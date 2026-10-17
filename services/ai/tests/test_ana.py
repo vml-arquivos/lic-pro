@@ -1,4 +1,4 @@
-from src.ana import AnaService, InMemoryConversationStore
+from src.ana import AnaService, InMemoryConversationStore, InMemoryToolCallAuditor
 from src.models import ReaderResult, StoredAnalysis
 from src.reader import InMemoryAnalysisStore
 
@@ -50,3 +50,17 @@ def test_prompt_injection_is_treated_as_user_data_and_cannot_mutate() -> None:
 
     assert "Documento que reúne regras" in response.texto
     assert response.ferramentas == ["explicar_conceito"]
+
+
+def test_ana_records_messages_and_read_only_tool_call() -> None:
+    history = InMemoryConversationStore()
+    auditor = InMemoryToolCallAuditor()
+    analyses = InMemoryAnalysisStore()
+    ana = AnaService(analyses, history, auditor)
+
+    response = ana.chat("tenant-a", "user-a", "conversation-a", "Explique o conceito de edital.")
+
+    messages = history.messages[("tenant-a", "user-a", "conversation-a")]
+    assert [message.role for message in messages] == ["usuario", "assistente"]
+    assert auditor.calls == [("tenant-a", "conversation-a", "explicar_conceito", "edital")]
+    assert response.somente_leitura is True
