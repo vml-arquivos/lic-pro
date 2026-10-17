@@ -12,22 +12,42 @@ const questions = [
 
 export function OnboardingForm() {
   const [profile, setProfile] = useState<'iniciante' | 'mentorado' | 'profissional'>('iniciante');
-  const [submitted, setSubmitted] = useState(false);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [message, setMessage] = useState('');
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const response = await fetch('/api/core/me/onboarding', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ perfil_jornada: profile, respostas: answers }),
+    });
+    setMessage(
+      response.ok
+        ? `Jornada salva como ${profile}.`
+        : response.status === 401
+          ? 'Entre para salvar seu diagnóstico.'
+          : 'Não foi possível salvar a jornada.',
+    );
+  }
 
   return (
-    <form
-      className="onboarding-form"
-      onSubmit={(event) => {
-        event.preventDefault();
-        setSubmitted(true);
-      }}
-    >
+    <form className="onboarding-form" onSubmit={(event) => void submit(event)}>
       {questions.map((question, index) => (
         <label key={question} className="question-card">
           <span>
             {index + 1}. {question}
           </span>
-          <select defaultValue={index === 0 ? 'Ainda estou começando' : 'Quero explorar'}>
+          <select
+            defaultValue=""
+            onChange={(event) =>
+              setAnswers((current) => ({ ...current, [String(index + 1)]: event.target.value }))
+            }
+            required
+          >
+            <option value="" disabled>
+              Selecione uma resposta
+            </option>
             <option>Ainda estou começando</option>
             <option>Já tenho alguma experiência</option>
             <option>Quero explorar</option>
@@ -35,7 +55,6 @@ export function OnboardingForm() {
           </select>
         </label>
       ))}
-
       <fieldset className="question-card">
         <legend>Seu perfil de jornada</legend>
         <label>
@@ -69,12 +88,10 @@ export function OnboardingForm() {
           Profissional — quero uma visão mais direta e densa
         </label>
       </fieldset>
-
       <button type="submit">Salvar minha jornada</button>
-      {submitted ? (
-        <p className="success-message">
-          Jornada salva como <strong>{profile}</strong>. O core API receberá estas respostas quando
-          a sessão estiver conectada.
+      {message ? (
+        <p className="success-message" role="status">
+          {message}
         </p>
       ) : null}
     </form>
