@@ -7,7 +7,7 @@ A Fase 3 transforma este serviço em uma base segura para Reader/RAG e Ana:
 - `POST /ana/chat/stream` devolve SSE, respeita rate limit/cotas e usa somente as ferramentas de leitura `buscar_editais`, `ler_analise_edital` e `explicar_conceito`;
 - o provider de LLM inicial é `fake`, substituível por configuração após revisão de prompt, custos e privacidade;
 - o texto da Ana deixa claro que a saída não é conclusão jurídica nem promessa de vitória;
-- `ANA_HISTORY_RETENTION_DAYS` é a configuração de retenção; o job de retenção deve ser agendado fora do processo web.
+- `ANA_HISTORY_RETENTION_DAYS` configura `python -m src.retention`, job que exclui histórico expirado, grava contadores/status em `ana_retencao_execucoes` e registra falhas. Ele deve ser agendado fora do processo web, por cron/Coolify Job ou scheduler operacional revisado.
 
 A implementação usa stores em memória para testes e adapters PostgreSQL em `src/postgres.py`. Em produção, as conexões usam a role `licite_ai`, configuram `app.tenant_id`/`app.user_id` em cada transação e gravam chunks, análises, mensagens e tool calls nas tabelas protegidas por RLS.
 
