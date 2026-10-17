@@ -19,3 +19,7 @@ A Sala de Vidro deve anonimizar participantes no servidor, aplicar atraso config
 Dados multi-tenant devem usar RLS com `current_setting('app.tenant_id')`. O Reader preserva páginas e só apresenta evidências recuperadas do edital; ausência de trecho não pode virar afirmação. PDFs e mensagens podem conter prompt injection e são tratados como conteúdo não confiável. O provider de LLM e o modelo ficam configuráveis, com `prompt_version` gravada junto da análise.
 
 Conversas, mensagens e chamadas de ferramenta da Ana são auditáveis por tenant e usuário. Nesta fase, as três ferramentas permitidas são somente de leitura. Ações nunca são disparadas apenas por texto recuperado ou por uma mensagem que simule confirmação. Conclusões jurídicas, promessas de vitória, publicação, alteração, exclusão e envio de lances estão fora do escopo.
+
+## LGPD em rascunho
+
+`docs/legal/politica-privacidade.rascunho.md` e `docs/legal/mapa-de-dados.rascunho.md` são propostas não publicáveis até revisão por advogado. A retenção do histórico da Ana é configurável por `ANA_HISTORY_RETENTION_DAYS`; dados pessoais desnecessários não devem seguir para provider de LLM e CPF/e-mail são mascarados em logs e argumentos de auditoria.
