@@ -1,0 +1,34 @@
+{
+  "data": [
+    {
+      "numeroControlePNCP": "12345678000199-1-000042/2026",
+      "numeroCompra": "42/2026",
+      "anoCompra": 2026,
+      "sequencialCompra": 42,
+      "objetoCompra": "Aquisição de materiais de escritório",
+      "informacaoComplementar": "Entrega conforme edital e anexos.",
+      "modalidadeId": 8,
+      "modalidadeNome": "Pregão - Eletrônico",
+      "modoDisputaId": 1,
+      "modoDisputaNome": "Aberto",
+      "valorTotalEstimado": 12500.5,
+      "dataPublicacaoPncp": "2026-10-01T12:00:00Z",
+      "linkSistemaOrigem": "https://exemplo.gov.br/compra/42",
+      "orgaoEntidade": {
+        "cnpj": "12345678000199",
+        "razaoSocial": "Órgão Público de Exemplo"
+      },
+      "unidadeOrgao": {
+        "codigoUnidade": "123456",
+        "nomeUnidade": "Unidade Administrativa de Exemplo",
+        "ufSigla": "DF",
+        "municipioNome": "Brasília"
+      }
+    }
+  ],
+  "totalRegistros": 1,
+  "totalPaginas": 1,
+  "numeroPagina": 1,
+  "paginasRestantes": 0,
+  "empty": false
+}

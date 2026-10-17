@@ -1,0 +1,19 @@
+{
+  "resultado": [
+    {
+      "codigoGrupo": 1,
+      "nomeGrupo": "Material de escritório",
+      "codigoClasse": 2,
+      "nomeClasse": "Papelaria",
+      "codigoPdm": 3,
+      "nomePdm": "Papel",
+      "codigoItem": 123,
+      "descricaoItem": "Papel para impressão",
+      "statusItem": true,
+      "dataHoraAtualizacao": "2026-10-01T12:00:00.000Z"
+    }
+  ],
+  "totalRegistros": 1,
+  "totalPaginas": 1,
+  "paginasRestantes": 0
+}
