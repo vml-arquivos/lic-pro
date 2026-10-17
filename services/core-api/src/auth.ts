@@ -6,6 +6,7 @@ export const journeyProfileSchema = z.enum(['iniciante', 'mentorado', 'profissio
 export const authClaimsSchema = z.object({
   sub: z.string().uuid(),
   tenantId: z.string().uuid(),
+  empresaId: z.string().uuid().optional(),
   role: userRoleSchema,
   email: z.string().email().optional(),
 });

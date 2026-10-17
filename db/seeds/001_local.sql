@@ -23,6 +23,52 @@ ON CONFLICT (id) DO UPDATE SET
   papel = EXCLUDED.papel,
   password_hash = EXCLUDED.password_hash;
 
+INSERT INTO empresas (id, tenant_id, cnpj, razao_social, nome_fantasia, porte, segmento, cidade, uf)
+VALUES (
+  '00000000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000001',
+  '00000000000191',
+  'Empresa Demo Licite Comigo Ltda.',
+  'Empresa Demo',
+  'micro',
+  'servicos administrativos',
+  'Brasília',
+  'DF'
+)
+ON CONFLICT (id) DO UPDATE SET razao_social = EXCLUDED.razao_social;
+
+SELECT set_config('app.empresa_id', '00000000-0000-0000-0000-000000000003', true);
+
+INSERT INTO empresa_usuarios (tenant_id, empresa_id, usuario_id, papel)
+VALUES (
+  '00000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000002',
+  'proprietario'
+)
+ON CONFLICT (tenant_id, empresa_id, usuario_id) DO UPDATE SET papel = EXCLUDED.papel, ativo = true;
+
+INSERT INTO planos (id, slug, nome, descricao, limites)
+VALUES (
+  '00000000-0000-0000-0000-000000000004',
+  'local-demo',
+  'Plano local demo',
+  'Plano exclusivamente local para validar o fluxo do MVP 1.',
+  '{"empresas": 1, "usuarios": 5, "ia_mensal": 100}'::jsonb
+)
+ON CONFLICT (id) DO UPDATE SET limites = EXCLUDED.limites;
+
+INSERT INTO assinaturas (id, tenant_id, empresa_id, plano_id, status, limites_snapshot)
+VALUES (
+  '00000000-0000-0000-0000-000000000005',
+  '00000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000004',
+  'trial',
+  '{"empresas": 1, "usuarios": 5, "ia_mensal": 100}'::jsonb
+)
+ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, limites_snapshot = EXCLUDED.limites_snapshot;
+
 INSERT INTO glossario_termos (termo, definicao_simples, definicao_tecnica, referencia, status)
 VALUES ('edital', 'Documento com regras e prazos da oportunidade.', 'Instrumento convocatório da contratação pública.', 'Revisar norma vigente', 'rascunho_para_revisao')
 ON CONFLICT (termo) DO NOTHING;

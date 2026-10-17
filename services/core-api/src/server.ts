@@ -77,7 +77,8 @@ function sendDatabaseUnavailable(reply: FastifyReply): void {
 }
 
 function authContext(request: FastifyRequest) {
-  return { tenantId: request.user.tenantId, userId: request.user.sub };
+  const context = { tenantId: request.user.tenantId, userId: request.user.sub };
+  return request.user.empresaId ? { ...context, empresaId: request.user.empresaId } : context;
 }
 
 function requireRoles(
@@ -172,6 +173,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           email: string;
           papel: UserRole;
           password_hash: string | null;
+          empresa_id: string | null;
         }
       | undefined;
     try {
@@ -183,10 +185,15 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         email: string;
         papel: UserRole;
         password_hash: string | null;
+        empresa_id: string | null;
       }>(
-        `SELECT id, tenant_id, email, papel, password_hash
-           FROM usuarios
-          WHERE tenant_id = $1 AND lower(email) = lower($2) AND ativo = true`,
+        `SELECT u.id, u.tenant_id, u.email, u.papel, u.password_hash, eu.empresa_id
+           FROM usuarios u
+           LEFT JOIN empresa_usuarios eu
+             ON eu.usuario_id = u.id AND eu.tenant_id = u.tenant_id AND eu.ativo = true
+          WHERE u.tenant_id = $1 AND lower(u.email) = lower($2) AND u.ativo = true
+          ORDER BY eu.created_at NULLS LAST
+          LIMIT 1`,
         [body.tenant_id, body.email],
       );
       await client.query('COMMIT');
@@ -207,7 +214,13 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (config.jwtIssuer) tokenOptions.issuer = config.jwtIssuer;
     if (config.jwtAudience) tokenOptions.audience = config.jwtAudience;
     const accessToken = app.jwt.sign(
-      { sub: user.id, tenantId: user.tenant_id, role: user.papel, email: user.email },
+      {
+        sub: user.id,
+        tenantId: user.tenant_id,
+        empresaId: user.empresa_id ?? undefined,
+        role: user.papel,
+        email: user.email,
+      },
       tokenOptions,
     );
     return reply.send({

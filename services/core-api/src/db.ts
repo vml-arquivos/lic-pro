@@ -3,6 +3,7 @@ import { Pool, type PoolClient, type QueryResultRow } from 'pg';
 export type TenantContext = {
   tenantId: string;
   userId: string;
+  empresaId?: string;
 };
 
 export function createPool(connectionString: string): Pool {
@@ -19,6 +20,7 @@ export async function withTenant<T>(
     await client.query('BEGIN');
     await client.query("SELECT set_config('app.tenant_id', $1, true)", [context.tenantId]);
     await client.query("SELECT set_config('app.user_id', $1, true)", [context.userId]);
+    await client.query("SELECT set_config('app.empresa_id', $1, true)", [context.empresaId ?? '']);
     const result = await callback(client);
     await client.query('COMMIT');
     return result;

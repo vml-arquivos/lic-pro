@@ -10,8 +10,10 @@ rlsSuite('isolamento RLS efetivo por tenant com role de aplicação', () => {
   const tenantA = randomUUID();
   const tenantB = randomUUID();
   const userA = randomUUID();
+  const empresaA = randomUUID();
   const editalA = randomUUID();
   const itemA = randomUUID();
+  const oportunidadeA = randomUUID();
   const conversaA = randomUUID();
 
   beforeAll(async () => {
@@ -45,6 +47,17 @@ rlsSuite('isolamento RLS efetivo por tenant com role de aplicação', () => {
         [userA, tenantA, `admin-${tenantA}@example.test`, 'Admin A'],
       );
       await client.query(
+        `INSERT INTO empresas (id, tenant_id, cnpj, razao_social)
+         VALUES ($1, $2, '12345678000199', 'Empresa A')`,
+        [empresaA, tenantA],
+      );
+      await client.query("SELECT set_config('app.empresa_id', $1, true)", [empresaA]);
+      await client.query(
+        `INSERT INTO empresa_usuarios (tenant_id, empresa_id, usuario_id, papel)
+         VALUES ($1, $2, $3, 'proprietario')`,
+        [tenantA, empresaA, userA],
+      );
+      await client.query(
         `INSERT INTO editais
           (id, tenant_id, fonte, id_externo, titulo, hash_conteudo)
          VALUES ($1, $2, 'fixture', $3, 'Edital A', 'hash-a')`,
@@ -64,6 +77,11 @@ rlsSuite('isolamento RLS efetivo por tenant com role de aplicação', () => {
         `INSERT INTO analises_ia (tenant_id, edital_id, resultado, modelo, prompt_version)
          VALUES ($1, $2, '{"resumo":"A"}'::jsonb, 'fixture', 'test')`,
         [tenantA, editalA],
+      );
+      await client.query(
+        `INSERT INTO oportunidades_salvas (id, tenant_id, empresa_id, usuario_id, edital_id, status)
+         VALUES ($1, $2, $3, $4, $5, 'salva')`,
+        [oportunidadeA, tenantA, empresaA, userA, editalA],
       );
       await client.query(
         `INSERT INTO ana_conversas (id, tenant_id, usuario_id, titulo)
@@ -116,6 +134,9 @@ rlsSuite('isolamento RLS efetivo por tenant com role de aplicação', () => {
         'ana_conversas',
         'ana_mensagens',
         'ana_tool_calls',
+        'empresas',
+        'empresa_usuarios',
+        'oportunidades_salvas',
         'lances_log',
       ];
       for (const table of tables) {
