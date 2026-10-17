@@ -46,6 +46,7 @@ class AnaChatResponse(BaseModel):
 
 class ReaderAnalyzeRequest(BaseModel):
     tenant_id: str
+    user_id: str
     edital_id: str
     pergunta: str = Field(default="Faça uma leitura inicial do edital.", max_length=1000)
 
