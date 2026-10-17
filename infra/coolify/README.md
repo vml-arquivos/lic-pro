@@ -20,7 +20,8 @@ Não há deploy automatizado nesta fase, não há credenciais de infraestrutura 
 - Redis 7 com AOF e volume persistente `redis_prod_data`.
 - RabbitMQ 3 com volume persistente `rabbitmq_prod_data`.
 - Serviço one-shot `migrate`.
-- `core-api`, `ai`, `ingest`, `bid-engine`, `realtime-gw` e `web` construídos pelos Dockerfiles da raiz.
+- `core-api`, `ai`, `ingest`, `ingest-worker`, `ingest-scheduler` e `web` construídos pelos Dockerfiles da raiz.
+- `bid-engine` e `realtime-gw` ficam no profile `future` e não sobem por padrão no MVP 1.
 
 Configure o backup do PostgreSQL no recurso de volume persistente ou em uma rotina externa da VPS, com cópia cifrada fora do host e teste periódico de restauração. Redis e RabbitMQ não substituem o backup do PostgreSQL.
 

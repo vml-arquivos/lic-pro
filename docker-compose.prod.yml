@@ -223,6 +223,7 @@ services:
     networks: [private]
 
   bid-engine:
+    profiles: [future]
     build:
       context: .
       dockerfile: services/bid-engine/Dockerfile
@@ -245,6 +246,7 @@ services:
     networks: [private]
 
   realtime-gw:
+    profiles: [future]
     build:
       context: .
       dockerfile: services/realtime-gw/Dockerfile
