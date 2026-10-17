@@ -4,10 +4,17 @@ import os
 from typing import Any
 
 
-async def check_dependencies() -> dict[str, bool]:
-    database = await _check_database(os.getenv("DATABASE_URL"))
+async def check_dependencies() -> dict[str, Any]:
+    database_url = os.getenv("DATABASE_URL")
+    database = await _check_database(database_url)
     redis = await _check_redis(os.getenv("REDIS_URL"))
-    return {"database": database, "redis": redis, "ready": database and redis}
+    last_execution = await _last_execution(database_url, os.getenv("INGEST_SCHEDULE_TENANT_ID"))
+    return {
+        "database": database,
+        "redis": redis,
+        "last_execution": last_execution,
+        "ready": database and redis,
+    }
 
 
 async def _check_database(url: str | None) -> bool:
@@ -24,6 +31,41 @@ async def _check_database(url: str | None) -> bool:
     except Exception:
         return False
     return True
+
+
+async def _last_execution(url: str | None, tenant_id: str | None) -> dict[str, Any]:
+    if not url or not tenant_id:
+        return {"status": "never", "ultima_execucao_em": None, "concluida_em": None, "erro": None}
+    try:
+        import asyncpg
+
+        connection = await asyncpg.connect(url, timeout=2)
+        try:
+            await connection.execute("SELECT set_config('app.tenant_id', $1, false)", tenant_id)
+            row = await connection.fetchrow(
+                """
+                SELECT status, ultima_execucao_em, concluida_em, ultimo_erro
+                  FROM ingest_checkpoints
+                 WHERE tenant_id = $1
+                 ORDER BY updated_at DESC
+                 LIMIT 1
+                """,
+                tenant_id,
+            )
+        finally:
+            await connection.close()
+    except Exception as error:
+        return {"status": "unavailable", "erro": str(error)[:300]}
+    if row is None:
+        return {"status": "never", "ultima_execucao_em": None, "concluida_em": None, "erro": None}
+    return {
+        "status": str(row["status"]),
+        "ultima_execucao_em": (
+            row["ultima_execucao_em"].isoformat() if row["ultima_execucao_em"] else None
+        ),
+        "concluida_em": row["concluida_em"].isoformat() if row["concluida_em"] else None,
+        "erro": row["ultimo_erro"],
+    }
 
 
 async def _check_redis(url: str | None) -> bool:

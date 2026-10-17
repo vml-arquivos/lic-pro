@@ -7,12 +7,12 @@ from typing import Protocol
 
 from .clients import PncpClient
 from .events import EventPublisher
-from .models import IngestEvent, PncpPublicationQuery, UpsertResult
+from .models import IngestEvent, NormalizedTender, PncpPublicationQuery, UpsertResult
 from .normalizer import normalize_pncp_publication
 
 
 class TenderWriter(Protocol):
-    def upsert(self, tender: object) -> UpsertResult:
+    def upsert(self, tender: NormalizedTender) -> UpsertResult:
         """Persist a normalized tender and classify it as new or updated."""
 
 

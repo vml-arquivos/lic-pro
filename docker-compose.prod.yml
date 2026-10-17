@@ -171,6 +171,57 @@ services:
       retries: 12
     networks: [private]
 
+  ingest-worker:
+    build:
+      context: .
+      dockerfile: services/ingest/Dockerfile
+    restart: unless-stopped
+    command:
+      ['celery', '-A', 'src.worker.celery_app', 'worker', '--loglevel=INFO', '--queues=ingest']
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${INGEST_DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      PNCP_BASE_URL: ${PNCP_BASE_URL}
+      INGEST_MAX_RETRIES: ${INGEST_MAX_RETRIES:-3}
+      INGEST_RATE_LIMIT_SECONDS: ${INGEST_RATE_LIMIT_SECONDS:-0.2}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks: [private]
+
+  ingest-scheduler:
+    build:
+      context: .
+      dockerfile: services/ingest/Dockerfile
+    restart: unless-stopped
+    command: ['celery', '-A', 'src.worker.celery_app', 'beat', '--loglevel=INFO']
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${INGEST_DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      INGEST_SCHEDULE_SECONDS: ${INGEST_SCHEDULE_SECONDS:-900}
+      INGEST_SCHEDULE_TENANT_ID: ${INGEST_SCHEDULE_TENANT_ID}
+      INGEST_SCHEDULE_MODALITY_CODE: ${INGEST_SCHEDULE_MODALITY_CODE:-6}
+      INGEST_SCHEDULE_UF: ${INGEST_SCHEDULE_UF}
+      INGEST_WINDOW_DAYS: ${INGEST_WINDOW_DAYS:-1}
+    depends_on:
+      ingest-worker:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks: [private]
+
   bid-engine:
     build:
       context: .
