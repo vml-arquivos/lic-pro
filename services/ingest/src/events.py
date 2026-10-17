@@ -24,7 +24,7 @@ class InMemoryEventPublisher:
 class RabbitMqEventPublisher:
     """Concrete publisher using pika; connection is opened per event for a safe baseline."""
 
-    def __init__(self, url: str, exchange: str = 'licite.events') -> None:
+    def __init__(self, url: str, exchange: str = "licite.events") -> None:
         self.url = url
         self.exchange = exchange
 
