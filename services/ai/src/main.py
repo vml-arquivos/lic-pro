@@ -14,6 +14,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from .ana import AnaService, InMemoryConversationStore, InMemoryToolCallAuditor
+from .auth import AuthDependency
 from .dependencies import check_dependencies
 from .ingestion import DeterministicEmbeddingProvider, chunk_pages, embed_chunks, extract_pdf_pages
 from .limits import InMemoryUsageStore, LimitExceeded, RateLimiter, ServiceLimits, estimate_tokens
@@ -44,12 +45,19 @@ rate_limiter = RateLimiter(limits)
 database_url = os.getenv("DATABASE_URL")
 chunks = PostgresChunkStore(database_url) if database_url else InMemoryChunkStore()
 analyses = PostgresAnalysisStore(database_url) if database_url else InMemoryAnalysisStore()
-reader = ReaderAgent(build_llm_provider("fake"), chunks, analyses)
+reader = ReaderAgent(
+    build_llm_provider(
+        os.getenv("LLM_PROVIDER", "fake"),
+        model=os.getenv("LLM_MODEL", "offline-reader-v1"),
+    ),
+    chunks,
+    analyses,
+)
 history = PostgresConversationStore(database_url) if database_url else InMemoryConversationStore()
 auditor = PostgresToolCallAuditor(database_url) if database_url else InMemoryToolCallAuditor()
 ana = AnaService(analyses, history, auditor)
 usage = PostgresUsageStore(database_url, limits) if database_url else InMemoryUsageStore(limits)
-app = FastAPI(title="Licite Comigo AI", version="0.3.1")
+app = FastAPI(title="Licite Comigo AI", version="0.3.2")
 
 
 @app.get("/health")
@@ -65,16 +73,13 @@ async def ready_route() -> JSONResponse:
 
 @app.post("/reader/ingest")
 async def reader_ingest(
+    auth: AuthDependency,
     file: Annotated[UploadFile, File(...)],
-    tenant_id: Annotated[str, Form(...)],
-    user_id: Annotated[str, Form(...)],
     edital_id: Annotated[str, Form(...)],
     ocr_enabled: Annotated[bool, Form()] = False,
 ) -> dict[str, int | bool]:
-    _uuid(tenant_id, "tenant_id")
-    _uuid(user_id, "user_id")
     _uuid(edital_id, "edital_id")
-    _guard_rate(tenant_id, user_id)
+    _guard_rate(auth.tenant_id, auth.user_id)
     if file.content_type not in {"application/pdf", "application/octet-stream"}:
         raise HTTPException(status_code=415, detail="envie um PDF")
     content = await file.read(limits.max_pdf_bytes + 1)
@@ -90,31 +95,27 @@ async def reader_ingest(
         raise HTTPException(status_code=413, detail="pdf_too_many_pages")
     if not pages and ocr_enabled:
         raise HTTPException(status_code=422, detail="OCR ainda depende de worker configurado")
-    raw_chunks = chunk_pages(pages, tenant_id, edital_id)
+    raw_chunks = chunk_pages(pages, auth.tenant_id, edital_id)
     embedded = embed_chunks(raw_chunks, DeterministicEmbeddingProvider())
     chunks.save(embedded)
     return {"paginas": len(pages), "chunks": len(embedded), "ocr_solicitado": ocr_enabled}
 
 
 @app.post("/reader/analyze")
-def reader_analyze(request: ReaderAnalyzeRequest) -> ReaderResult:
-    _uuid(request.tenant_id, "tenant_id")
-    _uuid(request.user_id, "user_id")
+def reader_analyze(request: ReaderAnalyzeRequest, auth: AuthDependency) -> ReaderResult:
     _uuid(request.edital_id, "edital_id")
-    _guard_rate(request.tenant_id, request.user_id)
-    _consume_usage(request.tenant_id, request.user_id, request.pergunta, 1)
-    return reader.analyze(request.tenant_id, request.edital_id, request.pergunta)
+    _guard_rate(auth.tenant_id, auth.user_id)
+    _consume_usage(auth.tenant_id, auth.user_id, request.pergunta, 1)
+    return reader.analyze(auth.tenant_id, request.edital_id, request.pergunta)
 
 
 @app.post("/ana/chat/stream")
-def ana_chat_stream(request: AnaChatRequest) -> StreamingResponse:
-    _uuid(request.tenant_id, "tenant_id")
-    _uuid(request.user_id, "user_id")
+def ana_chat_stream(request: AnaChatRequest, auth: AuthDependency) -> StreamingResponse:
     if request.conversa_id:
         _uuid(request.conversa_id, "conversa_id")
-    _guard_rate(request.tenant_id, request.user_id)
-    _consume_usage(request.tenant_id, request.user_id, request.mensagem, 1)
-    response = ana.chat(request.tenant_id, request.user_id, request.conversa_id, request.mensagem)
+    _guard_rate(auth.tenant_id, auth.user_id)
+    _consume_usage(auth.tenant_id, auth.user_id, request.mensagem, 1)
+    response = ana.chat(auth.tenant_id, auth.user_id, request.conversa_id, request.mensagem)
 
     def stream() -> Iterator[str]:
         yield f"data: {json.dumps(response.model_dump(mode='json'), ensure_ascii=False)}\n\n"

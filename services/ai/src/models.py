@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Evidence(BaseModel):
@@ -14,6 +14,9 @@ class Evidence(BaseModel):
     clausula: str | None = None
     trecho: str = Field(min_length=1)
     chunk_id: str | None = None
+    fonte: str | None = None
+    confianca: float | None = Field(default=None, ge=0, le=1)
+    status_validacao: Literal["extraido", "confirmado_usuario", "corrigido"] = "extraido"
 
 
 class ReaderResult(BaseModel):
@@ -30,8 +33,8 @@ class ReaderResult(BaseModel):
 
 
 class AnaChatRequest(BaseModel):
-    tenant_id: str
-    user_id: str
+    model_config = ConfigDict(extra="ignore")
+
     conversa_id: str | None = None
     mensagem: str = Field(min_length=1, max_length=4000)
 
@@ -45,8 +48,8 @@ class AnaChatResponse(BaseModel):
 
 
 class ReaderAnalyzeRequest(BaseModel):
-    tenant_id: str
-    user_id: str
+    model_config = ConfigDict(extra="ignore")
+
     edital_id: str
     pergunta: str = Field(default="Faça uma leitura inicial do edital.", max_length=1000)
 
@@ -67,6 +70,9 @@ class DocumentChunk:
     conteudo: str
     metadata: dict[str, Any]
     embedding: tuple[float, ...] = ()
+    fonte: str | None = None
+    confianca: float | None = None
+    status_validacao: str = "extraido"
 
 
 @dataclass(frozen=True)
