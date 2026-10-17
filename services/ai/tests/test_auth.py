@@ -47,7 +47,9 @@ def test_production_requires_jwt_key() -> None:
 
 def test_production_does_not_accept_fake_provider(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("NODE_ENV", "production")
-    from src.providers import build_llm_provider
+    from src.providers import build_embedding_provider, build_llm_provider
 
     with pytest.raises(RuntimeError, match="fake"):
         build_llm_provider("fake")
+    with pytest.raises(RuntimeError, match="determinístico"):
+        build_embedding_provider("deterministic")

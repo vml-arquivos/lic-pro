@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from .ana import AnaService, InMemoryConversationStore, InMemoryToolCallAuditor
 from .auth import AuthDependency
 from .dependencies import check_dependencies
-from .ingestion import DeterministicEmbeddingProvider, chunk_pages, embed_chunks, extract_pdf_pages
+from .ingestion import chunk_pages, embed_chunks, extract_pdf_pages
 from .limits import InMemoryUsageStore, LimitExceeded, RateLimiter, ServiceLimits, estimate_tokens
 from .models import AnaChatRequest, ReaderAnalyzeRequest, ReaderResult
 from .postgres import (
@@ -25,7 +25,7 @@ from .postgres import (
     PostgresConversationStore,
     PostgresToolCallAuditor,
 )
-from .providers import build_llm_provider
+from .providers import build_embedding_provider, build_llm_provider
 from .reader import InMemoryAnalysisStore, InMemoryChunkStore, ReaderAgent
 from .usage import PostgresUsageStore
 
@@ -53,6 +53,7 @@ reader = ReaderAgent(
     chunks,
     analyses,
 )
+embedding_provider = build_embedding_provider(os.getenv("EMBEDDING_PROVIDER", "deterministic"))
 history = PostgresConversationStore(database_url) if database_url else InMemoryConversationStore()
 auditor = PostgresToolCallAuditor(database_url) if database_url else InMemoryToolCallAuditor()
 ana = AnaService(analyses, history, auditor)
@@ -96,7 +97,7 @@ async def reader_ingest(
     if not pages and ocr_enabled:
         raise HTTPException(status_code=422, detail="OCR ainda depende de worker configurado")
     raw_chunks = chunk_pages(pages, auth.tenant_id, edital_id)
-    embedded = embed_chunks(raw_chunks, DeterministicEmbeddingProvider())
+    embedded = embed_chunks(raw_chunks, embedding_provider)
     chunks.save(embedded)
     return {"paginas": len(pages), "chunks": len(embedded), "ocr_solicitado": ocr_enabled}
 

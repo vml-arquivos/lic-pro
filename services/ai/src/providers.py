@@ -1,10 +1,12 @@
-"""Provider boundary for LLM calls; no provider is hardcoded in Reader."""
+"""Provider boundary for LLM and embeddings; no fake fallback in production."""
 
 from __future__ import annotations
 
+import os
 from collections.abc import Mapping, Sequence
 from typing import Any, Protocol
 
+from .ingestion import DeterministicEmbeddingProvider, EmbeddingProvider
 from .models import DocumentChunk
 
 
@@ -18,7 +20,9 @@ class LLMProvider(Protocol):
 
 class FakeLLMProvider:
     name = "fake"
-    model = "offline-reader-v1"
+
+    def __init__(self, model: str = "offline-reader-v1") -> None:
+        self.model = model
 
     def complete_json(self, *, system: str, prompt: str, chunks: Sequence[DocumentChunk]) -> Mapping[str, Any]:
         del system, prompt
@@ -28,6 +32,9 @@ class FakeLLMProvider:
                 "secao": chunk.secao,
                 "clausula": chunk.clausula,
                 "trecho": chunk.conteudo[:240],
+                "fonte": chunk.fonte or f"página {chunk.pagina or 'não informada'}",
+                "confianca": chunk.confianca or 0.75,
+                "status_validacao": chunk.status_validacao,
             }
             for chunk in chunks[:3]
         ]
@@ -41,7 +48,27 @@ class FakeLLMProvider:
         }
 
 
-def build_llm_provider(provider_name: str = "fake") -> LLMProvider:
+def build_llm_provider(provider_name: str = "fake", *, model: str | None = None) -> LLMProvider:
+    environment = os.getenv("NODE_ENV", "development")
+    if environment == "production" and provider_name == "fake":
+        raise RuntimeError("LLM_PROVIDER=fake é proibido em produção")
     if provider_name == "fake":
-        return FakeLLMProvider()
-    raise ValueError(f"provider de LLM não configurado para uso seguro: {provider_name}")
+        return FakeLLMProvider(model or "offline-reader-v1")
+    if provider_name == "openai":
+        if not os.getenv("LLM_API_KEY"):
+            raise RuntimeError("LLM_API_KEY é obrigatório para LLM_PROVIDER=openai")
+        raise RuntimeError("provider openai ainda depende de adapter revisado")
+    raise ValueError(f"provider de LLM não configurado: {provider_name}")
+
+
+def build_embedding_provider(provider_name: str = "deterministic") -> EmbeddingProvider:
+    environment = os.getenv("NODE_ENV", "development")
+    if provider_name in {"fake", "deterministic"}:
+        if environment == "production":
+            raise RuntimeError("EMBEDDING_PROVIDER determinístico é proibido em produção")
+        return DeterministicEmbeddingProvider()
+    if provider_name == "openai":
+        if not os.getenv("EMBEDDING_API_KEY"):
+            raise RuntimeError("EMBEDDING_API_KEY é obrigatório para EMBEDDING_PROVIDER=openai")
+        raise RuntimeError("provider de embeddings openai ainda depende de adapter revisado")
+    raise ValueError(f"provider de embeddings não configurado: {provider_name}")
