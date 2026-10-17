@@ -6,9 +6,9 @@ A identidade visual atual é provisória. O wordmark, os tokens, o preset Tailwi
 
 ## Estado do projeto
 
-Esta entrega corresponde à **Fase 0 — Fundação**. Ela cria o monorepo, a infraestrutura local, o app web mínimo, os esqueletos de serviços, o CI e a documentação de arquitetura/compliance. Banco de negócio, ingestão real, RAG, lances e integrações de portal entram somente nas fases descritas no requisito original.
+Esta entrega cobre as **Fases 0, 1 e 2**. A fundação, o banco multi-tenant com RLS, o core API, os conectores oficiais do Radar, a normalização, os eventos, a busca e as telas iniciais do Radar estão implementados.
 
-Após a Fase 3, o desenvolvimento deve parar para revisão antes das fases 4 a 6.
+A Fase 3 adicionará Reader/RAG e Ana de leitura. Após a Fase 3, o desenvolvimento deve parar para revisão antes das fases 4 a 6.
 
 ## Requisitos locais
 
@@ -21,6 +21,14 @@ pnpm build
 pnpm lint
 pnpm test
 pnpm format:check
+```
+
+Para validar os serviços Python:
+
+```bash
+for service in services/ingest services/ai; do
+  (cd "$service" && pip install -e '.[dev]' && ruff check src tests && mypy src && pytest)
+done
 ```
 
 Para subir a infraestrutura:
@@ -36,14 +44,14 @@ Para desligar os containers:
 docker compose down
 ```
 
-O app web mínimo roda com `pnpm --filter @licitecomigo/web dev` e o endpoint local do core API com `pnpm --filter @licitecomigo/core-api dev`. Os serviços Python têm instruções próprias em seus READMEs.
+O app web roda com `pnpm --filter @licitecomigo/web dev`. O core API roda com `pnpm --filter @licitecomigo/core-api dev` e expõe `GET /editais` com filtros de palavra-chave, CATMAT/CATSER, UF, UASG, modalidade e faixa de valor, sempre dentro do tenant da sessão.
 
 ## Organização
 
-`apps/web` contém o Next.js com App Router. `services/core-api`, `services/bid-engine` e `services/realtime-gw` são serviços TypeScript. `services/ingest` e `services/ai` são projetos Python. `packages/shared` concentra contratos compartilhados e `packages/ui` concentra a fundação visual. `db/migrations` e `db/seeds` ficam reservados ao banco versionado.
+`apps/web` contém o Next.js com App Router, incluindo `/radar` e o detalhe do edital. `services/core-api` contém autenticação, RBAC, CRUD, auditoria e busca do Radar. `services/ingest` contém os clientes oficiais do PNCP e Compras.gov.br, normalizador, upsert e eventos. `services/bid-engine` e `services/realtime-gw` continuam como fundações para fases posteriores. `services/ai` permanece reservado para a Fase 3.
 
-A arquitetura detalhada está em [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), os riscos e controles em [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md), a especificação da Ana em [`docs/ANA.md`](docs/ANA.md) e as decisões em [`docs/DECISIONS.md`](docs/DECISIONS.md).
+A arquitetura detalhada está em [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), os riscos e controles em [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md), a especificação da Ana em [`docs/ANA.md`](docs/ANA.md), as fontes da Fase 2 em [`docs/research/fase2-apis-oficiais.md`](docs/research/fase2-apis-oficiais.md) e as decisões em [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 ## Avisos de segurança
 
-Nunca commite `.env`, chaves, tokens ou dados reais. O produto não promete lucro ou vitória e não presta consultoria jurídica. A fundação não automatiza portais reais de licitação.
+Nunca commite `.env`, chaves, tokens ou dados reais. O produto não promete lucro ou vitória e não presta consultoria jurídica. A fundação não automatiza portais reais de licitação. Os conectores da Fase 2 somente consultam APIs públicas documentadas; não publicam nem alteram dados nos portais.

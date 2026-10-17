@@ -19,3 +19,7 @@
 ## ADR-0005 — Sem automação de portais na fundação
 
 **Status:** aceito. **Contexto:** automação em portais reais exige validação jurídica e operacional específica. **Decisão:** nesta etapa não existe adapter de portal real; a futura camada de lances deverá depender de uma interface e usar apenas Mock/Simulador. **Consequência:** nenhum serviço da Fase 0 faz autenticação, scraping ou envio de lances para portais reais.
+
+## ADR-0006 — Contratos oficiais do Radar
+
+**Status:** aceito. **Contexto:** endpoints públicos de PNCP e Compras.gov.br podem mudar e rotas não documentadas não devem entrar no produto. **Decisão:** os conectores usam somente os OpenAPI/manuais oficiais registrados em `docs/research/fase2-apis-oficiais.md`; a paginação PNCP segue o OpenAPI vigente consultado, mesmo quando manuais antigos registram outro limite. **Consequência:** alterações futuras exigem atualizar a fonte registrada e os fixtures antes de alterar o cliente.
