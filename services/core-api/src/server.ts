@@ -26,6 +26,9 @@ export type BuildAppOptions = {
 
 const tenantPathSchema = z.object({ tenantId: z.string().uuid() });
 const userPathSchema = z.object({ userId: z.string().uuid() });
+const companyPathSchema = z.object({ companyId: z.string().uuid() });
+const opportunityPathSchema = z.object({ opportunityId: z.string().uuid() });
+const chunkPathSchema = z.object({ chunkId: z.string().uuid() });
 const tenantBodySchema = z.object({
   nome: z.string().trim().min(1).max(160),
   slug: z
@@ -69,6 +72,78 @@ const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1).max(200),
 });
+const companySchema = z.object({
+  cnpj: z.string().regex(/^\d{14}$/),
+  razao_social: z.string().trim().min(1).max(200),
+  nome_fantasia: z.string().trim().max(200).optional(),
+  porte: z.enum(['mei', 'micro', 'pequena', 'media', 'grande']).optional(),
+  segmento: z.string().trim().max(160).optional(),
+  cidade: z.string().trim().max(120).optional(),
+  uf: z.string().trim().length(2).toUpperCase().optional(),
+});
+const companyUpdateSchema = companySchema.partial();
+const diagnosisSchema = z.object({
+  publico: z.enum(['empresa', 'mentor', 'estudante']).optional(),
+  nivel_diagnostico: z
+    .enum(['sem_diagnostico', 'iniciante', 'em_evolucao', 'pronto_para_operar'])
+    .optional(),
+  perfil_jornada: journeyProfileSchema.optional(),
+});
+const concessionSchema = z.object({
+  mentor_id: z.string().uuid(),
+  empresa_id: z.string().uuid(),
+  escopo: z.record(z.unknown()).default({}),
+  fim_em: z.string().datetime().optional(),
+});
+const opportunitySchema = z.object({
+  empresa_id: z.string().uuid(),
+  edital_id: z.string().uuid(),
+  status: z
+    .enum([
+      'salva',
+      'triagem',
+      'em_analise',
+      'em_habilitacao',
+      'proposta',
+      'arquivada',
+      'ganha',
+      'perdida',
+    ])
+    .default('salva'),
+  observacoes: z.string().max(5000).optional(),
+});
+const opportunityUpdateSchema = opportunitySchema
+  .partial()
+  .omit({ empresa_id: true, edital_id: true });
+const opportunityQuerySchema = z.object({
+  empresa_id: z.string().uuid().optional(),
+  status: z
+    .enum([
+      'salva',
+      'triagem',
+      'em_analise',
+      'em_habilitacao',
+      'proposta',
+      'arquivada',
+      'ganha',
+      'perdida',
+    ])
+    .optional(),
+});
+const correctionSchema = z.object({
+  titulo: z.string().trim().min(1).max(500).optional(),
+  orgao: z.string().trim().max(300).nullable().optional(),
+  uf: z.string().trim().length(2).toUpperCase().nullable().optional(),
+  modalidade: z.string().trim().max(160).nullable().optional(),
+  catmat_catser: z.string().trim().max(160).nullable().optional(),
+  valor_estimado: z.number().nonnegative().nullable().optional(),
+  url_origem: z.string().url().nullable().optional(),
+  observacao: z.string().trim().max(2000).optional(),
+});
+const chunkCorrectionSchema = z.object({
+  status_validacao: z.enum(['extraido', 'confirmado_usuario', 'corrigido']),
+  observacao_correcao: z.string().trim().max(2000).optional(),
+});
 
 function sendDatabaseUnavailable(reply: FastifyReply): void {
   reply
@@ -78,7 +153,8 @@ function sendDatabaseUnavailable(reply: FastifyReply): void {
 
 function authContext(request: FastifyRequest) {
   const context = { tenantId: request.user.tenantId, userId: request.user.sub };
-  return request.user.empresaId ? { ...context, empresaId: request.user.empresaId } : context;
+  const withRole = { ...context, role: request.user.role };
+  return request.user.empresaId ? { ...withRole, empresaId: request.user.empresaId } : withRole;
 }
 
 function requireRoles(
@@ -187,17 +263,24 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         password_hash: string | null;
         empresa_id: string | null;
       }>(
-        `SELECT u.id, u.tenant_id, u.email, u.papel, u.password_hash, eu.empresa_id
-           FROM usuarios u
-           LEFT JOIN empresa_usuarios eu
-             ON eu.usuario_id = u.id AND eu.tenant_id = u.tenant_id AND eu.ativo = true
-          WHERE u.tenant_id = $1 AND lower(u.email) = lower($2) AND u.ativo = true
-          ORDER BY eu.created_at NULLS LAST
+        `SELECT id, tenant_id, email, papel, password_hash, NULL::uuid AS empresa_id
+           FROM usuarios
+          WHERE tenant_id = $1 AND lower(email) = lower($2) AND ativo = true
           LIMIT 1`,
         [body.tenant_id, body.email],
       );
-      await client.query('COMMIT');
       user = result.rows[0];
+      if (user) {
+        await client.query("SELECT set_config('app.user_id', $1, true)", [user.id]);
+        const company = await client.query<{ empresa_id: string }>(
+          `SELECT empresa_id FROM empresa_usuarios
+            WHERE tenant_id = $1 AND usuario_id = $2 AND ativo = true
+            ORDER BY created_at LIMIT 1`,
+          [body.tenant_id, user.id],
+        );
+        user.empresa_id = company.rows[0]?.empresa_id ?? null;
+      }
+      await client.query('COMMIT');
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -228,6 +311,178 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       token_type: 'Bearer',
       expires_in: config.jwtTtlSeconds,
     });
+  });
+
+  app.get('/me', async (request, reply) => {
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) =>
+      client.query(
+        `SELECT u.id, u.tenant_id, u.email, u.nome, u.papel, u.publico, u.nivel_diagnostico,
+                u.perfil_jornada, u.onboarding_concluido, eu.empresa_id, eu.papel AS empresa_papel
+           FROM usuarios u
+           LEFT JOIN empresa_usuarios eu
+             ON eu.usuario_id = u.id AND eu.tenant_id = u.tenant_id AND eu.ativo = true
+          WHERE u.tenant_id = $1 AND u.id = $2
+          ORDER BY eu.created_at NULLS LAST
+          LIMIT 1`,
+        [request.user.tenantId, request.user.sub],
+      ),
+    );
+    if (!result.rows[0]) return reply.code(404).send({ error: 'user_not_found' });
+    return reply.send(result.rows[0]);
+  });
+
+  app.patch('/me/diagnostico', async (request, reply) => {
+    const body = diagnosisSchema.parse(request.body);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const updated = await client.query(
+        `UPDATE usuarios
+            SET publico = COALESCE($3, publico),
+                nivel_diagnostico = COALESCE($4, nivel_diagnostico),
+                perfil_jornada = COALESCE($5, perfil_jornada),
+                updated_at = now()
+          WHERE tenant_id = $1 AND id = $2
+          RETURNING id, publico, nivel_diagnostico, perfil_jornada`,
+        [
+          request.user.tenantId,
+          request.user.sub,
+          body.publico ?? null,
+          body.nivel_diagnostico ?? null,
+          body.perfil_jornada ?? null,
+        ],
+      );
+      if (updated.rows[0])
+        await audit(client, request, 'diagnostico.updated', 'usuario', request.user.sub);
+      return updated.rows[0];
+    });
+    if (!result) return reply.code(404).send({ error: 'user_not_found' });
+    return reply.send(result);
+  });
+
+  app.get('/companies', async (request, reply) => {
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) =>
+      client.query(
+        `SELECT e.id, e.cnpj, e.razao_social, e.nome_fantasia, e.porte, e.segmento, e.cidade, e.uf,
+                e.ativo, count(eu.usuario_id)::integer AS usuarios
+           FROM empresas e
+           LEFT JOIN empresa_usuarios eu ON eu.empresa_id = e.id AND eu.ativo = true
+          WHERE e.tenant_id = $1
+          GROUP BY e.id
+          ORDER BY e.razao_social`,
+        [request.user.tenantId],
+      ),
+    );
+    return reply.send({ data: result.rows });
+  });
+
+  app.post('/companies', async (request, reply) => {
+    if (!requireRoles(reply, request, ['admin', 'operador'])) return;
+    const body = companySchema.parse(request.body);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const inserted = await client.query(
+        `INSERT INTO empresas (tenant_id, cnpj, razao_social, nome_fantasia, porte, segmento, cidade, uf)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING id, tenant_id, cnpj, razao_social, nome_fantasia, porte, segmento, cidade, uf, ativo`,
+        [
+          request.user.tenantId,
+          body.cnpj,
+          body.razao_social,
+          body.nome_fantasia ?? null,
+          body.porte ?? null,
+          body.segmento ?? null,
+          body.cidade ?? null,
+          body.uf ?? null,
+        ],
+      );
+      const company = inserted.rows[0];
+      await client.query(
+        `INSERT INTO empresa_usuarios (tenant_id, empresa_id, usuario_id, papel)
+         VALUES ($1, $2, $3, 'proprietario')`,
+        [request.user.tenantId, company.id, request.user.sub],
+      );
+      await audit(client, request, 'empresa.created', 'empresa', company.id);
+      return company;
+    });
+    return reply.code(201).send(result);
+  });
+
+  app.patch('/companies/:companyId', async (request, reply) => {
+    if (!requireRoles(reply, request, ['admin', 'operador'])) return;
+    const { companyId } = companyPathSchema.parse(request.params);
+    const body = companyUpdateSchema.parse(request.body);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const updated = await client.query(
+        `UPDATE empresas
+            SET cnpj = COALESCE($3, cnpj), razao_social = COALESCE($4, razao_social),
+                nome_fantasia = COALESCE($5, nome_fantasia), porte = COALESCE($6, porte),
+                segmento = COALESCE($7, segmento), cidade = COALESCE($8, cidade),
+                uf = COALESCE($9, uf), updated_at = now()
+          WHERE tenant_id = $1 AND id = $2
+          RETURNING id, tenant_id, cnpj, razao_social, nome_fantasia, porte, segmento, cidade, uf, ativo`,
+        [
+          request.user.tenantId,
+          companyId,
+          body.cnpj ?? null,
+          body.razao_social ?? null,
+          body.nome_fantasia ?? null,
+          body.porte ?? null,
+          body.segmento ?? null,
+          body.cidade ?? null,
+          body.uf ?? null,
+        ],
+      );
+      if (updated.rows[0]) await audit(client, request, 'empresa.updated', 'empresa', companyId);
+      return updated.rows[0];
+    });
+    if (!result) return reply.code(404).send({ error: 'company_not_found' });
+    return reply.send(result);
+  });
+
+  app.post('/mentor/concessions', async (request, reply) => {
+    if (!requireRoles(reply, request, ['admin'])) return;
+    const body = concessionSchema.parse(request.body);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const inserted = await client.query(
+        `INSERT INTO concessoes_mentor (tenant_id, mentor_id, empresa_id, escopo, fim_em)
+         VALUES ($1, $2, $3, $4::jsonb, $5)
+         ON CONFLICT (tenant_id, mentor_id, empresa_id) DO UPDATE SET
+           escopo = EXCLUDED.escopo, fim_em = EXCLUDED.fim_em, revogada_em = NULL
+         RETURNING id, tenant_id, mentor_id, empresa_id, escopo, inicio_em, fim_em`,
+        [
+          request.user.tenantId,
+          body.mentor_id,
+          body.empresa_id,
+          JSON.stringify(body.escopo),
+          body.fim_em ?? null,
+        ],
+      );
+      await audit(client, request, 'mentor.concession.granted', 'empresa', body.empresa_id, {
+        mentor_id: body.mentor_id,
+      });
+      return inserted.rows[0];
+    });
+    return reply.code(201).send(result);
+  });
+
+  app.get('/mentor/companies', async (request, reply) => {
+    if (!requireRoles(reply, request, ['mentor'])) return;
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) =>
+      client.query(
+        `SELECT e.id, e.cnpj, e.razao_social, e.nome_fantasia, cm.escopo, cm.fim_em
+           FROM concessoes_mentor cm
+           JOIN empresas e ON e.id = cm.empresa_id
+          WHERE cm.tenant_id = $1 AND cm.mentor_id = $2 AND cm.revogada_em IS NULL
+          ORDER BY e.razao_social`,
+        [request.user.tenantId, request.user.sub],
+      ),
+    );
+    return reply.send({ data: result.rows });
   });
 
   app.post('/tenants', async (request, reply) => {
@@ -368,6 +623,159 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return reply.send(result);
   });
 
+  app.get('/dashboard/summary', async (request, reply) => {
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const [opportunities, deadlines, tasks, unread] = await Promise.all([
+        client.query(
+          `SELECT count(*)::integer AS total,
+                  count(*) FILTER (WHERE status = 'triagem')::integer AS triagem,
+                  count(*) FILTER (WHERE status = 'em_analise')::integer AS em_analise,
+                  count(*) FILTER (WHERE status = 'proposta')::integer AS proposta
+             FROM oportunidades_salvas WHERE tenant_id = $1`,
+          [request.user.tenantId],
+        ),
+        client.query(
+          `SELECT count(*)::integer AS total,
+                  count(*) FILTER (WHERE vence_em < now() AND status = 'aberto')::integer AS atrasados
+             FROM prazos_agenda WHERE tenant_id = $1`,
+          [request.user.tenantId],
+        ),
+        client.query(
+          `SELECT count(*)::integer AS abertas
+             FROM tarefas WHERE tenant_id = $1 AND status IN ('aberta', 'em_andamento')`,
+          [request.user.tenantId],
+        ),
+        client.query(
+          `SELECT count(*)::integer AS total
+             FROM notificacoes WHERE tenant_id = $1 AND usuario_id = $2 AND lida_em IS NULL`,
+          [request.user.tenantId, request.user.sub],
+        ),
+      ]);
+      return {
+        oportunidades: opportunities.rows[0],
+        prazos: deadlines.rows[0],
+        tarefas: tasks.rows[0],
+        notificacoes_nao_lidas: unread.rows[0]?.total ?? 0,
+      };
+    });
+    return reply.send(result);
+  });
+
+  app.get('/opportunities', async (request, reply) => {
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const filters = opportunityQuerySchema.parse(request.query);
+    const result = await withTenant(pool, authContext(request), async (client) =>
+      client.query(
+        `SELECT o.id, o.empresa_id, o.edital_id, o.status, o.observacoes, o.origem,
+                o.created_at, o.updated_at, e.titulo, e.orgao, e.uf, e.modalidade,
+                e.valor_estimado, e.data_publicacao
+           FROM oportunidades_salvas o
+           JOIN editais e ON e.id = o.edital_id
+          WHERE o.tenant_id = $1
+            AND ($2::uuid IS NULL OR o.empresa_id = $2)
+            AND ($3::text IS NULL OR o.status = $3)
+          ORDER BY o.updated_at DESC`,
+        [request.user.tenantId, filters.empresa_id ?? null, filters.status ?? null],
+      ),
+    );
+    return reply.send({ data: result.rows });
+  });
+
+  app.post('/opportunities', async (request, reply) => {
+    const body = opportunitySchema.parse(request.body);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const inserted = await client.query(
+        `INSERT INTO oportunidades_salvas
+           (tenant_id, empresa_id, usuario_id, edital_id, status, observacoes)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (tenant_id, empresa_id, edital_id) DO UPDATE SET
+           status = EXCLUDED.status, observacoes = EXCLUDED.observacoes, updated_at = now()
+         RETURNING id, tenant_id, empresa_id, usuario_id, edital_id, status, observacoes, origem, created_at, updated_at`,
+        [
+          request.user.tenantId,
+          body.empresa_id,
+          request.user.sub,
+          body.edital_id,
+          body.status,
+          body.observacoes ?? null,
+        ],
+      );
+      await audit(client, request, 'oportunidade.saved', 'oportunidade', inserted.rows[0].id, {
+        edital_id: body.edital_id,
+        empresa_id: body.empresa_id,
+      });
+      return inserted.rows[0];
+    });
+    return reply.code(201).send(result);
+  });
+
+  app.get('/opportunities/:opportunityId', async (request, reply) => {
+    const { opportunityId } = opportunityPathSchema.parse(request.params);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const [opportunity, checklist, deadlines, tasks] = await Promise.all([
+        client.query(
+          `SELECT o.id, o.empresa_id, o.edital_id, o.status, o.observacoes, o.origem,
+                  o.created_at, o.updated_at, e.titulo, e.orgao, e.uf, e.modalidade,
+                  e.valor_estimado, e.data_publicacao, e.url_origem
+             FROM oportunidades_salvas o JOIN editais e ON e.id = o.edital_id
+            WHERE o.id = $1 AND o.tenant_id = $2`,
+          [opportunityId, request.user.tenantId],
+        ),
+        client.query(
+          `SELECT c.id, c.titulo, c.tipo,
+                  coalesce(json_agg(json_build_object(
+                    'id', ci.id, 'titulo', ci.titulo, 'obrigatorio', ci.obrigatorio,
+                    'concluido', ci.concluido, 'evidencia_url', ci.evidencia_url
+                  ) ORDER BY ci.id) FILTER (WHERE ci.id IS NOT NULL), '[]'::json) AS itens
+             FROM checklists c LEFT JOIN checklist_itens ci ON ci.checklist_id = c.id
+            WHERE c.oportunidade_id = $1 AND c.tenant_id = $2 GROUP BY c.id`,
+          [opportunityId, request.user.tenantId],
+        ),
+        client.query(
+          `SELECT id, titulo, tipo, vence_em, status, fonte
+             FROM prazos_agenda WHERE oportunidade_id = $1 AND tenant_id = $2 ORDER BY vence_em`,
+          [opportunityId, request.user.tenantId],
+        ),
+        client.query(
+          `SELECT id, titulo, descricao, prioridade, status, responsavel_id, vence_em
+             FROM tarefas WHERE oportunidade_id = $1 AND tenant_id = $2 ORDER BY vence_em NULLS LAST`,
+          [opportunityId, request.user.tenantId],
+        ),
+      ]);
+      return {
+        oportunidade: opportunity.rows[0],
+        checklists: checklist.rows,
+        prazos: deadlines.rows,
+        tarefas: tasks.rows,
+      };
+    });
+    if (!result.oportunidade) return reply.code(404).send({ error: 'opportunity_not_found' });
+    return reply.send(result);
+  });
+
+  app.patch('/opportunities/:opportunityId', async (request, reply) => {
+    const { opportunityId } = opportunityPathSchema.parse(request.params);
+    const body = opportunityUpdateSchema.parse(request.body);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const updated = await client.query(
+        `UPDATE oportunidades_salvas
+            SET status = COALESCE($3, status), observacoes = COALESCE($4, observacoes), updated_at = now()
+          WHERE id = $1 AND tenant_id = $2
+          RETURNING id, empresa_id, edital_id, status, observacoes, origem, updated_at`,
+        [opportunityId, request.user.tenantId, body.status ?? null, body.observacoes ?? null],
+      );
+      if (updated.rows[0])
+        await audit(client, request, 'oportunidade.updated', 'oportunidade', opportunityId);
+      return updated.rows[0];
+    });
+    if (!result) return reply.code(404).send({ error: 'opportunity_not_found' });
+    return reply.send(result);
+  });
+
   app.get('/editais', async (request, reply) => {
     if (!pool) return sendDatabaseUnavailable(reply);
     const filters = editalSearchSchema.parse(request.query);
@@ -392,7 +800,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (!pool) return sendDatabaseUnavailable(reply);
     const { editalId } = editalPathSchema.parse(request.params);
     const result = await withTenant(pool, authContext(request), async (client) => {
-      const [edital, itens] = await Promise.all([
+      const [edital, itens, versoes, chunks, analise] = await Promise.all([
         client.query(
           `SELECT id, fonte, id_externo, titulo, orgao, uf, uasg, modalidade, catmat_catser,
                   valor_estimado, data_publicacao, url_origem, conteudo_texto, hash_conteudo,
@@ -409,10 +817,97 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
             ORDER BY numero`,
           [editalId],
         ),
+        client.query(
+          `SELECT id, numero, fonte, url_origem, hash_conteudo, publicado_em, capturado_em
+             FROM edital_versoes WHERE edital_id = $1 ORDER BY numero DESC`,
+          [editalId],
+        ),
+        client.query(
+          `SELECT id, pagina, secao, clausula, conteudo, fonte, confianca, status_validacao,
+                  corrigido_por, corrigido_em, observacao_correcao
+             FROM edital_chunks WHERE edital_id = $1 ORDER BY pagina, id`,
+          [editalId],
+        ),
+        client.query(
+          `SELECT id, status, resultado, modelo, prompt_version, erro, created_at, updated_at
+             FROM analises_ia WHERE edital_id = $1 ORDER BY created_at DESC LIMIT 1`,
+          [editalId],
+        ),
       ]);
-      return { edital: edital.rows[0], itens: itens.rows };
+      return {
+        edital: edital.rows[0],
+        itens: itens.rows,
+        versoes: versoes.rows,
+        evidencias: chunks.rows,
+        analise: analise.rows[0] ?? null,
+      };
     });
     if (!result.edital) return reply.code(404).send({ error: 'edital_not_found' });
+    return reply.send(result);
+  });
+
+  app.patch('/editais/:editalId/corrections', async (request, reply) => {
+    const { editalId } = editalPathSchema.parse(request.params);
+    const body = correctionSchema.parse(request.body);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const updated = await client.query(
+        `UPDATE editais
+            SET titulo = COALESCE($3, titulo), orgao = COALESCE($4, orgao),
+                uf = COALESCE($5, uf), modalidade = COALESCE($6, modalidade),
+                catmat_catser = COALESCE($7, catmat_catser), valor_estimado = COALESCE($8, valor_estimado),
+                url_origem = COALESCE($9, url_origem), updated_at = now()
+          WHERE id = $1 AND tenant_id = $2
+          RETURNING id, titulo, orgao, uf, modalidade, catmat_catser, valor_estimado, url_origem, updated_at`,
+        [
+          editalId,
+          request.user.tenantId,
+          body.titulo ?? null,
+          body.orgao ?? null,
+          body.uf ?? null,
+          body.modalidade ?? null,
+          body.catmat_catser ?? null,
+          body.valor_estimado ?? null,
+          body.url_origem ?? null,
+        ],
+      );
+      if (updated.rows[0]) {
+        await audit(client, request, 'edital.corrected', 'edital', editalId, {
+          origem: 'user_correction',
+          observacao: body.observacao ?? '',
+        });
+      }
+      return updated.rows[0];
+    });
+    if (!result) return reply.code(404).send({ error: 'edital_not_found' });
+    return reply.send(result);
+  });
+
+  app.patch('/reader/chunks/:chunkId', async (request, reply) => {
+    const { chunkId } = chunkPathSchema.parse(request.params);
+    const body = chunkCorrectionSchema.parse(request.body);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const updated = await client.query(
+        `UPDATE edital_chunks
+            SET status_validacao = $3, observacao_correcao = $4,
+                corrigido_por = $5, corrigido_em = now()
+          WHERE id = $1 AND tenant_id = $2
+          RETURNING id, edital_id, pagina, conteudo, fonte, confianca, status_validacao,
+                    observacao_correcao, corrigido_por, corrigido_em`,
+        [
+          chunkId,
+          request.user.tenantId,
+          body.status_validacao,
+          body.observacao_correcao ?? null,
+          request.user.sub,
+        ],
+      );
+      if (updated.rows[0])
+        await audit(client, request, 'reader.evidence.validated', 'edital_chunk', chunkId);
+      return updated.rows[0];
+    });
+    if (!result) return reply.code(404).send({ error: 'reader_chunk_not_found' });
     return reply.send(result);
   });
 
