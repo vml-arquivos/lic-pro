@@ -48,6 +48,8 @@ jobs:
           for file in db/migrations/*.sql; do
             psql --host localhost --username licite --dbname licite_comigo --set ON_ERROR_STOP=1 --file "$file"
           done
+          psql --host localhost --username licite --dbname licite_comigo --set ON_ERROR_STOP=1 \
+            --command "ALTER ROLE licite_core LOGIN PASSWORD 'change-me-ci-only'"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Check formatting
@@ -58,7 +60,8 @@ jobs:
         run: pnpm typecheck
       - name: Test
         env:
-          TEST_DATABASE_URL: postgresql://licite:change-me-ci-only@localhost:5432/licite_comigo
+          TEST_APP_ROLE: licite_core
+          TEST_DATABASE_URL: postgresql://licite_core:change-me-ci-only@localhost:5432/licite_comigo
         run: pnpm test
       - name: Build
         run: pnpm build

@@ -1,20 +1,36 @@
 import { randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
-import { beforeAll, afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const connectionString = process.env.TEST_DATABASE_URL;
 const rlsSuite = describe.skipIf(!connectionString);
 
-rlsSuite('isolamento RLS por tenant', () => {
+rlsSuite('isolamento RLS efetivo por tenant com role de aplicação', () => {
   let pool: Pool;
   const tenantA = randomUUID();
   const tenantB = randomUUID();
   const userA = randomUUID();
+  const editalA = randomUUID();
+  const itemA = randomUUID();
+  const conversaA = randomUUID();
 
   beforeAll(async () => {
     pool = new Pool({ connectionString });
     const client = await pool.connect();
     try {
+      const role = await client.query<{
+        rolname: string;
+        rolsuper: boolean;
+        rolbypassrls: boolean;
+      }>(
+        `SELECT rolname, rolsuper, rolbypassrls
+           FROM pg_roles
+          WHERE rolname = current_user`,
+      );
+      expect(role.rows[0]?.rolname).toBe(process.env.TEST_APP_ROLE ?? 'licite_core');
+      expect(role.rows[0]?.rolsuper).toBe(false);
+      expect(role.rows[0]?.rolbypassrls).toBe(false);
+
       await client.query('BEGIN');
       await client.query("SELECT set_config('app.tenant_id', $1, true)", [tenantA]);
       await client.query("SELECT set_config('app.user_id', $1, true)", [userA]);
@@ -29,9 +45,40 @@ rlsSuite('isolamento RLS por tenant', () => {
         [userA, tenantA, `admin-${tenantA}@example.test`, 'Admin A'],
       );
       await client.query(
-        `INSERT INTO ana_conversas (tenant_id, usuario_id, titulo)
-         VALUES ($1, $2, $3)`,
-        [tenantA, userA, 'Conversa privada A'],
+        `INSERT INTO editais
+          (id, tenant_id, fonte, id_externo, titulo, hash_conteudo)
+         VALUES ($1, $2, 'fixture', $3, 'Edital A', 'hash-a')`,
+        [editalA, tenantA, `edital-${editalA}`],
+      );
+      await client.query(
+        `INSERT INTO itens_edital (id, tenant_id, edital_id, numero, descricao)
+         VALUES ($1, $2, $3, '1', 'Item A')`,
+        [itemA, tenantA, editalA],
+      );
+      await client.query(
+        `INSERT INTO edital_chunks (tenant_id, edital_id, pagina, conteudo)
+         VALUES ($1, $2, 1, 'Trecho privado A')`,
+        [tenantA, editalA],
+      );
+      await client.query(
+        `INSERT INTO analises_ia (tenant_id, edital_id, resultado, modelo, prompt_version)
+         VALUES ($1, $2, '{"resumo":"A"}'::jsonb, 'fixture', 'test')`,
+        [tenantA, editalA],
+      );
+      await client.query(
+        `INSERT INTO ana_conversas (id, tenant_id, usuario_id, titulo)
+         VALUES ($1, $2, $3, 'Conversa privada A')`,
+        [conversaA, tenantA, userA],
+      );
+      await client.query(
+        `INSERT INTO ana_mensagens (tenant_id, conversa_id, tipo, conteudo)
+         VALUES ($1, $2, 'usuario', 'Mensagem A')`,
+        [tenantA, conversaA],
+      );
+      await client.query(
+        `INSERT INTO ana_tool_calls (tenant_id, conversa_id, ferramenta, nivel)
+         VALUES ($1, $2, 'explicar_conceito', 'leitura')`,
+        [tenantA, conversaA],
       );
       await client.query('COMMIT');
 
@@ -56,22 +103,34 @@ rlsSuite('isolamento RLS por tenant', () => {
     await pool.end();
   });
 
-  it('não permite que o tenant B leia conversas do tenant A', async () => {
+  it('não permite que tenant B leia dados sensíveis de tenant A', async () => {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
       await client.query("SELECT set_config('app.tenant_id', $1, true)", [tenantB]);
-      const result = await client.query<{ count: string }>(
-        'SELECT count(*)::text AS count FROM ana_conversas',
-      );
+      const tables = [
+        'editais',
+        'itens_edital',
+        'edital_chunks',
+        'analises_ia',
+        'ana_conversas',
+        'ana_mensagens',
+        'ana_tool_calls',
+        'lances_log',
+      ];
+      for (const table of tables) {
+        const result = await client.query<{ count: string }>(
+          `SELECT count(*)::text AS count FROM ${table}`,
+        );
+        expect(result.rows[0]?.count, table).toBe('0');
+      }
       await client.query('COMMIT');
-      expect(result.rows[0]?.count).toBe('0');
     } finally {
       client.release();
     }
   });
 
-  it('bloqueia escrita com tenant_id de outro tenant', async () => {
+  it('bloqueia escrita cross-tenant e mutação de lances_log', async () => {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -83,6 +142,14 @@ rlsSuite('isolamento RLS por tenant', () => {
           [tenantA, userA, 'Tentativa indevida'],
         ),
       ).rejects.toThrow();
+      await client.query('ROLLBACK');
+
+      await client.query('BEGIN');
+      await client.query("SELECT set_config('app.tenant_id', $1, true)", [tenantA]);
+      await expect(
+        client.query('UPDATE lances_log SET decisao = $1', ['enviar']),
+      ).rejects.toThrow();
+      await expect(client.query('DELETE FROM lances_log')).rejects.toThrow();
       await client.query('ROLLBACK');
     } finally {
       client.release();
