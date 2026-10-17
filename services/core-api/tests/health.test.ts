@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildApp } from '../src/index.js';
+import { buildApp } from '../src/server.js';
 
 describe('core-api', () => {
   it('exposes a local health endpoint', async () => {
-    const app = buildApp();
+    const app = buildApp({ jwtSecret: 'test-secret', logger: false });
     const response = await app.inject({ method: 'GET', url: '/health' });
 
     expect(response.statusCode).toBe(200);

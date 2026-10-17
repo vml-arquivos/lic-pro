@@ -1,17 +1,13 @@
-import Fastify, { type FastifyInstance } from 'fastify';
-import { health } from '@licitecomigo/shared';
+import { buildApp } from './server.js';
+import { createPool } from './db.js';
+import { loadConfig } from './config.js';
 
-export function buildApp(): FastifyInstance {
-  const app = Fastify({ logger: true });
+const config = loadConfig();
+const pool = config.databaseUrl ? createPool(config.databaseUrl) : undefined;
+const app = pool ? buildApp({ config, pool }) : buildApp({ config });
 
-  app.get('/health', async () => health('core-api'));
-
-  return app;
+if (config.nodeEnv !== 'test') {
+  await app.listen({ host: '0.0.0.0', port: config.port });
 }
 
-const app = buildApp();
-const port = Number(process.env.CORE_API_PORT ?? 3001);
-
-if (process.env.NODE_ENV !== 'test') {
-  await app.listen({ host: '0.0.0.0', port });
-}
+export { app, buildApp };
