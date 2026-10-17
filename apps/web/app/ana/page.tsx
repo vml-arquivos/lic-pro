@@ -22,8 +22,8 @@ export default function AnaPage() {
       <section className="detail-card">
         <h2>Como Ana pode ajudar agora</h2>
         <p>
-          Use o botão flutuante para iniciar uma conversa. A conexão de streaming é configurada por
-          `NEXT_PUBLIC_AI_API_URL`.
+          Use o botão flutuante para iniciar uma conversa. O servidor web intermedia a conexão de
+          streaming; o endereço interno do AI nunca é exposto ao browser.
         </p>
       </section>
     </main>

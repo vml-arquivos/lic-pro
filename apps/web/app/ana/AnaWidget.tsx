@@ -13,22 +13,11 @@ export function AnaWidget() {
     if (!question || loading) return;
     setLoading(true);
     setAnswer('');
-    const apiUrl = process.env.NEXT_PUBLIC_AI_API_URL;
     try {
-      if (!apiUrl) {
-        setAnswer(
-          'Posso ajudar a organizar a leitura. Ainda não encontrei uma conexão configurada com o Reader; confira o edital e os anexos na fonte oficial.',
-        );
-        return;
-      }
-      const response = await fetch(`${apiUrl}/ana/chat/stream`, {
+      const response = await fetch('/api/ana/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          tenant_id: '00000000-0000-0000-0000-000000000001',
-          user_id: '00000000-0000-0000-0000-000000000002',
-          mensagem: question,
-        }),
+        body: JSON.stringify({ mensagem: question }),
       });
       if (!response.ok) throw new Error('ana_unavailable');
       const raw = await response.text();
@@ -38,7 +27,7 @@ export function AnaWidget() {
         ?.replace(/^data: /, '');
       setAnswer(dataLine ? ((JSON.parse(dataLine) as { texto?: string }).texto ?? raw) : raw);
     } catch {
-      setAnswer('Não consegui conectar à Ana agora. Tente novamente e confirme a fonte oficial.');
+      setAnswer('Não consegui conectar à Ana agora. Entre na conta e confirme a fonte oficial.');
     } finally {
       setLoading(false);
     }

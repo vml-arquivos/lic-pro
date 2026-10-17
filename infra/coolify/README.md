@@ -1,6 +1,6 @@
 # Deploy no Coolify — esqueleto de produção
 
-Esta pasta documenta o caminho para subir o esqueleto do Licite Comigo em uma VPS própria usando Coolify. O domínio temporário pode ser `licitecomigo.buscarr.com.br`, mas ele **não é hardcoded**: configure `APP_URL`, `API_URL`, `WS_URL`, `ALLOWED_ORIGINS` e `NEXT_PUBLIC_AI_API_URL` no ambiente do Coolify.
+Esta pasta documenta o caminho para subir o esqueleto do Licite Comigo em uma VPS própria usando Coolify. O domínio temporário pode ser `licitecomigo.buscarr.com.br`, mas ele **não é hardcoded**: configure `APP_URL`, `API_URL`, `WS_URL` e `ALLOWED_ORIGINS` no ambiente do Coolify. O AI é acessado somente pelo proxy same-origin do web via `AI_INTERNAL_URL`.
 
 Não há deploy automatizado nesta fase, não há credenciais de infraestrutura no repositório e não há acesso ao servidor. O resultado é código pronto para configurar.
 
@@ -9,7 +9,7 @@ Não há deploy automatizado nesta fase, não há credenciais de infraestrutura 
 1. Crie um recurso **Docker Compose** apontando para `docker-compose.prod.yml` e para a raiz do repositório.
 2. Configure uma rede privada do projeto e mantenha apenas o serviço `web` associado ao domínio público. Os demais serviços usam `expose` e não publicam portas no host.
 3. Preencha no painel de variáveis todos os valores de `.env.example`, substituindo todos os `change-me-*` por segredos fortes. Use `MIGRATION_DATABASE_URL` com a role `licite_owner` somente para o serviço `migrate`.
-4. Configure o domínio do recurso web com o valor de `APP_URL`. Se API, WebSocket e AI tiverem domínios próprios, informe-os em `API_URL`, `WS_URL` e `NEXT_PUBLIC_AI_API_URL`; se compartilharem domínio com paths, informe as URLs com os paths correspondentes.
+4. Configure o domínio do recurso web com o valor de `APP_URL`. Se API e WebSocket tiverem domínios próprios, informe-os em `API_URL` e `WS_URL`; o AI permanece em rede privada e recebe `AI_INTERNAL_URL=http://ai:8000`.
 5. Configure `ALLOWED_ORIGINS` com as origens exatas do browser. O core-api habilita CORS com credenciais somente para essa lista.
 6. Faça o primeiro start. A ordem é: PostgreSQL saudável, Redis/RabbitMQ saudáveis, `migrate` concluído, serviços internos e, por último, web.
 7. Em cada deploy, verifique os logs do serviço `migrate`. Migrations são one-shot e não são executadas dentro do processo web.
@@ -41,7 +41,7 @@ Nesse caminho, conecte os serviços à mesma rede privada, crie o PostgreSQL/Red
 
 ## Variáveis por serviço
 
-- **web:** `APP_URL`, `API_URL`, `WS_URL`, `NEXT_PUBLIC_AI_API_URL`, `ALLOWED_ORIGINS`.
+- **web:** `APP_URL`, `API_URL`, `WS_URL`, `AI_INTERNAL_URL`, `ALLOWED_ORIGINS`.
 - **core-api:** `JWT_SECRET`, `CORE_DATABASE_URL`, `REDIS_URL`, `APP_URL`, `API_URL`, `WS_URL`, `ALLOWED_ORIGINS`.
 - **ai:** `AI_DATABASE_URL`, `REDIS_URL`, limites `AI_*`, `ANA_HISTORY_RETENTION_DAYS` e provider configurável.
 - **ingest:** `INGEST_DATABASE_URL`, `REDIS_URL`, `RABBITMQ_URL`, `PNCP_BASE_URL`, `COMPRAS_GOV_BASE_URL`.
