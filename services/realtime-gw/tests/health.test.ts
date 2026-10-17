@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { getHealth } from '../src/index.js';
+import { getHealth, getReady } from '../src/index.js';
 
 describe('realtime-gw', () => {
-  it('reports its service health', () => {
+  it('exposes health and websocket readiness payloads', () => {
     expect(getHealth()).toMatchObject({ service: 'realtime-gw', status: 'ok' });
+    expect(getReady()).toMatchObject({ service: 'realtime-gw', ready: true, websocket: true });
   });
 });

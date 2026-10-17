@@ -1,3 +1,4 @@
+import fastifyCors from '@fastify/cors';
 import fastifyJwt from '@fastify/jwt';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import type { Pool } from 'pg';
@@ -12,6 +13,7 @@ import {
 } from './auth.js';
 import { loadConfig, type RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
+import { checkReadiness } from './readiness.js';
 import { buildEditalSearchQuery, editalSearchSchema } from './search.js';
 
 export type BuildAppOptions = {
@@ -60,6 +62,7 @@ const quizAttemptSchema = z.object({
   respostas: z.record(z.number().int().min(0).max(100)),
 });
 const glossaryPathSchema = z.object({ termo: z.string().trim().min(1).max(100) });
+const conversaPathSchema = z.object({ conversaId: z.string().uuid() });
 
 function sendDatabaseUnavailable(reply: FastifyReply): void {
   reply
@@ -110,6 +113,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const pool = options.pool;
   const app = Fastify({ logger: options.logger ?? true });
 
+  void app.register(fastifyCors, {
+    origin: config.allowedOrigins.length > 0 ? config.allowedOrigins : false,
+    credentials: true,
+  });
   void app.register(fastifyJwt, { secret: options.jwtSecret ?? config.jwtSecret });
 
   app.setErrorHandler((error, _request, reply) => {
@@ -125,7 +132,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.addHook('preHandler', async (request, reply) => {
-    if (request.url === '/health') {
+    if (request.url === '/health' || request.url === '/ready') {
       return;
     }
     await request.jwtVerify();
@@ -136,6 +143,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.get('/health', async () => ({ ...health('core-api'), databaseConfigured: Boolean(pool) }));
+
+  app.get('/ready', async (_request, reply) => {
+    const result = await checkReadiness(pool, config.redisUrl);
+    return reply.code(result.ready ? 200 : 503).send({ service: 'core-api', ...result });
+  });
 
   app.post('/tenants', async (request, reply) => {
     if (!requireRoles(reply, request, ['admin'])) return;
@@ -321,6 +333,53 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     });
     if (!result.edital) return reply.code(404).send({ error: 'edital_not_found' });
     return reply.send(result);
+  });
+
+  app.get('/ana/conversations', async (request, reply) => {
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) =>
+      client.query(
+        `SELECT id, titulo, created_at, updated_at
+           FROM ana_conversas
+          WHERE tenant_id = $1 AND usuario_id = $2 AND apagada_em IS NULL
+          ORDER BY updated_at DESC`,
+        [request.user.tenantId, request.user.sub],
+      ),
+    );
+    return reply.send({ data: result.rows });
+  });
+
+  app.get('/ana/conversations/:conversaId/messages', async (request, reply) => {
+    const { conversaId } = conversaPathSchema.parse(request.params);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) =>
+      client.query(
+        `SELECT m.id, m.tipo, m.conteudo, m.fonte, m.created_at
+           FROM ana_mensagens m
+           JOIN ana_conversas c ON c.id = m.conversa_id
+          WHERE m.tenant_id = $1 AND c.tenant_id = $1 AND c.usuario_id = $2
+            AND c.id = $3 AND c.apagada_em IS NULL
+          ORDER BY m.created_at`,
+        [request.user.tenantId, request.user.sub, conversaId],
+      ),
+    );
+    return reply.send({ data: result.rows });
+  });
+
+  app.delete('/ana/conversations/:conversaId', async (request, reply) => {
+    const { conversaId } = conversaPathSchema.parse(request.params);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) =>
+      client.query(
+        `UPDATE ana_conversas
+            SET apagada_em = now(), updated_at = now()
+          WHERE id = $1 AND tenant_id = $2 AND usuario_id = $3 AND apagada_em IS NULL
+          RETURNING id`,
+        [conversaId, request.user.tenantId, request.user.sub],
+      ),
+    );
+    if (!result.rows[0]) return reply.code(404).send({ error: 'conversation_not_found' });
+    return reply.code(204).send();
   });
 
   app.get('/academy/tracks', async (request, reply) => {

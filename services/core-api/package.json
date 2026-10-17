@@ -1,6 +1,6 @@
 {
   "name": "@licitecomigo/core-api",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,10 +13,12 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@fastify/cors": "^10.0.2",
     "@fastify/jwt": "^9.0.1",
     "@licitecomigo/shared": "workspace:*",
     "fastify": "^5.2.1",
     "pg": "^8.13.1",
+    "redis": "^4.7.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {

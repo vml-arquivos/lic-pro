@@ -1,6 +1,6 @@
 {
   "name": "@licitecomigo/realtime-gw",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,9 +13,11 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@licitecomigo/shared": "workspace:*"
+    "@licitecomigo/shared": "workspace:*",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@types/ws": "^8.5.13",
     "vitest": "^2.1.8"
   }
 }
