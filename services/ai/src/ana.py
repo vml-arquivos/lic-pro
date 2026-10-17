@@ -38,12 +38,18 @@ class GlossaryTool:
         del tenant_id
         term = argument.strip().lower()
         definitions = {
-            "edital": "Documento que reúne regras, prazos e requisitos da oportunidade.",
-            "habilitação": "Conjunto de documentos e condições exigidos para participar.",
-            "catmat": "Catálogo de materiais usado para identificar itens de material.",
-            "catser": "Catálogo de serviços usado para identificar itens de serviço.",
+            "edital": ("Documento que reúne regras, prazos e requisitos da oportunidade.", "rascunho_para_revisao"),
+            "habilitação": ("Conjunto de documentos e condições exigidos para participar.", "rascunho_para_revisao"),
+            "catmat": ("Catálogo de materiais usado para identificar itens de material.", "rascunho_para_revisao"),
+            "catser": ("Catálogo de serviços usado para identificar itens de serviço.", "rascunho_para_revisao"),
         }
-        return definitions.get(term, "Não tenho uma definição revisada para esse termo."), []
+        definition = definitions.get(term)
+        if definition is None:
+            return "Não tenho uma definição revisada para esse termo.", []
+        text, status = definition
+        if status == "rascunho_para_revisao":
+            text += " Aviso: conteúdo em revisão, confirme na norma vigente."
+        return text, []
 
 
 class SearchEditaisTool:

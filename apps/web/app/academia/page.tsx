@@ -40,6 +40,7 @@ export default function AcademyPage() {
             simpleDefinition="Documento que reúne regras, prazos e requisitos da oportunidade."
           />
         </span>
+        <small>Conteúdo em revisão, confirme na norma vigente.</small>
       </section>
 
       <section className="track-grid" aria-label="Trilhas disponíveis">

@@ -49,6 +49,7 @@ def test_prompt_injection_is_treated_as_user_data_and_cannot_mutate() -> None:
     )
 
     assert "Documento que reúne regras" in response.texto
+    assert "conteúdo em revisão, confirme na norma vigente" in response.texto
     assert response.ferramentas == ["explicar_conceito"]
 
 
