@@ -1,26 +1,35 @@
-.PHONY: install dev lint test build format infra-up infra-down
+.PHONY: install dev lint test build format infra-up infra-down db-migrate db-seed ingest-smoke
 
 install:
-\tpnpm install
+	pnpm install
 
 infra-up:
-\tdocker compose up -d postgres redis rabbitmq
+	docker compose up -d postgres redis rabbitmq
 
 infra-down:
-\tdocker compose down
+	docker compose down
+
+db-migrate:
+	pnpm db:migrate
+
+db-seed:
+	pnpm db:seed
+
+ingest-smoke:
+	pnpm ingest:smoke
 
 lint:
-\tpnpm lint
-\tpnpm format:check
+	pnpm lint
+	pnpm format:check
 
 test:
-\tpnpm test
+	pnpm test
 
 build:
-\tpnpm build
+	pnpm build
 
 format:
-\tpnpm format
+	pnpm format
 
 dev:
-\tpnpm dev
+	pnpm dev
