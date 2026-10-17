@@ -81,6 +81,8 @@ async def reader_ingest(
 ) -> dict[str, int | bool]:
     _uuid(edital_id, "edital_id")
     _guard_rate(auth.tenant_id, auth.user_id)
+    if ocr_enabled and os.getenv("ENABLE_OCR", "false").lower() != "true":
+        raise HTTPException(status_code=422, detail="ocr_not_configured")
     if file.content_type not in {"application/pdf", "application/octet-stream"}:
         raise HTTPException(status_code=415, detail="envie um PDF")
     content = await file.read(limits.max_pdf_bytes + 1)

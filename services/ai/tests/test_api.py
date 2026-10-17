@@ -141,3 +141,16 @@ def test_reader_timeout_is_configurable(monkeypatch: MonkeyPatch) -> None:
         assert response.json()["detail"] == "reader_timeout"
     finally:
         main.limits.reader_timeout_seconds = previous
+
+
+def test_reader_rejects_ocr_without_configured_worker(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setenv("ENABLE_OCR", "false")
+    main.rate_limiter.reset()
+    response = TestClient(app).post(
+        "/reader/ingest",
+        headers=auth_headers(),
+        data={"edital_id": EDITAL_ID, "ocr_enabled": "true"},
+        files={"file": ("edital.pdf", b"fixture", "application/pdf")},
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"] == "ocr_not_configured"

@@ -2,10 +2,10 @@
 
 A Fase 3 transforma este serviço em uma base segura para Reader/RAG e Ana:
 
-- `POST /reader/ingest` extrai texto de PDF, preserva página, identifica headings/cláusulas, cria chunks estruturais e embeddings por provider configurável;
+- `POST /reader/ingest` extrai texto de PDF, preserva página, identifica headings/cláusulas, cria chunks estruturais e embeddings por provider configurável; o pedido de OCR retorna `ocr_not_configured` enquanto não houver worker habilitado, sem fingir fallback;
 - `POST /reader/analyze` recupera chunks apenas dentro do tenant/edital e devolve resumo, riscos, pontos de atenção, checklist, perguntas e evidências;
 - `POST /ana/chat/stream` devolve SSE, respeita rate limit/cotas e usa somente as ferramentas de leitura `buscar_editais`, `ler_analise_edital` e `explicar_conceito`;
-- o provider de LLM inicial é `fake`, substituível por configuração após revisão de prompt, custos e privacidade;
+- o provider de LLM inicial é `fake`, substituível por configuração após revisão de prompt, custos e privacidade; o prompt enviado pelo usuário (`pergunta`) é separado da fonte persistida e toda resposta deve citar evidências;
 - o texto da Ana deixa claro que a saída não é conclusão jurídica nem promessa de vitória;
 - `ANA_HISTORY_RETENTION_DAYS` configura `python -m src.retention`, job que exclui histórico expirado, grava contadores/status em `ana_retencao_execucoes` e registra falhas. Ele deve ser agendado fora do processo web, por cron/Coolify Job ou scheduler operacional revisado.
 
