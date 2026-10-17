@@ -178,3 +178,207 @@ main > p:not(.eyebrow):not(.notice) {
 .placeholder {
   opacity: 0.75;
 }
+
+.academy-page {
+  max-width: 72rem;
+  padding-top: 3rem;
+}
+
+.journey-callout,
+.onboarding-form,
+.track-card,
+.module-card,
+.lesson-player,
+.checklist-card,
+.quiz-card,
+.mentor-card {
+  background: var(--lc-color-muted);
+  border: 1px solid var(--lc-color-border);
+  border-radius: var(--lc-radius-lg);
+  padding: 1.25rem;
+}
+
+.journey-callout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2rem;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.glossary-term abbr {
+  border-bottom: 1px dotted var(--lc-color-foreground);
+  cursor: help;
+  text-decoration: none;
+}
+
+.track-grid,
+.mentor-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.track-card,
+.module-card,
+.mentor-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.track-card h2,
+.module-card h2,
+.mentor-card h2 {
+  margin: 0;
+}
+
+.track-card p:not(.eyebrow),
+.module-card p:not(.eyebrow),
+.mentor-card p:not(.eyebrow) {
+  color: var(--lc-color-muted-foreground);
+  line-height: 1.55;
+}
+
+.progress-line {
+  background: var(--lc-color-border);
+  border-radius: 999px;
+  height: 0.5rem;
+  overflow: hidden;
+}
+
+.progress-line span {
+  background: var(--lc-color-primary);
+  display: block;
+  height: 100%;
+}
+
+.track-footer,
+.module-actions,
+.academy-links {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.academy-links {
+  justify-content: flex-start;
+  margin-top: 1.5rem;
+}
+
+.academy-links a,
+.button-quiet {
+  color: var(--lc-color-foreground);
+  font-weight: 700;
+}
+
+.button-quiet {
+  background: transparent;
+  border: 1px solid var(--lc-color-border);
+  border-radius: var(--lc-radius-sm);
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+}
+
+.onboarding-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.question-card {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.question-card span,
+.question-card legend {
+  font-weight: 700;
+}
+
+.question-card select {
+  background: var(--lc-color-background);
+  border: 1px solid var(--lc-color-border);
+  border-radius: var(--lc-radius-sm);
+  color: var(--lc-color-foreground);
+  padding: 0.75rem;
+}
+
+.question-card label {
+  color: var(--lc-color-muted-foreground);
+  font-weight: 400;
+}
+
+.onboarding-form > button,
+.checklist-card button,
+.quiz-card button {
+  background: var(--lc-color-primary);
+  border: 0;
+  border-radius: var(--lc-radius-sm);
+  color: var(--lc-color-primary-foreground);
+  cursor: pointer;
+  padding: 0.8rem 1rem;
+}
+
+.success-message {
+  color: var(--lc-color-muted-foreground);
+}
+
+.lesson-player {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: minmax(12rem, 1fr) minmax(14rem, 1fr);
+}
+
+.video-placeholder {
+  align-items: center;
+  background: var(--lc-color-background);
+  border: 1px dashed var(--lc-color-border);
+  border-radius: var(--lc-radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  justify-content: center;
+  min-height: 14rem;
+}
+
+.video-placeholder strong {
+  font-size: 2rem;
+}
+
+.lesson-copy p,
+.checklist-card label,
+.quiz-card label,
+.mentor-card p {
+  color: var(--lc-color-muted-foreground);
+  line-height: 1.6;
+}
+
+.checklist-card,
+.quiz-card {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.checklist-card h2,
+.quiz-card h2 {
+  margin: 0;
+}
+
+.checklist-card button,
+.quiz-card button {
+  justify-self: start;
+  margin-top: 0.5rem;
+}
+
+.mentor-card strong {
+  margin-top: auto;
+}
+
+@media (max-width: 42rem) {
+  .lesson-player {
+    grid-template-columns: 1fr;
+  }
+}

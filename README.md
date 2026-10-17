@@ -6,7 +6,7 @@ A identidade visual atual é provisória. O wordmark, os tokens, o preset Tailwi
 
 ## Estado do projeto
 
-Esta entrega cobre as **Fases 0, 1 e 2**. A fundação, o banco multi-tenant com RLS, o core API, os conectores oficiais do Radar, a normalização, os eventos, a busca e as telas iniciais do Radar estão implementados.
+Esta entrega cobre as **Fases 0, 1, 2 e 2B**. A fundação, o banco multi-tenant com RLS, o core API, os conectores oficiais do Radar, a normalização, os eventos, a busca, o onboarding, a adaptação guiada/profissional e a Academia com trilhas, player, progresso, quizzes e painel de mentor estão implementados.
 
 A Fase 3 adicionará Reader/RAG e Ana de leitura. Após a Fase 3, o desenvolvimento deve parar para revisão antes das fases 4 a 6.
 
@@ -44,11 +44,11 @@ Para desligar os containers:
 docker compose down
 ```
 
-O app web roda com `pnpm --filter @licitecomigo/web dev`. O core API roda com `pnpm --filter @licitecomigo/core-api dev` e expõe `GET /editais` com filtros de palavra-chave, CATMAT/CATSER, UF, UASG, modalidade e faixa de valor, sempre dentro do tenant da sessão.
+O app web roda com `pnpm --filter @licitecomigo/web dev`. O core API roda com `pnpm --filter @licitecomigo/core-api dev` e expõe `GET /editais` com filtros de palavra-chave, CATMAT/CATSER, UF, UASG, modalidade e faixa de valor, sempre dentro do tenant da sessão. A Academia usa `/onboarding`, `/academia`, `/academia/trilhas/:slug` e `/academia/mentor`; as rotas equivalentes do backend ficam sob `/academy`.
 
 ## Organização
 
-`apps/web` contém o Next.js com App Router, incluindo `/radar` e o detalhe do edital. `services/core-api` contém autenticação, RBAC, CRUD, auditoria e busca do Radar. `services/ingest` contém os clientes oficiais do PNCP e Compras.gov.br, normalizador, upsert e eventos. `services/bid-engine` e `services/realtime-gw` continuam como fundações para fases posteriores. `services/ai` permanece reservado para a Fase 3.
+`apps/web` contém o Next.js com App Router, incluindo Radar, onboarding e Academia. `packages/ui` contém tokens e adaptação de jornada compartilhada. `services/core-api` contém autenticação, RBAC, CRUD, auditoria, busca do Radar e rotas de Academia. `services/ingest` contém os clientes oficiais do PNCP e Compras.gov.br, normalizador, upsert e eventos. `services/bid-engine` e `services/realtime-gw` continuam como fundações para fases posteriores. `services/ai` permanece reservado para a Fase 3.
 
 A arquitetura detalhada está em [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), os riscos e controles em [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md), a especificação da Ana em [`docs/ANA.md`](docs/ANA.md), as fontes da Fase 2 em [`docs/research/fase2-apis-oficiais.md`](docs/research/fase2-apis-oficiais.md) e as decisões em [`docs/DECISIONS.md`](docs/DECISIONS.md).
 

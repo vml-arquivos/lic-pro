@@ -23,3 +23,7 @@
 ## ADR-0006 — Contratos oficiais do Radar
 
 **Status:** aceito. **Contexto:** endpoints públicos de PNCP e Compras.gov.br podem mudar e rotas não documentadas não devem entrar no produto. **Decisão:** os conectores usam somente os OpenAPI/manuais oficiais registrados em `docs/research/fase2-apis-oficiais.md`; a paginação PNCP segue o OpenAPI vigente consultado, mesmo quando manuais antigos registram outro limite. **Consequência:** alterações futuras exigem atualizar a fonte registrada e os fixtures antes de alterar o cliente.
+
+## ADR-0007 — Jornada adaptativa e conteúdo acadêmico em revisão
+
+**Status:** aceito. **Contexto:** iniciantes e profissionais precisam da mesma base com densidade e orientação diferentes, sem criar duas plataformas divergentes. **Decisão:** o perfil de jornada é um atributo persistido (`iniciante`, `mentorado`, `profissional`) que controla modo guiado/profissional, glossário e próximo passo; trilhas, aulas e quizzes entram como conteúdo versionável com status `rascunho_para_revisao`. **Consequência:** nenhum conteúdo acadêmico deve ser tratado como material jurídico definitivo, e quizzes precisam passar por revisão editorial antes de publicação.
