@@ -1,16 +1,22 @@
 [project]
 name = "licite-comigo-ai"
-version = "0.1.0"
-description = "Agentes de IA e assistente Ana do Licite Comigo."
+version = "0.2.0"
+description = "Reader/RAG, agentes e assistente Ana do Licite Comigo."
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+  "fastapi>=0.115,<1",
+  "pypdf>=5,<6",
+  "python-multipart>=0.0.20,<1",
+  "pydantic>=2.10,<3",
+  "uvicorn>=0.34,<1",
+]
 
 [project.optional-dependencies]
-dev = ["mypy>=1.14,<2", "pytest>=8.3,<9", "ruff>=0.9,<1"]
+dev = ["httpx>=0.28,<1", "mypy>=1.14,<2", "pytest>=8.3,<9", "ruff>=0.9,<1"]
 
 [tool.ruff]
 target-version = "py312"
-line-length = 100
+line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
