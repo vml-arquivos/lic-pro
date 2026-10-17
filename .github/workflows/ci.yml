@@ -13,6 +13,20 @@ jobs:
   javascript:
     name: JavaScript / TypeScript
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: licite_comigo
+          POSTGRES_USER: licite
+          POSTGRES_PASSWORD: change-me-ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U licite -d licite_comigo"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,6 +39,15 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install --yes postgresql-client
+      - name: Apply migrations
+        env:
+          PGPASSWORD: change-me-ci-only
+        run: |
+          for file in db/migrations/*.sql; do
+            psql --host localhost --username licite --dbname licite_comigo --set ON_ERROR_STOP=1 --file "$file"
+          done
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Check formatting
@@ -34,6 +57,8 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
       - name: Test
+        env:
+          TEST_DATABASE_URL: postgresql://licite:change-me-ci-only@localhost:5432/licite_comigo
         run: pnpm test
       - name: Build
         run: pnpm build
