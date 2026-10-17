@@ -178,15 +178,18 @@ async function audit(
   metadata: Record<string, unknown> = {},
 ): Promise<void> {
   await client.query(
-    `INSERT INTO auditoria (tenant_id, usuario_id, acao, recurso, recurso_id, metadata)
-     VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+    `INSERT INTO auditoria
+       (tenant_id, usuario_id, empresa_id, acao, recurso, recurso_id, metadata, request_id, origem, versao_dados)
+     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, 'app', 'mvp1')`,
     [
       request.user.tenantId,
       request.user.sub,
+      request.user.empresaId ?? null,
       action,
       resource,
       resourceId,
       JSON.stringify(metadata),
+      request.id,
     ],
   );
 }
