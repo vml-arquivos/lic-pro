@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
+import { RadarResults } from './RadarResults';
 
 export const metadata = {
   title: 'Radar | Licite Comigo',
@@ -8,9 +10,18 @@ export const metadata = {
 export default function RadarPage() {
   return (
     <main className="radar-page">
-      <Link className="back-link" href="/">
-        ← Licite Comigo
-      </Link>
+      <header className="app-header">
+        <div>
+          <p className="eyebrow">Radar</p>
+          <strong>Oportunidades com fonte</strong>
+        </div>
+        <nav aria-label="Navegação principal">
+          <Link href="/">Dashboard</Link>
+          <Link href="/empresas">Empresas</Link>
+          <Link href="/academia">Academia</Link>
+          <Link href="/ana">Ana</Link>
+        </nav>
+      </header>
       <div className="page-heading">
         <p className="eyebrow">Radar de editais</p>
         <h1>Encontre oportunidades para analisar com calma.</h1>
@@ -19,7 +30,6 @@ export default function RadarPage() {
           confira sempre o edital e a fonte original antes de tomar uma decisão.
         </p>
       </div>
-
       <form className="filter-card" action="/radar" method="get">
         <label>
           Palavra-chave
@@ -39,25 +49,15 @@ export default function RadarPage() {
         </label>
         <button type="submit">Buscar editais</button>
       </form>
-
-      <section className="radar-empty" aria-live="polite">
-        <strong>Conecte os filtros ao core API para carregar resultados.</strong>
-        <p>
-          A busca já está preparada no backend com paginação, texto em português e escopo por
-          tenant.
-        </p>
-      </section>
-
-      <section className="radar-example">
-        <div>
-          <p className="eyebrow">Exemplo de navegação</p>
-          <h2>Detalhe do edital</h2>
-          <p>Itens, análise IA, raio-x e proposta aparecem como áreas separadas.</p>
-        </div>
-        <Link className="button-secondary" href="/radar/00000000-0000-0000-0000-000000000001">
-          Ver detalhe demonstrativo
-        </Link>
-      </section>
+      <Suspense
+        fallback={
+          <section className="radar-empty">
+            <p>Carregando resultados…</p>
+          </section>
+        }
+      >
+        <RadarResults />
+      </Suspense>
     </main>
   );
 }

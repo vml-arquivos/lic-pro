@@ -6,7 +6,7 @@ A identidade visual atual é provisória. O wordmark, os tokens, o preset Tailwi
 
 ## Estado do projeto
 
-Esta entrega cobre as **Fases 0, 1, 2, 2B, 3 e 3.1**. A fundação, o banco multi-tenant com RLS, o core API, os conectores oficiais do Radar, a normalização, os eventos, a busca, o onboarding, a adaptação guiada/profissional, a Academia, o Reader/RAG, a Ana somente-leitura, as roles de aplicação e o esqueleto de deploy estão implementados.
+Esta entrega cobre as **Fases 0, 1, 2, 2B, 3, 3.1 e o MVP 1 da especificação v2**. Além da fundação, banco multi-tenant com RLS, conectores oficiais, Academia, Reader/RAG, Ana somente-leitura, roles e deploy, o MVP 1 entrega sessão local, empresas/CNPJ, concessão de mentor, dashboard, Radar autenticado, pipeline de oportunidades, versões/evidências do edital e correções auditadas.
 
 Conforme solicitado, as fases posteriores não foram iniciadas. A automação de portais e ações reais de lance não foi implementada.
 
@@ -43,7 +43,7 @@ docker compose up -d postgres redis rabbitmq
 docker compose down
 ```
 
-O app web roda com `pnpm --filter @licitecomigo/web dev`. O core API roda com `pnpm --filter @licitecomigo/core-api dev` e expõe `GET /health` e `GET /ready`; a readiness exige banco e Redis. O serviço de IA expõe `/health`, `/ready`, `/reader/ingest`, `/reader/analyze` e `/ana/chat/stream`. O ingest expõe `/health` e `/ready`; bid-engine e realtime-gw expõem ambos os endpoints, sendo o realtime responsável por upgrade WebSocket em `/ws`.
+O app web roda com `pnpm --filter @licitecomigo/web dev`. O core API roda com `pnpm --filter @licitecomigo/core-api dev`, expõe `GET /health` e `GET /ready` e concentra `/auth/login`, `/me`, `/companies`, `/mentor/companies`, `/opportunities`, `/dashboard/summary`, `/editais` e `/reader/chunks`; a readiness exige banco e Redis. O web usa proxies same-origin em `/api/core/*`, `/api/auth/login` e `/api/reader/*`, sem expor URL interna do AI ao browser. O serviço de IA expõe `/health`, `/ready`, `/reader/ingest`, `/reader/analyze` e `/ana/chat/stream`. O ingest expõe `/health` e `/ready`; bid-engine e realtime-gw expõem ambos os endpoints, sendo o realtime responsável por upgrade WebSocket em `/ws`.
 
 O smoke test das fontes públicas é opt-in e nunca roda no CI:
 

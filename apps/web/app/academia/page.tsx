@@ -17,6 +17,7 @@ const tracks = [
 ];
 
 export default function AcademyPage() {
+  const demoMode = process.env.DEMO_MODE === 'true';
   return (
     <main className="academy-page">
       <Link className="back-link" href="/">
@@ -32,6 +33,11 @@ export default function AcademyPage() {
       </div>
 
       <section className="journey-callout">
+        {demoMode ? (
+          <strong className="demo-warning">
+            Modo demo ativo: não use estes dados como conteúdo de produção.
+          </strong>
+        ) : null}
         <strong>Próximo passo sugerido: fundamentos.</strong>
         <span>
           Glossário rápido:{' '}
