@@ -58,3 +58,123 @@ main > p:not(.eyebrow):not(.notice) {
   margin-top: 2rem;
   padding: 0.75rem 1rem;
 }
+
+.back-link,
+.button-secondary {
+  color: var(--lc-color-foreground);
+  font-weight: 700;
+}
+
+.radar-page {
+  max-width: 72rem;
+  padding-top: 3rem;
+}
+
+.page-heading {
+  margin: 4rem 0 2rem;
+}
+
+.page-heading h1 {
+  max-width: 16ch;
+}
+
+.page-heading p:not(.eyebrow),
+.lead {
+  color: var(--lc-color-muted-foreground);
+  max-width: 44rem;
+  line-height: 1.6;
+}
+
+.filter-card,
+.radar-empty,
+.radar-example,
+.detail-card {
+  background: var(--lc-color-muted);
+  border: 1px solid var(--lc-color-border);
+  border-radius: var(--lc-radius-lg);
+  padding: 1.25rem;
+}
+
+.filter-card {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.filter-card label {
+  display: grid;
+  font-size: 0.875rem;
+  font-weight: 700;
+  gap: 0.5rem;
+}
+
+.filter-card input {
+  background: var(--lc-color-background);
+  border: 1px solid var(--lc-color-border);
+  border-radius: var(--lc-radius-sm);
+  color: var(--lc-color-foreground);
+  padding: 0.75rem;
+}
+
+.filter-card button,
+.button-secondary {
+  align-self: end;
+  background: var(--lc-color-primary);
+  border: 0;
+  border-radius: var(--lc-radius-sm);
+  color: var(--lc-color-primary-foreground);
+  cursor: pointer;
+  display: inline-block;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  text-decoration: none;
+}
+
+.radar-empty,
+.radar-example,
+.detail-card {
+  margin-top: 1.5rem;
+}
+
+.radar-empty p,
+.radar-example p,
+.detail-card p {
+  color: var(--lc-color-muted-foreground);
+  line-height: 1.6;
+}
+
+.radar-example {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.radar-example h2,
+.detail-card h2 {
+  margin-bottom: 0.25rem;
+}
+
+.tabs {
+  border-bottom: 1px solid var(--lc-color-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 2rem;
+}
+
+.tab {
+  color: var(--lc-color-muted-foreground);
+  padding: 0.75rem 1rem;
+  text-decoration: none;
+}
+
+.tab.active {
+  border-bottom: 2px solid var(--lc-color-foreground);
+  color: var(--lc-color-foreground);
+  font-weight: 700;
+}
+
+.placeholder {
+  opacity: 0.75;
+}

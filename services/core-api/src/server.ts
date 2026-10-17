@@ -12,6 +12,7 @@ import {
 } from './auth.js';
 import { loadConfig, type RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
+import { buildEditalSearchQuery, editalSearchSchema } from './search.js';
 
 export type BuildAppOptions = {
   pool?: Pool;
@@ -42,6 +43,7 @@ const updateUserSchema = z.object({
   perfil_jornada: journeyProfileSchema.optional(),
   onboarding_concluido: z.boolean().optional(),
 });
+const editalPathSchema = z.object({ editalId: z.string().uuid() });
 
 function sendDatabaseUnavailable(reply: FastifyReply): void {
   reply
@@ -113,7 +115,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     await request.jwtVerify();
     const claims = authClaimsSchema.safeParse(request.user);
     if (!claims.success) {
-      reply.code(401).send({ error: 'invalid_claims' });
+      return reply.code(401).send({ error: 'invalid_claims' });
     }
   });
 
@@ -232,6 +234,54 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return updated.rows[0];
     });
     if (!result) return reply.code(404).send({ error: 'user_not_found' });
+    return reply.send(result);
+  });
+
+  app.get('/editais', async (request, reply) => {
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const filters = editalSearchSchema.parse(request.query);
+    const search = buildEditalSearchQuery(filters);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const [rows, count] = await Promise.all([
+        client.query(search.text, search.values),
+        client.query<{ total: number }>(search.countText, search.countValues),
+      ]);
+      return { rows: rows.rows, total: count.rows[0]?.total ?? 0 };
+    });
+    return reply.send({
+      data: result.rows,
+      page: filters.page,
+      page_size: filters.page_size,
+      total: result.total,
+      total_pages: Math.ceil(result.total / filters.page_size),
+    });
+  });
+
+  app.get('/editais/:editalId', async (request, reply) => {
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const { editalId } = editalPathSchema.parse(request.params);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const [edital, itens] = await Promise.all([
+        client.query(
+          `SELECT id, fonte, id_externo, titulo, orgao, uf, uasg, modalidade, catmat_catser,
+                  valor_estimado, data_publicacao, url_origem, conteudo_texto, hash_conteudo,
+                  created_at, updated_at
+             FROM editais
+            WHERE id = $1`,
+          [editalId],
+        ),
+        client.query(
+          `SELECT id, numero, descricao, unidade, quantidade, valor_unitario_estimado,
+                  catmat_catser
+             FROM itens_edital
+            WHERE edital_id = $1
+            ORDER BY numero`,
+          [editalId],
+        ),
+      ]);
+      return { edital: edital.rows[0], itens: itens.rows };
+    });
+    if (!result.edital) return reply.code(404).send({ error: 'edital_not_found' });
     return reply.send(result);
   });
 
