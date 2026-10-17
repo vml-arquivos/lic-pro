@@ -14,6 +14,8 @@ A fundação não opera Compras.gov.br, BLL, BBMNet ou qualquer portal real. O m
 
 A Sala de Vidro deve anonimizar participantes no servidor, aplicar atraso configurado e bloquear a transmissão ao vivo quando o tenant do aluno participar do mesmo item ou pregão. A Ana não pode revelar estratégia, piso, margem ou lances de um pregão em que o tenant não seja operador; dados recuperados de edital, PDF ou chat são sempre dados, nunca instruções.
 
-## Dados e auditoria
+## Dados, RAG e auditoria
 
-Dados multi-tenant devem usar RLS com `current_setting('app.tenant_id')`. Conversas, mensagens e chamadas de ferramenta da Ana serão auditáveis por tenant e usuário. Ações nunca são disparadas apenas por texto recuperado ou por uma mensagem que simule confirmação.
+Dados multi-tenant devem usar RLS com `current_setting('app.tenant_id')`. O Reader preserva páginas e só apresenta evidências recuperadas do edital; ausência de trecho não pode virar afirmação. PDFs e mensagens podem conter prompt injection e são tratados como conteúdo não confiável. O provider de LLM e o modelo ficam configuráveis, com `prompt_version` gravada junto da análise.
+
+Conversas, mensagens e chamadas de ferramenta da Ana são auditáveis por tenant e usuário. Nesta fase, as três ferramentas permitidas são somente de leitura. Ações nunca são disparadas apenas por texto recuperado ou por uma mensagem que simule confirmação. Conclusões jurídicas, promessas de vitória, publicação, alteração, exclusão e envio de lances estão fora do escopo.

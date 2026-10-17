@@ -6,9 +6,9 @@ A identidade visual atual é provisória. O wordmark, os tokens, o preset Tailwi
 
 ## Estado do projeto
 
-Esta entrega cobre as **Fases 0, 1, 2 e 2B**. A fundação, o banco multi-tenant com RLS, o core API, os conectores oficiais do Radar, a normalização, os eventos, a busca, o onboarding, a adaptação guiada/profissional e a Academia com trilhas, player, progresso, quizzes e painel de mentor estão implementados.
+Esta entrega cobre as **Fases 0, 1, 2, 2B e 3**. A fundação, o banco multi-tenant com RLS, o core API, os conectores oficiais do Radar, a normalização, os eventos, a busca, o onboarding, a adaptação guiada/profissional, a Academia, o Reader/RAG e a Ana com ferramentas somente leitura estão implementados.
 
-A Fase 3 adicionará Reader/RAG e Ana de leitura. Após a Fase 3, o desenvolvimento deve parar para revisão antes das fases 4 a 6.
+Conforme solicitado, o desenvolvimento para aqui para revisão antes das fases 4 a 6. Hunter, Pricer e Writer ficam apenas como interfaces/skeletons nesta parada; a automação de portais e ações reais não foi implementada.
 
 ## Requisitos locais
 
@@ -44,14 +44,14 @@ Para desligar os containers:
 docker compose down
 ```
 
-O app web roda com `pnpm --filter @licitecomigo/web dev`. O core API roda com `pnpm --filter @licitecomigo/core-api dev` e expõe `GET /editais` com filtros de palavra-chave, CATMAT/CATSER, UF, UASG, modalidade e faixa de valor, sempre dentro do tenant da sessão. A Academia usa `/onboarding`, `/academia`, `/academia/trilhas/:slug` e `/academia/mentor`; as rotas equivalentes do backend ficam sob `/academy`.
+O app web roda com `pnpm --filter @licitecomigo/web dev`. O core API roda com `pnpm --filter @licitecomigo/core-api dev` e expõe `GET /editais` com filtros de palavra-chave, CATMAT/CATSER, UF, UASG, modalidade e faixa de valor, sempre dentro do tenant da sessão. A Academia usa `/onboarding`, `/academia`, `/academia/trilhas/:slug` e `/academia/mentor`; as rotas equivalentes do backend ficam sob `/academy`. O serviço de IA expõe `/reader/ingest`, `/reader/analyze` e `/ana/chat/stream`.
 
 ## Organização
 
-`apps/web` contém o Next.js com App Router, incluindo Radar, onboarding e Academia. `packages/ui` contém tokens e adaptação de jornada compartilhada. `services/core-api` contém autenticação, RBAC, CRUD, auditoria, busca do Radar e rotas de Academia. `services/ingest` contém os clientes oficiais do PNCP e Compras.gov.br, normalizador, upsert e eventos. `services/bid-engine` e `services/realtime-gw` continuam como fundações para fases posteriores. `services/ai` permanece reservado para a Fase 3.
+`apps/web` contém o Next.js com App Router, incluindo Radar, onboarding, Academia, análise com evidências e o widget flutuante da Ana. `packages/ui` contém tokens e adaptação de jornada compartilhada. `services/core-api` contém autenticação, RBAC, CRUD, auditoria, busca do Radar e rotas de Academia. `services/ingest` contém os clientes oficiais do PNCP e Compras.gov.br, normalizador, upsert e eventos. `services/ai` contém extração estrutural de PDF, embeddings, Reader, provider boundary, Ana e skeletons de agentes futuros. `services/bid-engine` e `services/realtime-gw` continuam como fundações para fases posteriores.
 
 A arquitetura detalhada está em [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), os riscos e controles em [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md), a especificação da Ana em [`docs/ANA.md`](docs/ANA.md), as fontes da Fase 2 em [`docs/research/fase2-apis-oficiais.md`](docs/research/fase2-apis-oficiais.md) e as decisões em [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 ## Avisos de segurança
 
-Nunca commite `.env`, chaves, tokens ou dados reais. O produto não promete lucro ou vitória e não presta consultoria jurídica. A fundação não automatiza portais reais de licitação. Os conectores da Fase 2 somente consultam APIs públicas documentadas; não publicam nem alteram dados nos portais.
+Nunca commite `.env`, chaves, tokens ou dados reais. O produto não promete lucro ou vitória e não presta consultoria jurídica. A fundação não automatiza portais reais de licitação. Os conectores consultam APIs públicas documentadas; Reader e Ana somente organizam evidências e não publicam, alteram, apagam ou enviam lances para portais.
