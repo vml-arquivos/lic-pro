@@ -51,7 +51,7 @@ apps/web ── sessão do usuário ──► services/ai
 
 O sistema é um monorepo com fronteiras claras: aplicações web e serviços TypeScript vivem em workspaces pnpm; ingestão e IA usam projetos Python isolados por serviço. O PostgreSQL é a fonte de verdade para dados de negócio e auditoria. Redis fica reservado para estado efêmero, locks e coordenação; RabbitMQ transporta eventos assíncronos.
 
-Toda chamada sensível deve carregar o tenant e o usuário da sessão. Nenhum serviço da fundação usa conexão privilegiada para a Ana. Recursos de lances deverão depender de `PortalAdapter`; as Fases 2 e 3 apenas consultam fontes públicas e leem documentos, sem operar portais reais.
+Toda chamada sensível deve carregar o tenant e o usuário da sessão. Migrations usam `licite_owner`; runtime usa roles próprias `NOSUPERUSER`/`NOBYPASSRLS`, com grants mínimos e `FORCE ROW LEVEL SECURITY`. Nenhum serviço da fundação usa conexão privilegiada para a Ana. Recursos de lances deverão depender de `PortalAdapter`; as Fases 2, 3 e 3.1 apenas consultam fontes públicas e leem documentos, sem operar portais reais.
 
 ## Reader/RAG
 
@@ -59,8 +59,12 @@ O Reader preserva página, seção e cláusula durante a extração. O chunking 
 
 ## Ana
 
-Ana é read-only nesta fase. As ferramentas permitidas são `buscar_editais`, `ler_analise_edital` e `explicar_conceito`. A mensagem do usuário, o PDF e o conteúdo recuperado são dados não confiáveis; não alteram as regras do sistema. O histórico fica separado por tenant/usuário, e cada tool call é auditável. Conclusão jurídica, promessa de vitória e ações de portal estão fora do escopo.
+Ana é read-only nesta fase. As ferramentas permitidas são `buscar_editais`, `ler_analise_edital` e `explicar_conceito`. A mensagem do usuário, o PDF e o conteúdo recuperado são dados não confiáveis; não alteram as regras do sistema. O histórico fica separado por tenant/usuário, e cada tool call é auditável. Conclusão jurídica, promessa de vitória e ações de portal estão fora do escopo. Rate limits por usuário/tenant e `uso_ia` protegem custo e abuso.
+
+## Deploy e readiness
+
+`docker-compose.prod.yml` sobe PostgreSQL com pgvector, Redis, RabbitMQ, o serviço one-shot `migrate`, APIs, gateways e web em rede privada sem portas internas publicadas. Cada serviço tem `/health` liveness e `/ready`; o core/AI/ingest verificam dependências. O web recebe domínio por configuração, e WebSocket usa `/ws` com reconexão exponencial no cliente.
 
 ## Evolução planejada
 
-A Fase 3 está concluída nesta parada para revisão. As fases posteriores só começam após a revisão solicitada; Hunter, Pricer e Writer continuam como skeletons.
+A Fase 3.1 está concluída nesta parada para revisão. As fases posteriores só começam após a revisão solicitada; Hunter, Pricer e Writer continuam como skeletons.
