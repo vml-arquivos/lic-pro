@@ -1,0 +1,46 @@
+/* PROVISÓRIO: substitua somente este arquivo quando a identidade oficial for entregue. */
+:root {
+  --lc-color-background: hsl(0 0% 100%);
+  --lc-color-foreground: hsl(222 47% 11%);
+  --lc-color-muted: hsl(210 40% 96%);
+  --lc-color-muted-foreground: hsl(215 16% 47%);
+  --lc-color-primary: hsl(222 47% 11%);
+  --lc-color-primary-foreground: hsl(210 40% 98%);
+  --lc-color-border: hsl(214 32% 91%);
+  --lc-color-ring: hsl(215 20% 65%);
+  --lc-font-sans: ui-sans-serif, system-ui, sans-serif;
+  --lc-font-display: ui-sans-serif, system-ui, sans-serif;
+  --lc-font-mono: ui-monospace, SFMono-Regular, monospace;
+  --lc-radius-sm: 0.375rem;
+  --lc-radius-md: 0.5rem;
+  --lc-radius-lg: 0.75rem;
+  --lc-radius-full: 9999px;
+  --lc-shadow-sm: 0 1px 2px 0 hsl(222 47% 11% / 0.05);
+  --lc-shadow-md: 0 4px 12px hsl(222 47% 11% / 0.08);
+  --lc-space-page: 1.5rem;
+  --lc-space-section: 4rem;
+}
+
+.dark {
+  --lc-color-background: hsl(222 47% 11%);
+  --lc-color-foreground: hsl(210 40% 98%);
+  --lc-color-muted: hsl(217 33% 18%);
+  --lc-color-muted-foreground: hsl(215 20% 65%);
+  --lc-color-primary: hsl(210 40% 98%);
+  --lc-color-primary-foreground: hsl(222 47% 11%);
+  --lc-color-border: hsl(217 33% 24%);
+  --lc-color-ring: hsl(215 20% 65%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --lc-color-background: hsl(222 47% 11%);
+    --lc-color-foreground: hsl(210 40% 98%);
+    --lc-color-muted: hsl(217 33% 18%);
+    --lc-color-muted-foreground: hsl(215 20% 65%);
+    --lc-color-primary: hsl(210 40% 98%);
+    --lc-color-primary-foreground: hsl(222 47% 11%);
+    --lc-color-border: hsl(217 33% 24%);
+    --lc-color-ring: hsl(215 20% 65%);
+  }
+}

@@ -1,0 +1,14 @@
+/* PROVISÓRIO: o shadcn/ui consome os tokens, sem cores hardcoded nos componentes. */
+@layer base {
+  :root {
+    --background: var(--lc-color-background);
+    --foreground: var(--lc-color-foreground);
+    --muted: var(--lc-color-muted);
+    --muted-foreground: var(--lc-color-muted-foreground);
+    --primary: var(--lc-color-primary);
+    --primary-foreground: var(--lc-color-primary-foreground);
+    --border: var(--lc-color-border);
+    --ring: var(--lc-color-ring);
+    --radius: var(--lc-radius-md);
+  }
+}

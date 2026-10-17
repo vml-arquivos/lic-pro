@@ -1,0 +1,21 @@
+{
+  "name": "@licitecomigo/realtime-gw",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "lint": "eslint src",
+    "pretypecheck": "pnpm --filter @licitecomigo/shared build",
+    "start": "node dist/index.js",
+    "test": "vitest --config ../../vitest.config.ts run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@licitecomigo/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.8"
+  }
+}
