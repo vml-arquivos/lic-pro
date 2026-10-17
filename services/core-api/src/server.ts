@@ -13,6 +13,7 @@ import {
 } from './auth.js';
 import { loadConfig, type RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
+import { verifyPassword } from './password.js';
 import { checkReadiness } from './readiness.js';
 import { buildEditalSearchQuery, editalSearchSchema } from './search.js';
 
@@ -63,6 +64,11 @@ const quizAttemptSchema = z.object({
 });
 const glossaryPathSchema = z.object({ termo: z.string().trim().min(1).max(100) });
 const conversaPathSchema = z.object({ conversaId: z.string().uuid() });
+const loginSchema = z.object({
+  tenant_id: z.string().uuid(),
+  email: z.string().email(),
+  password: z.string().min(1).max(200),
+});
 
 function sendDatabaseUnavailable(reply: FastifyReply): void {
   reply
@@ -117,7 +123,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     origin: config.allowedOrigins.length > 0 ? config.allowedOrigins : false,
     credentials: true,
   });
-  void app.register(fastifyJwt, { secret: options.jwtSecret ?? config.jwtSecret });
+  const jwtOptions: { secret: string; issuer?: string; audience?: string } = {
+    secret: options.jwtSecret ?? config.jwtSecret,
+  };
+  if (config.jwtIssuer) jwtOptions.issuer = config.jwtIssuer;
+  if (config.jwtAudience) jwtOptions.audience = config.jwtAudience;
+  void app.register(fastifyJwt, jwtOptions);
 
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof z.ZodError) {
@@ -132,7 +143,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.addHook('preHandler', async (request, reply) => {
-    if (request.url === '/health' || request.url === '/ready') {
+    if (request.url === '/health' || request.url === '/ready' || request.url === '/auth/login') {
       return;
     }
     await request.jwtVerify();
@@ -147,6 +158,63 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.get('/ready', async (_request, reply) => {
     const result = await checkReadiness(pool, config.redisUrl);
     return reply.code(result.ready ? 200 : 503).send({ service: 'core-api', ...result });
+  });
+
+  app.post('/auth/login', async (request, reply) => {
+    const body = loginSchema.parse(request.body);
+    if (!pool) return sendDatabaseUnavailable(reply);
+
+    const client = await pool.connect();
+    let user:
+      | {
+          id: string;
+          tenant_id: string;
+          email: string;
+          papel: UserRole;
+          password_hash: string | null;
+        }
+      | undefined;
+    try {
+      await client.query('BEGIN');
+      await client.query("SELECT set_config('app.tenant_id', $1, true)", [body.tenant_id]);
+      const result = await client.query<{
+        id: string;
+        tenant_id: string;
+        email: string;
+        papel: UserRole;
+        password_hash: string | null;
+      }>(
+        `SELECT id, tenant_id, email, papel, password_hash
+           FROM usuarios
+          WHERE tenant_id = $1 AND lower(email) = lower($2) AND ativo = true`,
+        [body.tenant_id, body.email],
+      );
+      await client.query('COMMIT');
+      user = result.rows[0];
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    if (!user || !verifyPassword(body.password, user.password_hash)) {
+      return reply.code(401).send({ error: 'invalid_credentials' });
+    }
+    const tokenOptions: { expiresIn: number; issuer?: string; audience?: string } = {
+      expiresIn: config.jwtTtlSeconds,
+    };
+    if (config.jwtIssuer) tokenOptions.issuer = config.jwtIssuer;
+    if (config.jwtAudience) tokenOptions.audience = config.jwtAudience;
+    const accessToken = app.jwt.sign(
+      { sub: user.id, tenantId: user.tenant_id, role: user.papel, email: user.email },
+      tokenOptions,
+    );
+    return reply.send({
+      access_token: accessToken,
+      token_type: 'Bearer',
+      expires_in: config.jwtTtlSeconds,
+    });
   });
 
   app.post('/tenants', async (request, reply) => {

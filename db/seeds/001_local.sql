@@ -16,9 +16,12 @@ VALUES (
   'admin',
   'profissional',
   true,
-  'dev-only-no-login'
+  'scrypt$16384$8$1$bGljaXRlLWNvbWlnby1sb2NhbC1zYWx0$Hkc28dUl61j-hf-QCX1ZJQgPiNgjl3yb2cdx-xF5vtDJ57qYCGdTmubKsQAmHQ8LpB1GjxuEBK2TppPINjCG7Q'
 )
-ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome, papel = EXCLUDED.papel;
+ON CONFLICT (id) DO UPDATE SET
+  nome = EXCLUDED.nome,
+  papel = EXCLUDED.papel,
+  password_hash = EXCLUDED.password_hash;
 
 INSERT INTO glossario_termos (termo, definicao_simples, definicao_tecnica, referencia, status)
 VALUES ('edital', 'Documento com regras e prazos da oportunidade.', 'Instrumento convocatório da contratação pública.', 'Revisar norma vigente', 'rascunho_para_revisao')

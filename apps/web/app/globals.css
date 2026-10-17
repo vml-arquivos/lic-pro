@@ -59,6 +59,49 @@ main > p:not(.eyebrow):not(.notice) {
   padding: 0.75rem 1rem;
 }
 
+.auth-page {
+  max-width: 34rem;
+  padding-top: 5rem;
+}
+
+.auth-form {
+  background: var(--lc-color-muted);
+  border: 1px solid var(--lc-color-border);
+  border-radius: var(--lc-radius-lg);
+  display: grid;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding: 1.25rem;
+}
+
+.auth-form label {
+  display: grid;
+  font-weight: 700;
+  gap: 0.5rem;
+}
+
+.auth-form input {
+  background: var(--lc-color-background);
+  border: 1px solid var(--lc-color-border);
+  border-radius: var(--lc-radius-sm);
+  color: var(--lc-color-foreground);
+  padding: 0.75rem;
+}
+
+.auth-form button {
+  background: var(--lc-color-primary);
+  border: 0;
+  border-radius: var(--lc-radius-sm);
+  color: var(--lc-color-primary-foreground);
+  cursor: pointer;
+  padding: 0.8rem 1rem;
+}
+
+.error-message {
+  color: var(--lc-color-danger, #9f1239);
+  margin: 0;
+}
+
 .back-link,
 .button-secondary {
   color: var(--lc-color-foreground);

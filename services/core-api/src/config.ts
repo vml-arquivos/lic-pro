@@ -1,6 +1,9 @@
 export type RuntimeConfig = {
   port: number;
   jwtSecret: string;
+  jwtIssuer?: string;
+  jwtAudience?: string;
+  jwtTtlSeconds: number;
   databaseUrl?: string;
   redisUrl?: string;
   appUrl?: string;
@@ -19,12 +22,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
   const config: RuntimeConfig = {
     port: Number(env.CORE_API_PORT ?? 3001),
     jwtSecret: jwtSecret ?? 'test-only-secret',
+    jwtTtlSeconds: Number(env.JWT_TTL_SECONDS ?? 3600),
     allowedOrigins: (env.ALLOWED_ORIGINS ?? env.APP_URL ?? '')
       .split(',')
       .map((origin) => origin.trim())
       .filter(Boolean),
     nodeEnv: env.NODE_ENV ?? 'development',
   };
+  if (env.JWT_ISSUER) config.jwtIssuer = env.JWT_ISSUER;
+  if (env.JWT_AUDIENCE) config.jwtAudience = env.JWT_AUDIENCE;
   if (env.DATABASE_URL) config.databaseUrl = env.DATABASE_URL;
   if (env.REDIS_URL) config.redisUrl = env.REDIS_URL;
   if (env.APP_URL) config.appUrl = env.APP_URL;

@@ -19,14 +19,14 @@ cp .env.example .env
 pnpm install
 docker compose up -d postgres redis rabbitmq
 pnpm db:migrate
-pnpm db:seed
+DEMO_MODE=true pnpm db:seed
 pnpm build
 pnpm lint
 pnpm test
 pnpm format:check
 ```
 
-`pnpm db:migrate` executa todas as migrations em ordem com `MIGRATION_DATABASE_URL`, provisiona as senhas das roles de aplicação a partir das variáveis de ambiente e nunca é chamado pelo processo web. `pnpm db:seed` insere o tenant local `00000000-0000-0000-0000-000000000001` e o usuário `admin@local.test` (`00000000-0000-0000-0000-000000000002`), usando dados de desenvolvimento sem login real. Em produção, use o serviço one-shot `migrate` do `docker-compose.prod.yml` e um seed revisado separadamente.
+`pnpm db:migrate` executa todas as migrations em ordem com `MIGRATION_DATABASE_URL`, provisiona as senhas das roles de aplicação a partir das variáveis de ambiente e nunca é chamado pelo processo web. `db/seed.sh` recusa execução sem `DEMO_MODE=true` e insere o tenant local `00000000-0000-0000-0000-000000000001` e o usuário `admin@local.test` (`00000000-0000-0000-0000-000000000002`). Depois do seed, abra `/login` ou use `POST /auth/login` com tenant ID, e-mail e senha `local-dev-password`; a sessão é emitida pelo core API e guardada pelo web em cookie HttpOnly. Essa credencial só existe para o seed local. Em produção, use o serviço one-shot `migrate` do `docker-compose.prod.yml` e um seed/provedor de identidade revisado separadamente.
 
 Para validar os serviços Python:
 
