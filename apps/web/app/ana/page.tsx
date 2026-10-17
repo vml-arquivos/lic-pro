@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { AnaWidget } from './AnaWidget';
 
 export const metadata = {
   title: 'Ana | Licite Comigo',
@@ -27,7 +26,6 @@ export default function AnaPage() {
           `NEXT_PUBLIC_AI_API_URL`.
         </p>
       </section>
-      <AnaWidget />
     </main>
   );
 }

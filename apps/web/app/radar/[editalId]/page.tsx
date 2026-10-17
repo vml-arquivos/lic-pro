@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { AnaWidget } from '../../ana/AnaWidget';
 
 type DetailPageProps = {
   params: { editalId: string };
@@ -86,7 +85,6 @@ export default function EditalDetailPage({ params }: DetailPageProps) {
         <h2>Proposta</h2>
         <p>Placeholder reservado para uma fase posterior.</p>
       </section>
-      <AnaWidget />
     </main>
   );
 }
