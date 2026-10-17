@@ -377,8 +377,126 @@ main > p:not(.eyebrow):not(.notice) {
   margin-top: auto;
 }
 
+.analysis-heading,
+.analysis-columns {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.analysis-columns {
+  margin-top: 1.5rem;
+}
+
+.analysis-columns > div {
+  flex: 1;
+}
+
+.analysis-columns label {
+  color: var(--lc-color-muted-foreground);
+  display: block;
+  line-height: 1.6;
+  margin: 0.5rem 0;
+}
+
+.status-pill {
+  align-self: flex-start;
+  border: 1px solid var(--lc-color-border);
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+}
+
+.analysis-card blockquote {
+  border-left: 3px solid var(--lc-color-foreground);
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.analysis-card cite {
+  color: var(--lc-color-muted-foreground);
+  display: block;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.analysis-warning,
+.ana-disclaimer {
+  color: var(--lc-color-muted-foreground);
+  font-size: 0.875rem;
+}
+
+.ana-widget {
+  bottom: 1rem;
+  position: fixed;
+  right: 1rem;
+  z-index: 20;
+}
+
+.ana-panel {
+  background: var(--lc-color-background);
+  border: 1px solid var(--lc-color-border);
+  border-radius: var(--lc-radius-lg);
+  box-shadow: 0 1rem 3rem var(--lc-color-shadow);
+  margin-bottom: 0.75rem;
+  padding: 1rem;
+  width: min(22rem, calc(100vw - 2rem));
+}
+
+.ana-panel-heading {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+}
+
+.ana-panel-heading button {
+  background: transparent;
+  border: 0;
+  color: var(--lc-color-foreground);
+  cursor: pointer;
+  font-size: 1.5rem;
+}
+
+.ana-answer {
+  background: var(--lc-color-muted);
+  border-radius: var(--lc-radius-md);
+  color: var(--lc-color-muted-foreground);
+  line-height: 1.5;
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+}
+
+.ana-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ana-input-row input {
+  background: var(--lc-color-background);
+  border: 1px solid var(--lc-color-border);
+  border-radius: var(--lc-radius-sm);
+  color: var(--lc-color-foreground);
+  min-width: 0;
+  padding: 0.65rem;
+}
+
+.ana-input-row button,
+.ana-fab {
+  background: var(--lc-color-primary);
+  border: 0;
+  border-radius: var(--lc-radius-sm);
+  color: var(--lc-color-primary-foreground);
+  cursor: pointer;
+  padding: 0.65rem 0.85rem;
+}
+
+.ana-fab {
+  box-shadow: 0 0.5rem 1.5rem var(--lc-color-shadow);
+}
+
 @media (max-width: 42rem) {
-  .lesson-player {
+  .lesson-player,
+  .analysis-columns {
     grid-template-columns: 1fr;
+    flex-direction: column;
   }
 }
