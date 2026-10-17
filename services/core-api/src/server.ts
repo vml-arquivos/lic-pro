@@ -44,6 +44,22 @@ const updateUserSchema = z.object({
   onboarding_concluido: z.boolean().optional(),
 });
 const editalPathSchema = z.object({ editalId: z.string().uuid() });
+const onboardingSchema = z.object({
+  perfil_jornada: journeyProfileSchema,
+  respostas: z.record(z.string().max(500)).default({}),
+});
+const slugPathSchema = z.object({ slug: z.string().trim().min(1).max(100) });
+const aulaPathSchema = z.object({ aulaId: z.string().uuid() });
+const moduloPathSchema = z.object({ moduloId: z.string().uuid() });
+const quizPathSchema = z.object({ quizId: z.string().uuid() });
+const progressSchema = z.object({
+  concluida: z.boolean().default(false),
+  percentual: z.number().int().min(0).max(100).default(0),
+});
+const quizAttemptSchema = z.object({
+  respostas: z.record(z.number().int().min(0).max(100)),
+});
+const glossaryPathSchema = z.object({ termo: z.string().trim().min(1).max(100) });
 
 function sendDatabaseUnavailable(reply: FastifyReply): void {
   reply
@@ -237,6 +253,28 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return reply.send(result);
   });
 
+  app.post('/me/onboarding', async (request, reply) => {
+    const body = onboardingSchema.parse(request.body);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const updated = await client.query(
+        `UPDATE usuarios
+            SET perfil_jornada = $3, onboarding_concluido = true, updated_at = now()
+          WHERE tenant_id = $1 AND id = $2
+          RETURNING id, tenant_id, nome, perfil_jornada, onboarding_concluido`,
+        [request.user.tenantId, request.user.sub, body.perfil_jornada],
+      );
+      if (updated.rows[0]) {
+        await audit(client, request, 'onboarding.completed', 'user', request.user.sub, {
+          respostas: body.respostas,
+        });
+      }
+      return updated.rows[0];
+    });
+    if (!result) return reply.code(404).send({ error: 'user_not_found' });
+    return reply.send(result);
+  });
+
   app.get('/editais', async (request, reply) => {
     if (!pool) return sendDatabaseUnavailable(reply);
     const filters = editalSearchSchema.parse(request.query);
@@ -283,6 +321,141 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     });
     if (!result.edital) return reply.code(404).send({ error: 'edital_not_found' });
     return reply.send(result);
+  });
+
+  app.get('/academy/tracks', async (request, reply) => {
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) =>
+      client.query(
+        `SELECT t.id, t.slug, t.titulo, t.descricao, t.status,
+                count(DISTINCT m.id)::integer AS modulos,
+                count(DISTINCT a.id)::integer AS aulas
+           FROM trilhas t
+           LEFT JOIN modulos m ON m.trilha_id = t.id
+           LEFT JOIN aulas a ON a.modulo_id = m.id
+          GROUP BY t.id
+          ORDER BY t.titulo`,
+      ),
+    );
+    return reply.send(result.rows);
+  });
+
+  app.get('/academy/tracks/:slug', async (request, reply) => {
+    const { slug } = slugPathSchema.parse(request.params);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const track = await client.query(
+        `SELECT id, slug, titulo, descricao, status FROM trilhas WHERE slug = $1`,
+        [slug],
+      );
+      if (!track.rows[0]) return null;
+      const modules = await client.query(
+        `SELECT m.id, m.ordem, m.titulo, m.resumo, m.status,
+                json_agg(json_build_object(
+                  'id', a.id, 'ordem', a.ordem, 'titulo', a.titulo,
+                  'tipo', a.tipo, 'status', a.status
+                ) ORDER BY a.ordem) AS aulas
+           FROM modulos m
+           LEFT JOIN aulas a ON a.modulo_id = m.id
+          WHERE m.trilha_id = $1
+          GROUP BY m.id
+          ORDER BY m.ordem`,
+        [track.rows[0].id],
+      );
+      return { ...track.rows[0], modulos: modules.rows };
+    });
+    if (!result) return reply.code(404).send({ error: 'track_not_found' });
+    return reply.send(result);
+  });
+
+  app.get('/academy/glossary/:termo', async (request, reply) => {
+    const { termo } = glossaryPathSchema.parse(request.params);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) =>
+      client.query(
+        `SELECT termo, definicao_simples, definicao_tecnica, referencia, status
+           FROM glossario_termos WHERE lower(termo) = lower($1)`,
+        [termo],
+      ),
+    );
+    if (!result.rows[0]) return reply.code(404).send({ error: 'glossary_term_not_found' });
+    return reply.send(result.rows[0]);
+  });
+
+  app.put('/academy/progress/:aulaId', async (request, reply) => {
+    const { aulaId } = aulaPathSchema.parse(request.params);
+    const body = progressSchema.parse(request.body);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) =>
+      client.query(
+        `INSERT INTO progresso_aula (tenant_id, usuario_id, aula_id, concluida, percentual)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (usuario_id, aula_id) DO UPDATE SET
+           concluida = EXCLUDED.concluida,
+           percentual = EXCLUDED.percentual,
+           updated_at = now()
+         RETURNING id, aula_id, concluida, percentual, updated_at`,
+        [request.user.tenantId, request.user.sub, aulaId, body.concluida, body.percentual],
+      ),
+    );
+    return reply.send(result.rows[0]);
+  });
+
+  app.get('/academy/quizzes/:moduloId', async (request, reply) => {
+    const { moduloId } = moduloPathSchema.parse(request.params);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) =>
+      client.query(
+        `SELECT q.id, q.modulo_id, q.titulo, q.status,
+                json_agg(json_build_object(
+                  'id', qq.id, 'ordem', qq.ordem, 'enunciado', qq.enunciado,
+                  'alternativas', qq.alternativas
+                ) ORDER BY qq.ordem) AS questoes
+           FROM quizzes q
+           LEFT JOIN quiz_questoes qq ON qq.quiz_id = q.id
+          WHERE q.modulo_id = $1
+          GROUP BY q.id`,
+        [moduloId],
+      ),
+    );
+    if (!result.rows[0]) return reply.code(404).send({ error: 'quiz_not_found' });
+    return reply.send(result.rows[0]);
+  });
+
+  app.post('/academy/quizzes/:quizId/attempts', async (request, reply) => {
+    const { quizId } = quizPathSchema.parse(request.params);
+    const body = quizAttemptSchema.parse(request.body);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) =>
+      client.query(
+        `INSERT INTO quiz_tentativas (tenant_id, usuario_id, quiz_id, respostas)
+         VALUES ($1, $2, $3, $4::jsonb)
+         RETURNING id, quiz_id, respostas, nota, created_at`,
+        [request.user.tenantId, request.user.sub, quizId, JSON.stringify(body.respostas)],
+      ),
+    );
+    return reply.code(201).send(result.rows[0]);
+  });
+
+  app.get('/mentor/dashboard', async (request, reply) => {
+    if (!requireRoles(reply, request, ['admin', 'mentor'])) return;
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) =>
+      client.query(
+        `SELECT u.id, u.nome, u.email, u.perfil_jornada, u.onboarding_concluido,
+                count(pa.id)::integer AS aulas_com_progresso,
+                count(*) FILTER (WHERE pa.concluida)::integer AS aulas_concluidas,
+                max(pa.updated_at) AS ultimo_progresso
+           FROM mentor_mentorado mm
+           JOIN usuarios u ON u.id = mm.mentorado_id
+           LEFT JOIN progresso_aula pa ON pa.usuario_id = u.id AND pa.tenant_id = mm.tenant_id
+          WHERE mm.tenant_id = $1 AND mm.mentor_id = $2 AND mm.status = 'ativo'
+          GROUP BY u.id
+          ORDER BY u.nome`,
+        [request.user.tenantId, request.user.sub],
+      ),
+    );
+    return reply.send({ mentorados: result.rows });
   });
 
   return app;
