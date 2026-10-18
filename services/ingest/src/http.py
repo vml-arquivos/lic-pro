@@ -62,7 +62,12 @@ class UrllibJsonTransport:
         )
         try:
             with urlopen(request, timeout=self.timeout_seconds) as response:
-                payload = json.loads(response.read().decode("utf-8"))
+                body = response.read()
+                # The PNCP API uses 204 when a cursor is beyond the last page.
+                # Treat it as an empty JSON object so callers can stop cleanly
+                # using their normal pagination rules instead of parsing blank
+                # content as JSON.
+                payload = {} if response.status == 204 else json.loads(body.decode("utf-8"))
         except HTTPError as error:
             retry_after = _retry_after_seconds(error.headers.get("Retry-After"))
             raise TransportError(
