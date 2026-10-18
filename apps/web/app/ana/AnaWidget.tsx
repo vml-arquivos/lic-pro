@@ -8,8 +8,8 @@ export function AnaWidget() {
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
 
-  async function askAna() {
-    const question = message.trim();
+  async function askAna(questionOverride?: string) {
+    const question = (questionOverride ?? message).trim();
     if (!question || loading) return;
     setLoading(true);
     setAnswer('');
@@ -39,16 +39,19 @@ export function AnaWidget() {
         <div className="ana-panel">
           <div className="ana-panel-heading">
             <div>
-              <p className="eyebrow">Ana</p>
-              <strong>Ajuda de leitura</strong>
+              <strong>✦ ANA · sua assistente</strong>
             </div>
-            <button type="button" onClick={() => setOpen(false)} aria-label="Fechar Ana">
-              ×
+            <button type="button" onClick={() => setOpen(false)} aria-label="Minimizar Ana">
+              −
             </button>
           </div>
-          <p className="ana-disclaimer">
-            Apoio de leitura, sem conclusão jurídica ou promessa de resultado.
-          </p>
+          <p className="ana-intro">Olá! Sou a ANA, sua assistente para vendas ao Governo. Em que etapa posso ajudar?</p>
+          <div className="ana-quick-actions">
+            <button type="button" onClick={() => void askAna('Qual é o próximo passo?')}>Próximo passo</button>
+            <button type="button" onClick={() => void askAna('Quais documentos faltam?')}>Documentos</button>
+            <button type="button" onClick={() => void askAna('Avaliar uma oportunidade')}>Avaliar oportunidade</button>
+            <button type="button" onClick={() => void askAna('Quero automatizar tarefas')}>Automatizar tarefas ⚡</button>
+          </div>
           <div className="ana-answer" aria-live="polite">
             {answer || 'Pergunte sobre um conceito, um edital ou os próximos pontos para conferir.'}
           </div>
@@ -69,7 +72,7 @@ export function AnaWidget() {
         </div>
       ) : null}
       <button className="ana-fab" type="button" onClick={() => setOpen((value) => !value)}>
-        {open ? 'Fechar Ana' : 'Falar com Ana'}
+        {open ? 'Minimizar Ana' : '✦ ANA · sua assistente'}
       </button>
     </aside>
   );

@@ -1,60 +1,119 @@
-import Link from 'next/link';
+'use client';
 
-const existing = [
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
+
+const menu = [
   ['Início', '/', '⌂'],
-  ['Radar', '/radar', '⌕'],
-  ['Empresas', '/empresas', '▦'],
-  ['Leads', '/leads', '✉'],
-  ['Academia', '/academia', '◇'],
-  ['Ana', '/ana', '✦'],
-  ['Onboarding', '/onboarding', '◌'],
+  ['Central de automações', '/automacoes', '⚡'],
+  ['Aprovações da ANA', '/aprovacoes', '✓'],
+  ['Minha jornada', '/jornada', '◎'],
+  ['Explorar licitações', '/radar', '⌕'],
+  ['Analisar oportunidade', '/oportunidade', '◈'],
+  ['Analisar edital', '/edital', '▤'],
+  ['Precificação', '/precificacao', '▦'],
+  ['Documentos', '/documentos', '▣'],
+  ['Pregões ao vivo', '/pregoes', '◉'],
+  ['Mercado e concorrentes', '/mercado', '▥'],
+  ['Agenda e participações', '/agenda', '▦'],
+  ['Meus fornecedores', '/fornecedores', '♧'],
+  ['Plano de 30 dias', '/plano-30-dias', '◷'],
+  ['Mentoria', '/mentoria', '✧'],
+  ['Assinatura e notas', '/assinatura', '◉'],
 ] as const;
-const future = ['Agenda', 'Automações', 'Aprovações'];
+
+type Audience = 'empresario' | 'mentorado';
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return (parts.length > 1 ? `${parts[0]?.[0]}${parts.at(-1)?.[0]}` : parts[0]?.slice(0, 2) || 'UM').toUpperCase();
+}
 
 export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) {
-  const demoMode = process.env.DEMO_MODE === 'true';
+  const pathname = usePathname();
+  const [audience, setAudience] = useState<Audience>('empresario');
+  const [name, setName] = useState('Usuário Licite Comigo');
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem('lc-audience');
+    if (saved === 'empresario' || saved === 'mentorado') setAudience(saved);
+    const onAudienceChange = () => {
+      const next = window.localStorage.getItem('lc-audience');
+      if (next === 'empresario' || next === 'mentorado') setAudience(next);
+    };
+    window.addEventListener('lc-audience-change', onAudienceChange);
+    void fetch('/api/core/me', { cache: 'no-store' })
+      .then(async (response) => (response.ok ? ((await response.json()) as { nome?: string; publico?: string; papel?: string }) : null))
+      .then((me) => {
+        if (!me) return;
+        if (me.nome) setName(me.nome);
+        if (!saved && (me.publico === 'mentoria' || me.papel === 'mentor')) {
+          setAudience('mentorado');
+          window.localStorage.setItem('lc-audience', 'mentorado');
+        }
+      })
+      .catch(() => undefined);
+    return () => window.removeEventListener('lc-audience-change', onAudienceChange);
+  }, []);
+
+  const currentLabel = useMemo(
+    () => menu.find(([, href]) => href === pathname)?.[0] ?? 'Início',
+    [pathname],
+  );
+
+  function toggleAudience() {
+    const next = audience === 'empresario' ? 'mentorado' : 'empresario';
+    setAudience(next);
+    window.localStorage.setItem('lc-audience', next);
+    window.dispatchEvent(new Event('lc-audience-change'));
+  }
+
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
-        <Link href="/" className="sidebar-brand">
-          <span className="sidebar-mark">LC</span>
-          <span>
-            Licite
-            <br />
-            Comigo
+        <Link href="/" className="sidebar-brand" aria-label="Licite Comigo — Início">
+          <span className="sidebar-wordmark">
+            Licite<span>Comigo</span>
           </span>
         </Link>
-        <p className="sidebar-label">Operação</p>
+        <p className="sidebar-label">Meu espaço</p>
         <nav aria-label="Menu do aplicativo">
-          {existing.map(([label, href, icon]) => (
-            <Link href={href} key={href} className="sidebar-link">
+          {menu.map(([label, href, icon]) => (
+            <Link
+              href={href}
+              key={href}
+              className={`sidebar-link ${pathname === href ? 'active' : ''}`}
+            >
               <span aria-hidden="true">{icon}</span>
               {label}
             </Link>
           ))}
-          {future.map((label) => (
-            <span className="sidebar-link disabled" key={label} aria-disabled="true">
-              <span aria-hidden="true">—</span>
-              {label}
-              <small>Em breve</small>
-            </span>
-          ))}
         </nav>
+        <p className="sidebar-label sidebar-experience-label">Experiência</p>
+        <button className="audience-toggle" type="button" onClick={toggleAudience}>
+          Alternar público <span aria-hidden="true">↔</span>
+        </button>
         <div className="sidebar-bottom">
           <span className="status-dot" /> Serviços operacionais protegidos
         </div>
       </aside>
       <div className="app-shell-body">
         <header className="app-topbar">
-          <div>
-            <span className="topbar-context">Licite Comigo /</span>
-            <strong>Área de trabalho</strong>
+          <div className="topbar-title">
+            <strong>{currentLabel}</strong>
+            <small>Da oportunidade ao contrato fechado!</small>
           </div>
           <div className="topbar-actions">
-            <span className={demoMode ? 'demo-chip' : 'secure-chip'}>
-              {demoMode ? 'Modo demo' : 'Sessão protegida'}
+            <button className="audience-pill" type="button" onClick={toggleAudience}>
+              {audience === 'empresario' ? '👔 Empresário' : '🎓 Mentorado'}
+            </button>
+            <button className="notification-button" type="button" aria-label="Notificações">
+              🔔
+            </button>
+            <span className="user-avatar" title={name} aria-label={`Conta de ${name}`}>
+              {initials(name)}
             </span>
-            <Link href="/login">Conta</Link>
           </div>
         </header>
         <div className="app-shell-content">{children}</div>
