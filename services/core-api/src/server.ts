@@ -19,6 +19,14 @@ import { assertStrongPassword, hashPassword, verifyPassword } from './password.j
 import { sendEmail } from './email.js';
 import { checkReadiness } from './readiness.js';
 import { buildEditalSearchQuery, editalSearchSchema } from './search.js';
+import { assertMentorCapability } from './capabilities.js';
+import {
+  alertQuerySchema,
+  alertReadSchema,
+  sanitizeMessage,
+  savedSearchPatchSchema,
+  savedSearchSchema,
+} from './alerts.js';
 
 export type BuildAppOptions = {
   pool?: Pool;
@@ -62,6 +70,15 @@ const slugPathSchema = z.object({ slug: z.string().trim().min(1).max(100) });
 const aulaPathSchema = z.object({ aulaId: z.string().uuid() });
 const moduloPathSchema = z.object({ moduloId: z.string().uuid() });
 const quizPathSchema = z.object({ quizId: z.string().uuid() });
+const savedSearchPathSchema = z.object({ savedSearchId: z.string().uuid() });
+const alertPathSchema = z.object({ alertId: z.string().uuid() });
+const savedSearchQuerySchema = z.object({
+  empresa_id: z.string().uuid().optional(),
+  ativa: z.preprocess((value) => {
+    if (typeof value === 'string') return value.toLowerCase() === 'true';
+    return value;
+  }, z.boolean().optional()),
+});
 const progressSchema = z.object({
   concluida: z.boolean().default(false),
   percentual: z.number().int().min(0).max(100).default(0),
@@ -196,6 +213,22 @@ function requireRoles(
   return true;
 }
 
+function sanitizeAuditMetadata(value: unknown, depth = 0): unknown {
+  if (depth > 3) return '[truncated]';
+  if (typeof value === 'string') return sanitizeMessage(value, 500);
+  if (typeof value === 'number' || typeof value === 'boolean' || value === null) return value;
+  if (Array.isArray(value))
+    return value.slice(0, 50).map((item) => sanitizeAuditMetadata(item, depth + 1));
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .slice(0, 50)
+        .map(([key, item]) => [sanitizeMessage(key, 100), sanitizeAuditMetadata(item, depth + 1)]),
+    );
+  }
+  return undefined;
+}
+
 async function audit(
   client: Parameters<Parameters<typeof withTenant>[2]>[0],
   request: FastifyRequest,
@@ -215,7 +248,7 @@ async function audit(
       action,
       resource,
       resourceId,
-      JSON.stringify(metadata),
+      JSON.stringify(sanitizeAuditMetadata(metadata)),
       request.id,
     ],
   );
@@ -266,6 +299,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
     if (error instanceof Error && error.message === 'public_rate_limit') {
       reply.code(429).send({ error: 'rate_limited' });
+      return;
+    }
+    if (error instanceof Error && error.message === 'mentor_capability_forbidden') {
+      reply.code(403).send({ error: 'forbidden' });
       return;
     }
     reply.send(error);
@@ -1018,6 +1055,60 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return reply.send(result);
   });
 
+  app.get('/admin/users/audit', async (request, reply) => {
+    if (!requireRoles(reply, request, ['admin'])) return;
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) =>
+      client.query(
+        `SELECT a.id, a.usuario_id, u.nome AS usuario_nome, u.email AS usuario_email,
+                a.acao, a.recurso, a.recurso_id, a.metadata, a.created_at
+           FROM auditoria a
+           LEFT JOIN usuarios u ON u.id = a.usuario_id AND u.tenant_id = a.tenant_id
+          WHERE a.tenant_id = $1
+          ORDER BY a.created_at DESC
+          LIMIT 200`,
+        [request.user.tenantId],
+      ),
+    );
+    return reply.send({ data: result.rows });
+  });
+
+  app.get('/operations/ingest', async (request, reply) => {
+    if (!requireRoles(reply, request, ['admin', 'operador'])) return;
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const [checkpoints, deadLetters] = await Promise.all([
+        client.query(
+          `SELECT count(*)::integer AS checkpoints,
+                  count(*) FILTER (WHERE updated_at >= now() - interval '24 hours')::integer AS atualizados_24h,
+                  max(updated_at) AS ultima_atualizacao
+             FROM ingest_checkpoints WHERE tenant_id = $1`,
+          [request.user.tenantId],
+        ),
+        client.query(
+          `SELECT count(*)::integer AS total,
+                  count(*) FILTER (WHERE resolvida_em IS NULL)::integer AS pendentes,
+                  max(created_at) AS ultimo_registro
+             FROM ingest_dead_letters WHERE tenant_id = $1`,
+          [request.user.tenantId],
+        ),
+      ]);
+      return {
+        checkpoints: checkpoints.rows[0] ?? {
+          checkpoints: 0,
+          atualizados_24h: 0,
+          ultima_atualizacao: null,
+        },
+        dead_letters: deadLetters.rows[0] ?? {
+          total: 0,
+          pendentes: 0,
+          ultimo_registro: null,
+        },
+      };
+    });
+    return reply.send(result);
+  });
+
   app.post('/me/onboarding', async (request, reply) => {
     const body = onboardingSchema.parse(request.body);
     if (!pool) return sendDatabaseUnavailable(reply);
@@ -1038,6 +1129,255 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     });
     if (!result) return reply.code(404).send({ error: 'user_not_found' });
     return reply.send(result);
+  });
+
+  app.get('/saved-searches', async (request, reply) => {
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const filters = savedSearchQuerySchema.parse(request.query);
+    const result = await withTenant(pool, authContext(request), async (client) =>
+      client.query(
+        `SELECT id, tenant_id, usuario_id, empresa_id, nome, filtros, ativa, created_at, updated_at
+           FROM buscas_salvas
+          WHERE tenant_id = $1
+            AND (usuario_id = $2 OR $3::text IN ('admin', 'operador'))
+            AND ($4::boolean IS NULL OR ativa = $4)
+          ORDER BY updated_at DESC`,
+        [request.user.tenantId, request.user.sub, request.user.role, filters.ativa ?? null],
+      ),
+    );
+    return reply.send({ data: result.rows });
+  });
+
+  app.post('/saved-searches', async (request, reply) => {
+    const body = savedSearchSchema.parse(request.body);
+    const empresaId = body.empresa_id ?? request.user.empresaId;
+    if (!empresaId && !['admin', 'operador'].includes(request.user.role)) {
+      return reply.code(400).send({ error: 'company_scope_required' });
+    }
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      if (request.user.role === 'mentor') {
+        if (!empresaId) throw new Error('tenant_forbidden');
+        await assertMentorCapability(
+          client,
+          request.user.tenantId,
+          request.user.sub,
+          empresaId,
+          'saved_searches',
+        );
+      } else if (
+        !['admin', 'operador'].includes(request.user.role) &&
+        request.user.empresaId !== empresaId
+      ) {
+        throw new Error('tenant_forbidden');
+      }
+      const inserted = await client.query(
+        `INSERT INTO buscas_salvas (tenant_id, usuario_id, empresa_id, nome, filtros, ativa)
+         VALUES ($1, $2, $3, $4, $5::jsonb, $6)
+         ON CONFLICT (tenant_id, usuario_id, nome) DO UPDATE SET
+           empresa_id = EXCLUDED.empresa_id, filtros = EXCLUDED.filtros,
+           ativa = EXCLUDED.ativa, updated_at = now()
+         RETURNING id, tenant_id, usuario_id, empresa_id, nome, filtros, ativa, created_at, updated_at`,
+        [
+          request.user.tenantId,
+          request.user.sub,
+          empresaId ?? null,
+          body.nome,
+          JSON.stringify(body.filtros),
+          body.ativa,
+        ],
+      );
+      const saved = inserted.rows[0];
+      await client.query(
+        `INSERT INTO alertas_regras (tenant_id, busca_id, usuario_id, empresa_id, nome, regra, ativa)
+         SELECT $1, $2, $3, $4, $5, $6::jsonb, $7
+          WHERE NOT EXISTS (
+            SELECT 1 FROM alertas_regras WHERE tenant_id = $1 AND busca_id = $2
+          )`,
+        [
+          request.user.tenantId,
+          saved.id,
+          request.user.sub,
+          empresaId ?? null,
+          body.nome,
+          JSON.stringify(body.filtros),
+          body.ativa,
+        ],
+      );
+      await audit(client, request, 'saved_search.created', 'busca_salva', saved.id, {
+        empresa_id: empresaId ?? null,
+      });
+      return saved;
+    });
+    return reply.code(201).send(result);
+  });
+
+  app.patch('/saved-searches/:savedSearchId', async (request, reply) => {
+    const { savedSearchId } = savedSearchPathSchema.parse(request.params);
+    const body = savedSearchPatchSchema.parse(request.body);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const updated = await client.query(
+        `UPDATE buscas_salvas
+            SET nome = COALESCE($3, nome), filtros = COALESCE($4::jsonb, filtros),
+                ativa = COALESCE($5, ativa), updated_at = now()
+          WHERE id = $1 AND tenant_id = $2
+            AND (usuario_id = $6 OR $7::text IN ('admin', 'operador'))
+          RETURNING id, tenant_id, usuario_id, empresa_id, nome, filtros, ativa, created_at, updated_at`,
+        [
+          savedSearchId,
+          request.user.tenantId,
+          body.nome ?? null,
+          body.filtros ? JSON.stringify(body.filtros) : null,
+          body.ativa ?? null,
+          request.user.sub,
+          request.user.role,
+        ],
+      );
+      if (!updated.rows[0]) return null;
+      await client.query(
+        `UPDATE alertas_regras
+            SET nome = COALESCE($3, nome), regra = COALESCE($4::jsonb, regra),
+                ativa = COALESCE($5, ativa), updated_at = now()
+          WHERE tenant_id = $1 AND busca_id = $2`,
+        [
+          request.user.tenantId,
+          savedSearchId,
+          body.nome ?? null,
+          body.filtros ? JSON.stringify(body.filtros) : null,
+          body.ativa ?? null,
+        ],
+      );
+      await audit(client, request, 'saved_search.updated', 'busca_salva', savedSearchId);
+      return updated.rows[0];
+    });
+    if (!result) return reply.code(404).send({ error: 'saved_search_not_found' });
+    return reply.send(result);
+  });
+
+  app.delete('/saved-searches/:savedSearchId', async (request, reply) => {
+    const { savedSearchId } = savedSearchPathSchema.parse(request.params);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const removed = await withTenant(pool, authContext(request), async (client) => {
+      const result = await client.query(
+        `DELETE FROM buscas_salvas
+          WHERE id = $1 AND tenant_id = $2
+            AND (usuario_id = $3 OR $4::text IN ('admin', 'operador'))
+          RETURNING id`,
+        [savedSearchId, request.user.tenantId, request.user.sub, request.user.role],
+      );
+      if (result.rows[0]) {
+        await audit(client, request, 'saved_search.deleted', 'busca_salva', savedSearchId);
+      }
+      return result.rows[0];
+    });
+    if (!removed) return reply.code(404).send({ error: 'saved_search_not_found' });
+    return reply.code(204).send();
+  });
+
+  app.get('/alerts', async (request, reply) => {
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const filters = alertQuerySchema.parse(request.query);
+    const offset = (filters.page - 1) * filters.page_size;
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      // A consulta pública não oferece webhook. Ao abrir a inbox, fazemos uma
+      // reconciliação leve sobre os registros já ingeridos no tenant e a chave
+      // de idempotência impede duplicidade entre acessos concorrentes.
+      await client.query(
+        `INSERT INTO alerta_entregas
+           (tenant_id, alerta_regra_id, usuario_id, edital_id, canal, status, idempotency_key, payload)
+         SELECT ar.tenant_id, ar.id, ar.usuario_id, e.id, 'in_app', 'pendente',
+                ar.id::text || ':' || e.id::text || ':' || e.hash_conteudo,
+                jsonb_build_object(
+                  'busca_id', ar.busca_id,
+                  'usuario_id', ar.usuario_id,
+                  'titulo', left(e.titulo, 160),
+                  'mensagem', left('Nova correspondência em ' || bs.nome, 500),
+                  'fonte', e.fonte,
+                  'url_origem', e.url_origem,
+                  'capturado_em', e.updated_at
+                )
+           FROM alertas_regras ar
+           JOIN buscas_salvas bs ON bs.id = ar.busca_id AND bs.tenant_id = ar.tenant_id
+           JOIN editais e ON e.tenant_id = ar.tenant_id
+          WHERE ar.tenant_id = $1
+            AND ar.usuario_id = $2
+            AND ar.ativa = true
+            AND bs.ativa = true
+            AND (ar.regra->>'q' IS NULL OR e.search_vector @@ plainto_tsquery('portuguese', ar.regra->>'q'))
+            AND (ar.regra->>'uf' IS NULL OR e.uf = ar.regra->>'uf')
+            AND (ar.regra->>'modalidade' IS NULL OR e.modalidade = ar.regra->>'modalidade')
+            AND (ar.regra->>'situacao' IS NULL OR e.situacao = ar.regra->>'situacao')
+         ON CONFLICT (tenant_id, idempotency_key) DO NOTHING`,
+        [request.user.tenantId, request.user.sub],
+      );
+      return client.query(
+        `SELECT ae.id, ae.alerta_regra_id, ae.edital_id, ae.canal, ae.status,
+                ae.idempotency_key, ae.payload, ae.entregue_em, ae.created_at,
+                ar.busca_id, bs.nome AS busca_nome,
+                e.titulo, e.orgao, e.fonte, e.url_origem, e.data_publicacao
+           FROM alerta_entregas ae
+           JOIN alertas_regras ar ON ar.id = ae.alerta_regra_id AND ar.tenant_id = ae.tenant_id
+           JOIN buscas_salvas bs ON bs.id = ar.busca_id AND bs.tenant_id = ae.tenant_id
+           JOIN editais e ON e.id = ae.edital_id AND e.tenant_id = ae.tenant_id
+          WHERE ae.tenant_id = $1
+            AND ae.usuario_id = $2
+            AND ($3::boolean = false OR ae.status <> 'lida')
+          ORDER BY ae.created_at DESC
+          LIMIT $4 OFFSET $5`,
+        [
+          request.user.tenantId,
+          request.user.sub,
+          filters.apenas_nao_lidas,
+          filters.page_size,
+          offset,
+        ],
+      );
+    });
+    return reply.send({ data: result.rows, page: filters.page, page_size: filters.page_size });
+  });
+
+  const markAlertRead = async (request: FastifyRequest, reply: FastifyReply) => {
+    const { alertId } = alertPathSchema.parse(request.params);
+    const body = alertReadSchema.parse(request.body ?? {});
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const updated = await client.query(
+        `UPDATE alerta_entregas
+            SET status = CASE WHEN $3 THEN 'lida' ELSE 'pendente' END
+          WHERE id = $1 AND tenant_id = $2
+            AND EXISTS (
+              SELECT 1 FROM alertas_regras ar
+               WHERE ar.id = alerta_entregas.alerta_regra_id
+                 AND ar.tenant_id = alerta_entregas.tenant_id
+                 AND ar.usuario_id = $4
+            )
+          RETURNING id, alerta_regra_id, edital_id, canal, status, payload, entregue_em`,
+        [alertId, request.user.tenantId, body.lida, request.user.sub],
+      );
+      if (updated.rows[0]) await audit(client, request, 'alert.read', 'alerta_entrega', alertId);
+      return updated.rows[0];
+    });
+    if (!result) return reply.code(404).send({ error: 'alert_not_found' });
+    return reply.send(result);
+  };
+  app.patch('/alerts/:alertId/read', markAlertRead);
+  app.patch('/alerts/:alertId', markAlertRead);
+
+  app.get('/dashboard/alerts-summary', async (request, reply) => {
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) =>
+      client.query(
+        `SELECT count(*)::integer AS total,
+                count(*) FILTER (WHERE ae.status <> 'lida')::integer AS nao_lidas,
+                max(created_at) AS ultimo_alerta
+           FROM alerta_entregas ae
+           JOIN alertas_regras ar ON ar.id = ae.alerta_regra_id AND ar.tenant_id = ae.tenant_id
+          WHERE ae.tenant_id = $1 AND ar.usuario_id = $2`,
+        [request.user.tenantId, request.user.sub],
+      ),
+    );
+    return reply.send(result.rows[0] ?? { total: 0, nao_lidas: 0, ultimo_alerta: null });
   });
 
   app.get('/dashboard/summary', async (request, reply) => {
@@ -1217,10 +1557,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (!pool) return sendDatabaseUnavailable(reply);
     const { editalId } = editalPathSchema.parse(request.params);
     const result = await withTenant(pool, authContext(request), async (client) => {
-      const [edital, itens, versoes, chunks, analise] = await Promise.all([
+      const [edital, itens, versoes, chunks, analise, documentos, eventos] = await Promise.all([
         client.query(
-          `SELECT id, fonte, id_externo, titulo, orgao, uf, uasg, modalidade, catmat_catser,
-                  valor_estimado, data_publicacao, url_origem, conteudo_texto, hash_conteudo,
+          `SELECT id, fonte, sistema_origem, id_externo, titulo, orgao, uf, uasg,
+                  municipio_ibge, municipio_nome, esfera, poder, modalidade, codigo_modalidade,
+                  modo_disputa, codigo_modo_disputa, situacao, instrumento, codigo_instrumento,
+                  srp, catmat_catser, valor_estimado, valor_homologado, data_publicacao,
+                  data_atualizacao, data_abertura_proposta, data_encerramento_proposta,
+                  url_origem, conteudo_texto, hash_conteudo, estado_completude,
                   created_at, updated_at
              FROM editais
             WHERE id = $1`,
@@ -1250,6 +1594,17 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
              FROM analises_ia WHERE edital_id = $1 ORDER BY created_at DESC LIMIT 1`,
           [editalId],
         ),
+        client.query(
+          `SELECT id, tipo, nome_arquivo, url, mime_type, tamanho_bytes, hash_conteudo,
+                  estado, created_at, updated_at
+             FROM edital_documentos WHERE edital_id = $1 ORDER BY created_at DESC`,
+          [editalId],
+        ),
+        client.query(
+          `SELECT id, tipo, fonte, ocorrido_em, payload, hash_evento, created_at
+             FROM edital_eventos WHERE edital_id = $1 ORDER BY ocorrido_em DESC NULLS LAST, created_at DESC`,
+          [editalId],
+        ),
       ]);
       return {
         edital: edital.rows[0],
@@ -1257,6 +1612,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         versoes: versoes.rows,
         evidencias: chunks.rows,
         analise: analise.rows[0] ?? null,
+        documentos: documentos.rows,
+        eventos: eventos.rows,
       };
     });
     if (!result.edital) return reply.code(404).send({ error: 'edital_not_found' });
@@ -1487,6 +1844,82 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       ),
     );
     return reply.code(201).send(result.rows[0]);
+  });
+
+  app.get('/mentorado/dashboard', async (request, reply) => {
+    if (!requireRoles(reply, request, ['aluno'])) return;
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const [profile, progress, alerts] = await Promise.all([
+        client.query(
+          `SELECT id, nome, perfil_jornada, onboarding_concluido
+             FROM usuarios WHERE tenant_id = $1 AND id = $2`,
+          [request.user.tenantId, request.user.sub],
+        ),
+        client.query(
+          `SELECT count(*)::integer AS aulas_com_progresso,
+                  count(*) FILTER (WHERE concluida)::integer AS aulas_concluidas,
+                  coalesce(round(avg(percentual)), 0)::integer AS percentual_medio
+             FROM progresso_aula WHERE tenant_id = $1 AND usuario_id = $2`,
+          [request.user.tenantId, request.user.sub],
+        ),
+        client.query(
+          `SELECT count(*)::integer AS nao_lidas
+             FROM notificacoes WHERE tenant_id = $1 AND usuario_id = $2 AND lida_em IS NULL`,
+          [request.user.tenantId, request.user.sub],
+        ),
+      ]);
+      return {
+        usuario: profile.rows[0] ?? null,
+        progresso: progress.rows[0] ?? {
+          aulas_com_progresso: 0,
+          aulas_concluidas: 0,
+          percentual_medio: 0,
+        },
+        notificacoes_nao_lidas: alerts.rows[0]?.nao_lidas ?? 0,
+      };
+    });
+    if (!result.usuario) return reply.code(404).send({ error: 'user_not_found' });
+    return reply.send(result);
+  });
+
+  app.get('/professional/dashboard', async (request, reply) => {
+    if (!requireRoles(reply, request, ['aluno'])) return;
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const profile = await client.query<{ id: string }>(
+        `SELECT id FROM usuarios
+          WHERE tenant_id = $1 AND id = $2 AND perfil_jornada = 'profissional' AND ativo = true`,
+        [request.user.tenantId, request.user.sub],
+      );
+      if (!profile.rows[0]) return null;
+      const [opportunities, deadlines, tasks] = await Promise.all([
+        client.query(
+          `SELECT count(*)::integer AS total,
+                  count(*) FILTER (WHERE status IN ('triagem', 'em_analise', 'proposta'))::integer AS em_andamento
+             FROM oportunidades_salvas WHERE tenant_id = $1 AND usuario_id = $2`,
+          [request.user.tenantId, request.user.sub],
+        ),
+        client.query(
+          `SELECT count(*)::integer AS total,
+                  count(*) FILTER (WHERE vence_em >= now() AND vence_em < now() + interval '7 days' AND status = 'aberto')::integer AS proximos_7_dias
+             FROM prazos_agenda WHERE tenant_id = $1`,
+          [request.user.tenantId],
+        ),
+        client.query(
+          `SELECT count(*)::integer AS abertas
+             FROM tarefas WHERE tenant_id = $1 AND status IN ('aberta', 'em_andamento')`,
+          [request.user.tenantId],
+        ),
+      ]);
+      return {
+        oportunidades: opportunities.rows[0],
+        prazos: deadlines.rows[0],
+        tarefas: tasks.rows[0],
+      };
+    });
+    if (!result) return reply.code(403).send({ error: 'forbidden' });
+    return reply.send(result);
   });
 
   app.get('/mentor/dashboard', async (request, reply) => {
