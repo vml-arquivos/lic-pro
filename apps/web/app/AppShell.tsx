@@ -34,6 +34,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
   const pathname = usePathname();
   const [audience, setAudience] = useState<Audience>('empresario');
   const [name, setName] = useState('Usuário Licite Comigo');
+  const [role, setRole] = useState('');
 
   useEffect(() => {
     const saved = window.localStorage.getItem('lc-audience');
@@ -48,6 +49,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
       .then((me) => {
         if (!me) return;
         if (me.nome) setName(me.nome);
+        if (me.papel) setRole(me.papel);
         if (!saved && (me.publico === 'mentoria' || me.papel === 'mentor')) {
           setAudience('mentorado');
           window.localStorage.setItem('lc-audience', 'mentorado');
@@ -94,6 +96,15 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
         <button className="audience-toggle" type="button" onClick={toggleAudience}>
           Alternar público <span aria-hidden="true">↔</span>
         </button>
+        {role === 'admin' ? (
+          <>
+            <p className="sidebar-label">Administração</p>
+            <Link className={`sidebar-link ${pathname === '/leads' ? 'active' : ''}`} href="/leads">
+              <span aria-hidden="true">✉</span>
+              Painel administrativo
+            </Link>
+          </>
+        ) : null}
         <div className="sidebar-bottom">
           <span className="status-dot" /> Serviços operacionais protegidos
         </div>
