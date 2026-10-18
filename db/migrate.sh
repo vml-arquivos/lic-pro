@@ -12,12 +12,9 @@ until pg_isready --dbname "$MIGRATION_DATABASE_URL" >/dev/null 2>&1; do
   sleep 2
 done
 
-psql "$MIGRATION_DATABASE_URL" --set ON_ERROR_STOP=1 <<'SQL'
-CREATE TABLE IF NOT EXISTS schema_migrations (
-  filename TEXT PRIMARY KEY,
-  applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-SQL
+psql "$MIGRATION_DATABASE_URL" --set ON_ERROR_STOP=1 --single-transaction \
+  --command "SELECT pg_advisory_xact_lock(hashtextextended('licite-comigo:migrations', 0));" \
+  --command "CREATE TABLE IF NOT EXISTS schema_migrations (filename TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now());"
 
 for file in /migrations/*.sql; do
   filename="$(basename "$file")"
@@ -28,10 +25,10 @@ for file in /migrations/*.sql; do
     continue
   fi
   echo "aplicando migration: $filename"
-  psql "$MIGRATION_DATABASE_URL" --set ON_ERROR_STOP=1 --file "$file"
-  psql "$MIGRATION_DATABASE_URL" --set ON_ERROR_STOP=1 \
-    --set filename="$filename" \
-    --command "INSERT INTO schema_migrations (filename) VALUES (:'filename')"
+  psql "$MIGRATION_DATABASE_URL" --set ON_ERROR_STOP=1 --single-transaction \
+    --command "SELECT pg_advisory_xact_lock(hashtextextended('licite-comigo:migrations', 0));" \
+    --file "$file" \
+    --command "INSERT INTO schema_migrations (filename) VALUES ('$filename')"
 done
 
 for role_and_password in \
@@ -44,5 +41,11 @@ for role_and_password in \
   password="${role_and_password#*:}"
   psql "$MIGRATION_DATABASE_URL" --set ON_ERROR_STOP=1 \
     --set role_name="$role" --set role_password="$password" \
-    --command "ALTER ROLE :role_name LOGIN PASSWORD :'role_password'"
+    --command "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'role_name') THEN EXECUTE format('CREATE ROLE %I', :'role_name'); END IF; END \$\$;" \
+    --command "ALTER ROLE :role_name LOGIN PASSWORD :'role_password' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS"
 done
+
+if [ "${MIGRATE_IDLE_AFTER:-false}" = "true" ]; then
+  echo "migrations concluídas; permanecendo ocioso por MIGRATE_IDLE_AFTER=true"
+  while :; do sleep 3600; done
+fi

@@ -1,46 +1,42 @@
-/* PROVISÓRIO: substitua somente este arquivo quando a identidade oficial for entregue. */
+/* Tokens da marca — rascunho para revisão jurídica. */
 :root {
-  --lc-color-background: hsl(0 0% 100%);
-  --lc-color-foreground: hsl(222 47% 11%);
-  --lc-color-muted: hsl(210 40% 96%);
-  --lc-color-muted-foreground: hsl(215 16% 47%);
-  --lc-color-primary: hsl(222 47% 11%);
-  --lc-color-primary-foreground: hsl(210 40% 98%);
-  --lc-color-border: hsl(214 32% 91%);
-  --lc-color-ring: hsl(215 20% 65%);
-  --lc-font-sans: ui-sans-serif, system-ui, sans-serif;
-  --lc-font-display: ui-sans-serif, system-ui, sans-serif;
+  --lc-color-navy: #10273b;
+  --lc-color-teal: #0f937f;
+  --lc-color-mint: #dff9ef;
+  --lc-color-ink: #172a37;
+  --lc-color-muted: #718191;
+  --lc-color-line: #dce5ea;
+  --lc-color-bg: #f4f7f8;
+  --lc-color-accent: #57deb9;
+  --lc-gradient-brand: linear-gradient(135deg, #102d42 0%, #176c69 100%);
+  --lc-color-ana: #0e6f67;
+  --lc-color-background: var(--lc-color-bg);
+  --lc-color-foreground: var(--lc-color-ink);
+  --lc-color-muted-surface: var(--lc-color-mint);
+  --lc-color-muted-foreground: var(--lc-color-muted);
+  --lc-color-primary: var(--lc-color-teal);
+  --lc-color-primary-foreground: #ffffff;
+  --lc-color-border: var(--lc-color-line);
+  --lc-color-ring: var(--lc-color-accent);
+  --lc-font-sans: Inter, 'Segoe UI', Arial, sans-serif;
+  --lc-font-display: Inter, 'Segoe UI', Arial, sans-serif;
   --lc-font-mono: ui-monospace, SFMono-Regular, monospace;
   --lc-radius-sm: 0.375rem;
   --lc-radius-md: 0.5rem;
   --lc-radius-lg: 0.75rem;
   --lc-radius-full: 9999px;
-  --lc-shadow-sm: 0 1px 2px 0 hsl(222 47% 11% / 0.05);
-  --lc-shadow-md: 0 4px 12px hsl(222 47% 11% / 0.08);
+  --lc-shadow-sm: 0 1px 2px 0 rgba(16, 39, 59, 0.05);
+  --lc-shadow-md: 0 4px 12px rgba(16, 39, 59, 0.08);
   --lc-space-page: 1.5rem;
   --lc-space-section: 4rem;
 }
 
 .dark {
-  --lc-color-background: hsl(222 47% 11%);
-  --lc-color-foreground: hsl(210 40% 98%);
-  --lc-color-muted: hsl(217 33% 18%);
-  --lc-color-muted-foreground: hsl(215 20% 65%);
-  --lc-color-primary: hsl(210 40% 98%);
-  --lc-color-primary-foreground: hsl(222 47% 11%);
-  --lc-color-border: hsl(217 33% 24%);
-  --lc-color-ring: hsl(215 20% 65%);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    --lc-color-background: hsl(222 47% 11%);
-    --lc-color-foreground: hsl(210 40% 98%);
-    --lc-color-muted: hsl(217 33% 18%);
-    --lc-color-muted-foreground: hsl(215 20% 65%);
-    --lc-color-primary: hsl(210 40% 98%);
-    --lc-color-primary-foreground: hsl(222 47% 11%);
-    --lc-color-border: hsl(217 33% 24%);
-    --lc-color-ring: hsl(215 20% 65%);
-  }
+  --lc-color-background: var(--lc-color-navy);
+  --lc-color-foreground: var(--lc-color-bg);
+  --lc-color-muted: #176c69;
+  --lc-color-muted-foreground: #bfd0d8;
+  --lc-color-primary: var(--lc-color-accent);
+  --lc-color-primary-foreground: var(--lc-color-navy);
+  --lc-color-border: #2b4a5b;
 }

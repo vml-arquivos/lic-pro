@@ -1,0 +1,9 @@
+FROM postgres:16-alpine
+WORKDIR /migrate
+COPY db/migrations /migrations
+COPY db/migrate.sh /migrate.sh
+RUN chmod 0555 /migrate.sh
+ENV MIGRATE_IDLE_AFTER=false
+USER postgres
+# Recurso one-shot sem HTTP e sem HEALTHCHECK HTTP.
+ENTRYPOINT ["/bin/sh", "/migrate.sh"]

@@ -15,7 +15,7 @@ pytest
 
 ## Operação recorrente
 
-Em produção, o compose sobe três processos separados: `ingest` (health/readiness HTTP), `ingest-worker` (Celery consumer da fila `ingest`) e `ingest-scheduler` (Celery Beat). O scheduler cria uma janela PNCP real conforme `INGEST_SCHEDULE_TENANT_ID`, modalidade, UF e `INGEST_WINDOW_DAYS`; sem esse tenant configurado, ele não inventa dados e retorna `not_configured`.
+Em produção, o Coolify cria três recursos separados: `ingest` (Dockerfile HTTP com health/readiness), `ingest-worker` (`Dockerfile.worker`, consumer Celery) e `ingest-scheduler` (`Dockerfile.scheduler`, Celery Beat). Worker e scheduler não têm HTTP nem healthcheck HTTP; a operação observa processo, fila e logs. O scheduler cria uma janela PNCP real conforme `INGEST_SCHEDULE_TENANT_ID`, modalidade, UF e `INGEST_WINDOW_DAYS`; sem esse tenant configurado, ele não inventa dados e retorna `not_configured`.
 
 Cada execução usa uma chave de checkpoint `(tenant, fonte, modalidade, janela)` em `ingest_checkpoints`. Reprocessar a mesma janela incrementa a tentativa, reaproveita a página e usa o upsert idempotente do identificador oficial. Falhas fazem retry exponencial limitado por `INGEST_MAX_RETRIES`; depois, o erro é gravado em `ingest_dead_letters` e encaminhado à fila RabbitMQ `ingest.dlq` para inspeção operacional, sem descarte silencioso.
 

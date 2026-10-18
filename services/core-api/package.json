@@ -17,11 +17,13 @@
     "@fastify/jwt": "^9.0.1",
     "@licitecomigo/shared": "workspace:*",
     "fastify": "^5.2.1",
+    "nodemailer": "^6.9.16",
     "pg": "^8.13.1",
     "redis": "^4.7.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/nodemailer": "^6.4.15",
     "@types/pg": "^8.11.10",
     "vitest": "^2.1.8"
   }

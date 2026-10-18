@@ -3,13 +3,20 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-const localTenantId = '00000000-0000-0000-0000-000000000001';
+type TenantChoice = { id: string; nome: string };
 
-export function LoginForm() {
+export function LoginForm({
+  demoMode,
+  signupEnabled,
+}: {
+  demoMode: boolean;
+  signupEnabled: boolean;
+}) {
   const router = useRouter();
-  const [tenantId, setTenantId] = useState(localTenantId);
-  const [email, setEmail] = useState('admin@local.test');
-  const [password, setPassword] = useState('local-dev-password');
+  const [tenantId, setTenantId] = useState<string>();
+  const [email, setEmail] = useState(demoMode ? 'admin@local.test' : '');
+  const [password, setPassword] = useState(demoMode ? 'local-dev-password' : '');
+  const [tenants, setTenants] = useState<TenantChoice[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -22,11 +29,24 @@ export function LoginForm() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ tenant_id: tenantId, email, password }),
       });
-      if (!response.ok) throw new Error('login_failed');
-      router.push('/radar');
+      const payload = (await response.json().catch(() => ({}))) as {
+        tenants?: TenantChoice[];
+        error?: string;
+      };
+      if (response.status === 409 && payload.tenants) {
+        setTenants(payload.tenants);
+        return;
+      }
+      if (!response.ok) throw new Error(payload.error ?? 'login_failed');
+      router.push('/');
       router.refresh();
-    } catch {
-      setError('Não foi possível entrar. Confirme o tenant, e-mail e senha do seed local.');
+    } catch (cause) {
+      const code = cause instanceof Error ? cause.message : 'login_failed';
+      setError(
+        code === 'email_not_verified'
+          ? 'Confirme seu e-mail antes de entrar.'
+          : 'Não foi possível entrar. Confirme e-mail e senha.',
+      );
     } finally {
       setLoading(false);
     }
@@ -41,15 +61,12 @@ export function LoginForm() {
       }}
     >
       <label>
-        Tenant ID
-        <input value={tenantId} onChange={(event) => setTenantId(event.target.value)} required />
-      </label>
-      <label>
         E-mail
         <input
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
+          autoComplete="email"
           required
         />
       </label>
@@ -59,17 +76,49 @@ export function LoginForm() {
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
+          autoComplete="current-password"
           required
         />
       </label>
+      {tenants.length ? (
+        <fieldset className="tenant-choices">
+          <legend>Escolha a organização</legend>
+          {tenants.map((tenant) => (
+            <label key={tenant.id}>
+              <input
+                type="radio"
+                name="tenant"
+                value={tenant.id}
+                checked={tenantId === tenant.id}
+                onChange={() => setTenantId(tenant.id)}
+                required
+              />{' '}
+              {tenant.nome}
+            </label>
+          ))}
+          <button type="submit" disabled={loading || !tenantId}>
+            {loading ? 'Entrando…' : 'Continuar'}
+          </button>
+        </fieldset>
+      ) : (
+        <button type="submit" disabled={loading}>
+          {loading ? 'Entrando…' : 'Entrar'}
+        </button>
+      )}
       {error ? (
         <p role="alert" className="error-message">
           {error}
         </p>
       ) : null}
-      <button type="submit" disabled={loading}>
-        {loading ? 'Entrando…' : 'Entrar'}
-      </button>
+      <p className="auth-help">
+        <a href="/password-recovery">Esqueci minha senha</a>
+        {signupEnabled ? (
+          <>
+            {' '}
+            · <a href="/signup">Criar conta</a>
+          </>
+        ) : null}
+      </p>
     </form>
   );
 }

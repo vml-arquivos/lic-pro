@@ -6,13 +6,13 @@ A identidade visual atual é provisória. O wordmark, os tokens, o preset Tailwi
 
 ## Estado do projeto
 
-Esta entrega cobre as **Fases 0, 1, 2, 2B, 3, 3.1 e o MVP 1 da especificação v2**. Além da fundação, banco multi-tenant com RLS, conectores oficiais, Academia, Reader/RAG, Ana somente-leitura, roles e deploy, o MVP 1 entrega sessão local, empresas/CNPJ, concessão de mentor, dashboard, Radar autenticado, pipeline de oportunidades, versões/evidências do edital e correções auditadas.
+Esta entrega cobre as **Fases 0, 1, 2, 2B, 3, 3.1, MVP 1 e Fase 3.3 da especificação v2**. Além da fundação, banco multi-tenant com RLS, conectores oficiais, Academia, Reader/RAG, Ana somente-leitura, roles e deploy, foram entregues autenticação pública controlada, bootstrap administrativo, leads LGPD, site institucional, shell v2 e deploy por recurso Coolify.
 
 Conforme solicitado, as fases posteriores não foram iniciadas. A automação de portais e ações reais de lance não foi implementada.
 
 ## Requisitos locais
 
-Use Node.js 22+, pnpm 9+, Python 3.12+ e Docker Compose. Copie `.env.example` para `.env` e substitua os valores locais quando necessário. O `MIGRATION_DATABASE_URL` usa a role de migrations; cada serviço usa sua URL de role de aplicação.
+Use Node.js 22+, pnpm 9+, Python 3.12+ e Docker Compose apenas para desenvolvimento local. Copie `.env.example` para `.env` e substitua os valores locais quando necessário. O `MIGRATION_DATABASE_URL` usa a role de migrations; cada serviço usa sua URL de role de aplicação.
 
 ```bash
 cp .env.example .env
@@ -20,13 +20,14 @@ pnpm install
 docker compose up -d postgres redis rabbitmq
 pnpm db:migrate
 DEMO_MODE=true pnpm db:seed
+pnpm env:check
 pnpm build
 pnpm lint
 pnpm test
 pnpm format:check
 ```
 
-`pnpm db:migrate` executa todas as migrations em ordem com `MIGRATION_DATABASE_URL`, provisiona as senhas das roles de aplicação a partir das variáveis de ambiente e nunca é chamado pelo processo web. `db/seed.sh` recusa execução sem `DEMO_MODE=true` e insere o tenant local `00000000-0000-0000-0000-000000000001` e o usuário `admin@local.test` (`00000000-0000-0000-0000-000000000002`). Depois do seed, abra `/login` ou use `POST /auth/login` com tenant ID, e-mail e senha `local-dev-password`; a sessão é emitida pelo core API e guardada pelo web em cookie HttpOnly. Essa credencial só existe para o seed local. Em produção, use o serviço one-shot `migrate` do `docker-compose.prod.yml` e um seed/provedor de identidade revisado separadamente.
+`pnpm db:migrate` executa todas as migrations em ordem com `MIGRATION_DATABASE_URL`, provisiona as senhas das roles de aplicação a partir das variáveis de ambiente e nunca é chamado pelo processo web. `db/seed.sh` recusa execução sem `DEMO_MODE=true` e insere o tenant local e o usuário `admin@local.test`. Depois do seed, abra `/login`; em modo demo a tela pode preencher a credencial local, enquanto o login normal pede apenas e-mail e senha e solicita a organização somente se houver mais de uma. Para produção, rode `pnpm admin:bootstrap` como job one-shot com senha forte e use `db/Dockerfile.migrate` no recurso separado do Coolify.
 
 Para validar os serviços Python:
 
@@ -43,7 +44,7 @@ docker compose up -d postgres redis rabbitmq
 docker compose down
 ```
 
-O app web roda com `pnpm --filter @licitecomigo/web dev`. O core API roda com `pnpm --filter @licitecomigo/core-api dev`, expõe `GET /health` e `GET /ready` e concentra `/auth/login`, `/me`, `/companies`, `/mentor/companies`, `/opportunities`, `/dashboard/summary`, `/editais` e `/reader/chunks`; a readiness exige banco e Redis. O web usa proxies same-origin em `/api/core/*`, `/api/auth/login` e `/api/reader/*`, sem expor URL interna do AI ao browser. O serviço de IA expõe `/health`, `/ready`, `/reader/ingest`, `/reader/analyze` e `/ana/chat/stream`. O ingest expõe `/health` e `/ready`; bid-engine e realtime-gw expõem ambos os endpoints, sendo o realtime responsável por upgrade WebSocket em `/ws`.
+O app web roda com `pnpm --filter @licitecomigo/web dev`; o site institucional com `pnpm --filter @licitecomigo/site dev`. O core API expõe `/health`, `/ready`, login, signup controlado, recuperação, `/public/leads`, conta, empresas, pipeline e mentor. O web usa proxies same-origin sem expor URL interna do AI. O serviço de IA expõe `/health`, `/ready`, `/reader/ingest`, `/reader/analyze` e `/ana/chat/stream`. O ingest expõe `/health` e `/ready`; worker e scheduler não têm HTTP. Produção usa um recurso Coolify por Dockerfile; `infra/reference/docker-compose.prod.yml` é somente referência.
 
 O smoke test das fontes públicas é opt-in e nunca roda no CI:
 

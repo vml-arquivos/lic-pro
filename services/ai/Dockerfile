@@ -10,10 +10,11 @@ RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir .
 FROM python:3.12-slim AS runtime
 WORKDIR /app
 RUN groupadd --system app && useradd --system --gid app app
-ENV PATH="/opt/venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+ENV PATH="/opt/venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 AI_PORT=8000
 COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /build/src ./src
 COPY --from=builder /build/ana ./ana
 USER app
 EXPOSE 8000
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:' + __import__('os').environ.get('AI_PORT', '8000') + '/health', timeout=3)" || exit 1
+CMD ["sh", "-c", "exec uvicorn src.main:app --host 0.0.0.0 --port ${AI_PORT:-8000}"]

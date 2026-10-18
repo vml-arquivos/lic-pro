@@ -38,8 +38,20 @@
 
 ## ADR-0010 — Compose de produção com migration one-shot
 
-**Status:** aceito. **Contexto:** migrations dentro do start da aplicação tornam rollback e readiness imprevisíveis. **Decisão:** `docker-compose.prod.yml` usa o serviço `migrate`, espera PostgreSQL saudável, executa migrations em ordem e só então libera os serviços. URLs e origens são variáveis de ambiente; nenhum domínio fica hardcoded. **Consequência:** Coolify precisa manter o volume PostgreSQL persistente e configurar backups/restauração fora do processo web.
+**Status:** substituído pela ADR-0012. **Contexto:** migrations dentro do start da aplicação tornam rollback e readiness imprevisíveis. **Decisão original:** um serviço one-shot `migrate` separado aplica migrations antes dos serviços. A Fase 3.3 mantém essa separação via `db/Dockerfile.migrate` e deixa o Compose apenas em `infra/reference/`. **Consequência:** Coolify precisa manter o volume PostgreSQL persistente e configurar backups/restauração fora do processo web.
 
 ## ADR-0011 — Limites de IA por usuário, tenant e mês
 
 **Status:** aceito. **Contexto:** PDF, streaming e providers de LLM podem gerar custo ou abuso sem controle. **Decisão:** `/ana/chat/stream` e `/reader/*` usam rate limit por usuário/tenant, limites configuráveis de tamanho/páginas/timeout e `uso_ia` com cota mensal de chamadas/tokens. **Consequência:** excedentes retornam erro explícito e não disparam ação externa.
+
+## ADR-0012 — Deploy por recurso no Coolify
+
+**Status:** aceito. **Contexto:** produção não deve depender de um Compose monolítico para rebuild, health e rollback independentes. **Decisão:** cada serviço usa seu Dockerfile com contexto na raiz; `db/Dockerfile.migrate` é one-shot separado e o Compose produtivo foi movido para `infra/reference/` apenas como referência. **Consequência:** a ordem de criação e os hostnames internos precisam ser configurados no Coolify e workers/scheduler são observados por processo, não por HTTP.
+
+## ADR-0013 — Escopo dos editais no MVP 1
+
+**Status:** aceito para a parada 3.3. **Contexto:** o schema atual de `editais` e o pipeline já usam `tenant_id`, enquanto o Radar e o Reader aplicam isolamento por tenant. **Decisão:** manter `editais` tenant-scoped nesta parada, com ingestão programada por `INGEST_SCHEDULE_TENANT_ID`, documentando explicitamente que não há catálogo global compartilhado nem cópia entre tenants. A deduplicação é idempotente dentro de `(tenant_id, fonte, id_externo)` e as versões seguem o mesmo escopo. **Consequência:** uma futura ingestão global exigirá migration de catálogo, fan-out autorizado e reavaliação das policies antes de ser ativada; nenhuma automação externa é inferida agora.
+
+## ADR-0014 — Conta pública e consentimento versionado
+
+**Status:** aceito. **Contexto:** login por tenant ID não deve ser a experiência padrão e signup/reset precisam evitar enumeração. **Decisão:** `auth_credentials` suporta resolução de organização após validação da senha, tokens temporários armazenados somente como hash, rate limit por IP, termos/política com versão e provider SMTP configurável; `fake` só existe fora de produção. **Consequência:** o signup permanece desligado por padrão e a operação deve habilitá-lo somente depois de configurar e testar e-mail.

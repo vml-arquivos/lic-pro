@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 
 from fastapi import FastAPI
@@ -20,6 +21,22 @@ def health() -> ServiceHealth:
     return ServiceHealth(service="ingest")
 
 
+def validate_runtime_environment() -> None:
+    if os.getenv("NODE_ENV") != "production":
+        return
+    required = [
+        "DATABASE_URL",
+        "REDIS_URL",
+        "RABBITMQ_URL",
+        "PNCP_BASE_URL",
+        "COMPRAS_GOV_BASE_URL",
+    ]
+    missing = [name for name in required if not os.getenv(name)]
+    if missing:
+        raise RuntimeError(f"Variáveis obrigatórias ausentes no ingest: {', '.join(missing)}")
+
+
+validate_runtime_environment()
 app = FastAPI(title="Licite Comigo Ingest", version="0.3.1")
 
 

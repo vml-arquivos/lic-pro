@@ -32,10 +32,13 @@ class JwtSettings:
         self.issuer = values.get("AI_JWT_ISSUER")
         self.audience = values.get("AI_JWT_AUDIENCE")
         if self.environment == "production":
+            missing = [name for name in ("AI_JWT_ISSUER", "AI_JWT_AUDIENCE") if not values.get(name)]
             if self.algorithm.startswith("HS") and not self.secret:
-                raise RuntimeError("AI_JWT_SECRET é obrigatório em produção")
+                missing.append("AI_JWT_SECRET")
             if self.algorithm.startswith("RS") and not self.public_key:
-                raise RuntimeError("AI_JWT_PUBLIC_KEY é obrigatório em produção")
+                missing.append("AI_JWT_PUBLIC_KEY")
+            if missing:
+                raise RuntimeError(f"Variáveis obrigatórias ausentes no AI: {', '.join(missing)}")
             if self.algorithm not in {"HS256", "HS384", "HS512", "RS256", "RS384", "RS512"}:
                 raise RuntimeError("AI_JWT_ALGORITHM não permitido")
         if self.algorithm.startswith("HS"):

@@ -1,9 +1,11 @@
+import { randomUUID } from 'node:crypto';
 import fastifyCors from '@fastify/cors';
 import fastifyJwt from '@fastify/jwt';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import type { Pool } from 'pg';
 import { z } from 'zod';
 import { health } from '@licitecomigo/shared';
+import { createOpaqueToken, hashIp, hashOpaqueToken, PublicRateLimiter } from './auth-public.js';
 import {
   assertTenant,
   authClaimsSchema,
@@ -13,7 +15,8 @@ import {
 } from './auth.js';
 import { loadConfig, type RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
-import { verifyPassword } from './password.js';
+import { assertStrongPassword, hashPassword, verifyPassword } from './password.js';
+import { sendEmail } from './email.js';
 import { checkReadiness } from './readiness.js';
 import { buildEditalSearchQuery, editalSearchSchema } from './search.js';
 
@@ -27,6 +30,7 @@ export type BuildAppOptions = {
 const tenantPathSchema = z.object({ tenantId: z.string().uuid() });
 const userPathSchema = z.object({ userId: z.string().uuid() });
 const companyPathSchema = z.object({ companyId: z.string().uuid() });
+const concessionPathSchema = z.object({ concessionId: z.string().uuid() });
 const opportunityPathSchema = z.object({ opportunityId: z.string().uuid() });
 const chunkPathSchema = z.object({ chunkId: z.string().uuid() });
 const tenantBodySchema = z.object({
@@ -68,9 +72,31 @@ const quizAttemptSchema = z.object({
 const glossaryPathSchema = z.object({ termo: z.string().trim().min(1).max(100) });
 const conversaPathSchema = z.object({ conversaId: z.string().uuid() });
 const loginSchema = z.object({
-  tenant_id: z.string().uuid(),
+  tenant_id: z.string().uuid().optional(),
   email: z.string().email(),
   password: z.string().min(1).max(200),
+});
+const signupSchema = z.object({
+  nome: z.string().trim().min(2).max(160),
+  empresa_nome: z.string().trim().min(2).max(200),
+  email: z.string().email(),
+  password: z.string().min(1).max(200),
+  termos_aceitos: z.literal(true),
+  privacidade_aceita: z.literal(true),
+});
+const tokenSchema = z.object({ token: z.string().min(20).max(200) });
+const recoverySchema = z.object({ email: z.string().email() });
+const leadSchema = z.object({
+  nome: z.string().trim().min(2).max(160),
+  email: z.string().email(),
+  whatsapp: z.string().trim().max(40).optional(),
+  perfil: z.enum(['empresario', 'mentorado', 'iniciante']),
+  consentimento_lgpd: z.literal(true),
+  origem: z.string().trim().max(160).optional(),
+  utm_source: z.string().trim().max(160).optional(),
+  utm_medium: z.string().trim().max(160).optional(),
+  utm_campaign: z.string().trim().max(160).optional(),
+  website: z.string().max(200).optional(),
 });
 const companySchema = z.object({
   cnpj: z.string().regex(/^\d{14}$/),
@@ -83,7 +109,7 @@ const companySchema = z.object({
 });
 const companyUpdateSchema = companySchema.partial();
 const diagnosisSchema = z.object({
-  publico: z.enum(['empresa', 'mentor', 'estudante']).optional(),
+  publico: z.enum(['empresa', 'mentoria']).optional(),
   nivel_diagnostico: z
     .enum(['sem_diagnostico', 'iniciante', 'em_evolucao', 'pronto_para_operar'])
     .optional(),
@@ -144,6 +170,7 @@ const chunkCorrectionSchema = z.object({
   status_validacao: z.enum(['extraido', 'confirmado_usuario', 'corrigido']),
   observacao_correcao: z.string().trim().max(2000).optional(),
 });
+const publicRateLimiter = new PublicRateLimiter(12);
 
 function sendDatabaseUnavailable(reply: FastifyReply): void {
   reply
@@ -194,6 +221,24 @@ async function audit(
   );
 }
 
+async function auditPublic(
+  client: Parameters<Parameters<typeof withTenant>[2]>[0],
+  request: FastifyRequest,
+  tenantId: string,
+  userId: string,
+  action: string,
+  resource: string,
+  resourceId: string | null,
+  metadata: Record<string, unknown> = {},
+): Promise<void> {
+  await client.query(
+    `INSERT INTO auditoria
+       (tenant_id, usuario_id, acao, recurso, recurso_id, metadata, request_id, origem, versao_dados)
+     VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, 'public', 'phase3.3')`,
+    [tenantId, userId, action, resource, resourceId, JSON.stringify(metadata), request.id],
+  );
+}
+
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const config = options.config ?? loadConfig();
   const pool = options.pool;
@@ -219,11 +264,25 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       reply.code(403).send({ error: 'tenant_forbidden' });
       return;
     }
+    if (error instanceof Error && error.message === 'public_rate_limit') {
+      reply.code(429).send({ error: 'rate_limited' });
+      return;
+    }
     reply.send(error);
   });
 
   app.addHook('preHandler', async (request, reply) => {
-    if (request.url === '/health' || request.url === '/ready' || request.url === '/auth/login') {
+    const publicPaths = new Set([
+      '/health',
+      '/ready',
+      '/auth/login',
+      '/auth/signup',
+      '/auth/verify-email',
+      '/auth/password-recovery',
+      '/auth/password-reset',
+      '/public/leads',
+    ]);
+    if (publicPaths.has(request.url.split('?')[0] ?? '')) {
       return;
     }
     await request.jwtVerify();
@@ -242,78 +301,414 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   app.post('/auth/login', async (request, reply) => {
     const body = loginSchema.parse(request.body);
+    publicRateLimiter.check(`login:${request.ip}`);
     if (!pool) return sendDatabaseUnavailable(reply);
 
     const client = await pool.connect();
-    let user:
-      | {
-          id: string;
-          tenant_id: string;
-          email: string;
-          papel: UserRole;
-          password_hash: string | null;
-          empresa_id: string | null;
-        }
-      | undefined;
     try {
       await client.query('BEGIN');
-      await client.query("SELECT set_config('app.tenant_id', $1, true)", [body.tenant_id]);
+      await client.query("SELECT set_config('app.auth_flow', 'true', true)");
       const result = await client.query<{
         id: string;
         tenant_id: string;
+        tenant_nome: string;
         email: string;
         papel: UserRole;
-        password_hash: string | null;
+        password_hash: string;
         empresa_id: string | null;
       }>(
-        `SELECT id, tenant_id, email, papel, password_hash, NULL::uuid AS empresa_id
-           FROM usuarios
-          WHERE tenant_id = $1 AND lower(email) = lower($2) AND ativo = true
-          LIMIT 1`,
-        [body.tenant_id, body.email],
+        `SELECT c.usuario_id AS id, c.tenant_id, t.nome AS tenant_nome, c.email,
+                u.papel, c.password_hash, NULL::uuid AS empresa_id
+           FROM auth_credentials c
+           JOIN tenants t ON t.id = c.tenant_id
+           JOIN usuarios u ON u.id = c.usuario_id AND u.tenant_id = c.tenant_id
+          WHERE lower(c.email) = lower($1) AND c.ativo = true AND u.ativo = true
+            AND ($2::uuid IS NULL OR c.tenant_id = $2)
+          ORDER BY c.tenant_id`,
+        [body.email, body.tenant_id ?? null],
       );
-      user = result.rows[0];
-      if (user) {
-        await client.query("SELECT set_config('app.user_id', $1, true)", [user.id]);
-        const company = await client.query<{ empresa_id: string }>(
-          `SELECT empresa_id FROM empresa_usuarios
-            WHERE tenant_id = $1 AND usuario_id = $2 AND ativo = true
-            ORDER BY created_at LIMIT 1`,
-          [body.tenant_id, user.id],
-        );
-        user.empresa_id = company.rows[0]?.empresa_id ?? null;
+      const valid = result.rows.filter((candidate) =>
+        verifyPassword(body.password, candidate.password_hash),
+      );
+      if (valid.length === 0) {
+        await client.query('ROLLBACK');
+        return reply.code(401).send({ error: 'invalid_credentials' });
       }
+      if (valid.length > 1 && !body.tenant_id) {
+        await client.query('ROLLBACK');
+        return reply.code(409).send({
+          error: 'tenant_selection_required',
+          tenants: valid.map((candidate) => ({
+            id: candidate.tenant_id,
+            nome: candidate.tenant_nome,
+          })),
+        });
+      }
+      const user = valid[0];
+      if (!user) return reply.code(401).send({ error: 'invalid_credentials' });
+      const verified = await client.query<{ email_verificado_em: Date | null }>(
+        `SELECT email_verificado_em FROM auth_credentials
+          WHERE tenant_id = $1 AND usuario_id = $2`,
+        [user.tenant_id, user.id],
+      );
+      if (!verified.rows[0]?.email_verificado_em) {
+        await client.query('ROLLBACK');
+        return reply.code(403).send({ error: 'email_not_verified' });
+      }
+      await client.query("SELECT set_config('app.tenant_id', $1, true)", [user.tenant_id]);
+      await client.query("SELECT set_config('app.user_id', $1, true)", [user.id]);
+      const company = await client.query<{ empresa_id: string }>(
+        `SELECT empresa_id FROM empresa_usuarios
+          WHERE tenant_id = $1 AND usuario_id = $2 AND ativo = true
+          ORDER BY created_at LIMIT 1`,
+        [user.tenant_id, user.id],
+      );
+      user.empresa_id = company.rows[0]?.empresa_id ?? null;
       await client.query('COMMIT');
+      const tokenOptions: { expiresIn: number; issuer?: string; audience?: string } = {
+        expiresIn: config.jwtTtlSeconds,
+      };
+      if (config.jwtIssuer) tokenOptions.issuer = config.jwtIssuer;
+      if (config.jwtAudience) tokenOptions.audience = config.jwtAudience;
+      const accessToken = app.jwt.sign(
+        {
+          sub: user.id,
+          tenantId: user.tenant_id,
+          empresaId: user.empresa_id ?? undefined,
+          role: user.papel,
+          email: user.email,
+        },
+        tokenOptions,
+      );
+      return reply.send({
+        access_token: accessToken,
+        token_type: 'Bearer',
+        expires_in: config.jwtTtlSeconds,
+      });
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
     } finally {
       client.release();
     }
+  });
 
-    if (!user || !verifyPassword(body.password, user.password_hash)) {
-      return reply.code(401).send({ error: 'invalid_credentials' });
+  app.post('/auth/signup', async (request, reply) => {
+    if (!config.signupEnabled) return reply.code(404).send({ error: 'signup_disabled' });
+    publicRateLimiter.check(`signup:${request.ip}`);
+    const body = signupSchema.parse(request.body);
+    try {
+      assertStrongPassword(body.password);
+    } catch {
+      return reply.code(400).send({ error: 'weak_password' });
     }
-    const tokenOptions: { expiresIn: number; issuer?: string; audience?: string } = {
-      expiresIn: config.jwtTtlSeconds,
-    };
-    if (config.jwtIssuer) tokenOptions.issuer = config.jwtIssuer;
-    if (config.jwtAudience) tokenOptions.audience = config.jwtAudience;
-    const accessToken = app.jwt.sign(
-      {
-        sub: user.id,
-        tenantId: user.tenant_id,
-        empresaId: user.empresa_id ?? undefined,
-        role: user.papel,
-        email: user.email,
-      },
-      tokenOptions,
-    );
-    return reply.send({
-      access_token: accessToken,
-      token_type: 'Bearer',
-      expires_in: config.jwtTtlSeconds,
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const tenantId = randomUUID();
+    const userId = randomUUID();
+    const verificationToken = createOpaqueToken();
+    const slug = `${
+      body.empresa_nome
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 60) || 'empresa'
+    }-${tenantId.slice(0, 8)}`;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query("SELECT set_config('app.auth_flow', 'true', true)");
+      await client.query("SELECT set_config('app.tenant_id', $1, true)", [tenantId]);
+      await client.query("SELECT set_config('app.user_id', $1, true)", [userId]);
+      await client.query('INSERT INTO tenants (id, nome, slug) VALUES ($1, $2, $3)', [
+        tenantId,
+        body.empresa_nome,
+        slug,
+      ]);
+      const passwordHash = hashPassword(body.password);
+      await client.query(
+        `INSERT INTO usuarios
+          (id, tenant_id, email, nome, papel, perfil_jornada, password_hash, publico,
+           termos_versao, termos_aceitos_em, politica_versao, politica_aceita_em)
+         VALUES ($1, $2, $3, $4, 'admin', 'iniciante', $5, 'empresa', $6, now(), $7, now())`,
+        [
+          userId,
+          tenantId,
+          body.email.toLowerCase(),
+          body.nome,
+          passwordHash,
+          config.termsVersion,
+          config.privacyVersion,
+        ],
+      );
+      await client.query(
+        `INSERT INTO auth_credentials
+          (tenant_id, usuario_id, email, password_hash, verification_token_hash, verification_token_expires_at)
+         VALUES ($1, $2, $3, $4, $5, now() + interval '24 hours')`,
+        [
+          tenantId,
+          userId,
+          body.email.toLowerCase(),
+          passwordHash,
+          hashOpaqueToken(verificationToken),
+        ],
+      );
+      await auditPublic(
+        client,
+        request,
+        tenantId,
+        userId,
+        'auth.signup.requested',
+        'usuario',
+        userId,
+        {
+          termos_versao: config.termsVersion,
+          politica_versao: config.privacyVersion,
+        },
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      if (
+        error instanceof Error &&
+        'code' in error &&
+        (error as { code?: string }).code === '23505'
+      ) {
+        return reply
+          .code(202)
+          .send({ message: 'Se os dados forem válidos, enviaremos instruções por e-mail.' });
+      }
+      throw error;
+    } finally {
+      client.release();
+    }
+    await sendEmail(config, {
+      to: body.email,
+      subject: 'Confirme seu e-mail — Licite Comigo',
+      text: `Confirme seu e-mail em ${config.appUrl ?? config.siteUrl ?? ''}/verify-email?token=${verificationToken}`,
     });
+    return reply
+      .code(202)
+      .send({ message: 'Se os dados forem válidos, enviaremos instruções por e-mail.' });
+  });
+
+  app.post('/auth/verify-email', async (request, reply) => {
+    publicRateLimiter.check(`verify:${request.ip}`);
+    const { token } = tokenSchema.parse(request.body);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query("SELECT set_config('app.auth_flow', 'true', true)");
+      const match = await client.query<{ tenant_id: string; usuario_id: string }>(
+        `SELECT tenant_id, usuario_id FROM auth_credentials
+          WHERE verification_token_hash = $1 AND verification_token_expires_at > now() AND ativo = true LIMIT 1`,
+        [hashOpaqueToken(token)],
+      );
+      const row = match.rows[0];
+      if (!row) {
+        await client.query('ROLLBACK');
+        return reply.code(400).send({ error: 'invalid_or_expired_token' });
+      }
+      await client.query("SELECT set_config('app.tenant_id', $1, true)", [row.tenant_id]);
+      await client.query("SELECT set_config('app.user_id', $1, true)", [row.usuario_id]);
+      await client.query(
+        `UPDATE auth_credentials SET email_verificado_em = now(), verification_token_hash = NULL,
+          verification_token_expires_at = NULL, updated_at = now()
+         WHERE tenant_id = $1 AND usuario_id = $2`,
+        [row.tenant_id, row.usuario_id],
+      );
+      await client.query(
+        'UPDATE usuarios SET email_verificado_em = now(), updated_at = now() WHERE tenant_id = $1 AND id = $2',
+        [row.tenant_id, row.usuario_id],
+      );
+      await auditPublic(
+        client,
+        request,
+        row.tenant_id,
+        row.usuario_id,
+        'auth.email_verified',
+        'usuario',
+        row.usuario_id,
+      );
+      await client.query('COMMIT');
+      return reply.send({ message: 'e-mail verificado' });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  });
+
+  app.post('/auth/password-recovery', async (request, reply) => {
+    publicRateLimiter.check(`recovery:${request.ip}`);
+    const body = recoverySchema.parse(request.body);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const client = await pool.connect();
+    let token: string | undefined;
+    try {
+      await client.query('BEGIN');
+      await client.query("SELECT set_config('app.auth_flow', 'true', true)");
+      const result = await client.query<{ tenant_id: string; usuario_id: string }>(
+        `SELECT tenant_id, usuario_id FROM auth_credentials
+          WHERE lower(email) = lower($1) AND ativo = true LIMIT 1`,
+        [body.email],
+      );
+      const row = result.rows[0];
+      if (row) {
+        token = createOpaqueToken();
+        await client.query("SELECT set_config('app.tenant_id', $1, true)", [row.tenant_id]);
+        await client.query("SELECT set_config('app.user_id', $1, true)", [row.usuario_id]);
+        await client.query(
+          `UPDATE auth_credentials SET reset_token_hash = $3, reset_token_expires_at = now() + interval '1 hour', updated_at = now()
+            WHERE tenant_id = $1 AND usuario_id = $2`,
+          [row.tenant_id, row.usuario_id, hashOpaqueToken(token)],
+        );
+        await auditPublic(
+          client,
+          request,
+          row.tenant_id,
+          row.usuario_id,
+          'auth.password_recovery.requested',
+          'usuario',
+          row.usuario_id,
+        );
+      }
+      await client.query('COMMIT');
+      if (token) {
+        await sendEmail(config, {
+          to: body.email,
+          subject: 'Recuperação de senha — Licite Comigo',
+          text: `Redefina sua senha em ${config.appUrl ?? config.siteUrl ?? ''}/password-reset?token=${token}`,
+        });
+      }
+      return reply
+        .code(202)
+        .send({ message: 'Se o e-mail estiver cadastrado, enviaremos instruções.' });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  });
+
+  app.post('/auth/password-reset', async (request, reply) => {
+    publicRateLimiter.check(`reset:${request.ip}`);
+    const body = tokenSchema.extend({ password: z.string().min(1).max(200) }).parse(request.body);
+    try {
+      assertStrongPassword(body.password);
+    } catch {
+      return reply.code(400).send({ error: 'weak_password' });
+    }
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query("SELECT set_config('app.auth_flow', 'true', true)");
+      const result = await client.query<{ tenant_id: string; usuario_id: string }>(
+        `SELECT tenant_id, usuario_id FROM auth_credentials
+          WHERE reset_token_hash = $1 AND reset_token_expires_at > now() AND ativo = true LIMIT 1`,
+        [hashOpaqueToken(body.token)],
+      );
+      const row = result.rows[0];
+      if (!row) {
+        await client.query('ROLLBACK');
+        return reply.code(400).send({ error: 'invalid_or_expired_token' });
+      }
+      await client.query("SELECT set_config('app.tenant_id', $1, true)", [row.tenant_id]);
+      await client.query("SELECT set_config('app.user_id', $1, true)", [row.usuario_id]);
+      const passwordHash = hashPassword(body.password);
+      await client.query(
+        `UPDATE auth_credentials SET password_hash = $3, reset_token_hash = NULL, reset_token_expires_at = NULL, updated_at = now()
+          WHERE tenant_id = $1 AND usuario_id = $2`,
+        [row.tenant_id, row.usuario_id, passwordHash],
+      );
+      await client.query(
+        'UPDATE usuarios SET password_hash = $3, updated_at = now() WHERE tenant_id = $1 AND id = $2',
+        [row.tenant_id, row.usuario_id, passwordHash],
+      );
+      await auditPublic(
+        client,
+        request,
+        row.tenant_id,
+        row.usuario_id,
+        'auth.password_reset.completed',
+        'usuario',
+        row.usuario_id,
+      );
+      await client.query('COMMIT');
+      return reply.send({ message: 'senha atualizada' });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  });
+
+  app.post('/public/leads', async (request, reply) => {
+    publicRateLimiter.check(`lead:${request.ip}`);
+    const body = leadSchema.parse(request.body);
+    if (body.website) return reply.code(202).send({ message: 'recebido' });
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const ipHash = hashIp(request.ip, config.jwtSecret);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const duplicate = await client.query(
+        `SELECT id FROM leads WHERE lower(email) = lower($1) AND created_at > now() - interval '24 hours' LIMIT 1`,
+        [body.email],
+      );
+      if (duplicate.rows[0]) {
+        await client.query('COMMIT');
+        return reply.code(202).send({ message: 'recebido' });
+      }
+      const inserted = await client.query<{ id: string }>(
+        `INSERT INTO leads
+          (nome, email, whatsapp, perfil, consentimento_lgpd, consentimento_versao, consentimento_em,
+           origem, utm_source, utm_medium, utm_campaign, ip_hash)
+         VALUES ($1, lower($2), $3, $4, true, $5, now(), $6, $7, $8, $9, $10)
+         RETURNING id`,
+        [
+          body.nome,
+          body.email,
+          body.whatsapp ?? null,
+          body.perfil,
+          config.privacyVersion,
+          body.origem ?? null,
+          body.utm_source ?? null,
+          body.utm_medium ?? null,
+          body.utm_campaign ?? null,
+          ipHash,
+        ],
+      );
+      await client.query(
+        `INSERT INTO leads_auditoria (lead_id, acao, ip_hash, metadata)
+         VALUES ($1, 'lead.created', $2, $3::jsonb)`,
+        [inserted.rows[0]?.id, ipHash, JSON.stringify({ origem: body.origem ?? null })],
+      );
+      await client.query('COMMIT');
+      return reply.code(202).send({ message: 'recebido' });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  });
+
+  app.get('/admin/leads', async (request, reply) => {
+    if (!requireRoles(reply, request, ['admin'])) return;
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) =>
+      client.query(
+        `SELECT id, nome, email, whatsapp, perfil, consentimento_versao, consentimento_em,
+                origem, utm_source, utm_medium, utm_campaign, status, created_at
+           FROM leads ORDER BY created_at DESC LIMIT 200`,
+      ),
+    );
+    return reply.send({ data: result.rows });
   });
 
   app.get('/me', async (request, reply) => {
@@ -486,6 +881,25 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       ),
     );
     return reply.send({ data: result.rows });
+  });
+
+  app.delete('/mentor/concessions/:concessionId', async (request, reply) => {
+    if (!requireRoles(reply, request, ['admin'])) return;
+    const { concessionId } = concessionPathSchema.parse(request.params);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const revoked = await client.query(
+        `UPDATE concessoes_mentor SET revogada_em = now(), fim_em = COALESCE(fim_em, now())
+          WHERE id = $1 AND tenant_id = $2 AND revogada_em IS NULL
+          RETURNING id, mentor_id, empresa_id, revogada_em`,
+        [concessionId, request.user.tenantId],
+      );
+      if (revoked.rows[0])
+        await audit(client, request, 'mentor.concession.revoked', 'concessao_mentor', concessionId);
+      return revoked.rows[0];
+    });
+    if (!result) return reply.code(404).send({ error: 'concession_not_found' });
+    return reply.send(result);
   });
 
   app.post('/tenants', async (request, reply) => {

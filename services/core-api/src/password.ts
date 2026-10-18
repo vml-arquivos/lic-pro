@@ -5,6 +5,18 @@ const COST = 16_384;
 const BLOCK_SIZE = 8;
 const PARALLELIZATION = 1;
 
+export function assertStrongPassword(password: string): void {
+  if (
+    password.length < 12 ||
+    !/[a-z]/.test(password) ||
+    !/[A-Z]/.test(password) ||
+    !/[0-9]/.test(password) ||
+    !/[^A-Za-z0-9]/.test(password)
+  ) {
+    throw new Error('senha_forte_obrigatoria');
+  }
+}
+
 export function hashPassword(password: string, salt = randomBytes(16)): string {
   const derived = scryptSync(password, salt, KEY_LENGTH, {
     N: COST,

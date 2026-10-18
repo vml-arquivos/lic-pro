@@ -30,6 +30,18 @@ from .reader import InMemoryAnalysisStore, InMemoryChunkStore, ReaderAgent
 from .usage import PostgresUsageStore
 
 
+def validate_runtime_environment() -> None:
+    if os.getenv("NODE_ENV") != "production":
+        return
+    required = ["DATABASE_URL", "REDIS_URL", "LLM_PROVIDER", "EMBEDDING_PROVIDER"]
+    missing = [name for name in required if not os.getenv(name)]
+    if missing:
+        raise RuntimeError(f"Variáveis obrigatórias ausentes no AI: {', '.join(missing)}")
+
+
+validate_runtime_environment()
+
+
 @dataclass(frozen=True)
 class ServiceHealth:
     service: str

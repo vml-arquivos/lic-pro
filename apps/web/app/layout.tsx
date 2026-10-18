@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { AnaWidget } from './ana/AnaWidget';
+import { AppShell } from './AppShell';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -11,7 +12,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="pt-BR">
       <body>
-        {children}
+        <AppShell>{children}</AppShell>
         <AnaWidget />
       </body>
     </html>

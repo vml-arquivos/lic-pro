@@ -52,6 +52,8 @@ jobs:
             --command "ALTER ROLE licite_core LOGIN PASSWORD 'change-me-ci-only'"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Validate runtime environment contract
+        run: pnpm env:check
       - name: Check formatting
         run: pnpm format:check
       - name: Lint

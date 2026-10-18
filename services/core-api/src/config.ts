@@ -8,15 +8,39 @@ export type RuntimeConfig = {
   redisUrl?: string;
   appUrl?: string;
   apiUrl?: string;
-  wsUrl?: string;
+  siteUrl?: string;
   allowedOrigins: string[];
   nodeEnv: string;
+  signupEnabled: boolean;
+  emailProvider: 'fake' | 'smtp';
+  smtpHost?: string;
+  smtpPort: number;
+  smtpUser?: string;
+  smtpPassword?: string;
+  emailFrom?: string;
+  termsVersion: string;
+  privacyVersion: string;
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig {
+  const nodeEnv = env.NODE_ENV ?? 'development';
   const jwtSecret = env.JWT_SECRET;
-  if (!jwtSecret && env.NODE_ENV !== 'test') {
-    throw new Error('JWT_SECRET é obrigatório fora dos testes');
+  const missing: string[] = [];
+  if (!jwtSecret && nodeEnv !== 'test') missing.push('JWT_SECRET');
+  if (nodeEnv === 'production' && !env.DATABASE_URL) missing.push('DATABASE_URL');
+  if (missing.length) {
+    throw new Error(`Variáveis obrigatórias ausentes no core-api: ${missing.join(', ')}`);
+  }
+
+  const emailProvider = env.EMAIL_PROVIDER === 'smtp' ? 'smtp' : 'fake';
+  if (nodeEnv === 'production' && emailProvider === 'fake') {
+    throw new Error('EMAIL_PROVIDER=fake é proibido em produção');
+  }
+  if (nodeEnv === 'production' && emailProvider === 'smtp') {
+    const smtpMissing = ['SMTP_HOST', 'SMTP_FROM'].filter((variable) => !env[variable]);
+    if (smtpMissing.length) {
+      throw new Error(`Variáveis obrigatórias ausentes no core-api: ${smtpMissing.join(', ')}`);
+    }
   }
 
   const config: RuntimeConfig = {
@@ -27,7 +51,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
       .split(',')
       .map((origin) => origin.trim())
       .filter(Boolean),
-    nodeEnv: env.NODE_ENV ?? 'development',
+    nodeEnv,
+    signupEnabled: env.SIGNUP_ENABLED === 'true',
+    emailProvider,
+    smtpPort: Number(env.SMTP_PORT ?? 587),
+    termsVersion: env.TERMS_VERSION ?? '2026-10-17-draft',
+    privacyVersion: env.PRIVACY_VERSION ?? '2026-10-17-draft',
   };
   if (env.JWT_ISSUER) config.jwtIssuer = env.JWT_ISSUER;
   if (env.JWT_AUDIENCE) config.jwtAudience = env.JWT_AUDIENCE;
@@ -35,6 +64,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
   if (env.REDIS_URL) config.redisUrl = env.REDIS_URL;
   if (env.APP_URL) config.appUrl = env.APP_URL;
   if (env.API_URL) config.apiUrl = env.API_URL;
-  if (env.WS_URL) config.wsUrl = env.WS_URL;
+  if (env.SITE_URL) config.siteUrl = env.SITE_URL;
+  if (env.SMTP_HOST) config.smtpHost = env.SMTP_HOST;
+  if (env.SMTP_USER) config.smtpUser = env.SMTP_USER;
+  if (env.SMTP_PASSWORD) config.smtpPassword = env.SMTP_PASSWORD;
+  if (env.SMTP_FROM) config.emailFrom = env.SMTP_FROM;
   return config;
 }

@@ -2,6 +2,7 @@
 BEGIN;
 SELECT set_config('app.tenant_id', '00000000-0000-0000-0000-000000000001', true);
 SELECT set_config('app.user_id', '00000000-0000-0000-0000-000000000002', true);
+SELECT set_config('app.auth_flow', 'true', true);
 
 INSERT INTO tenants (id, nome, slug)
 VALUES ('00000000-0000-0000-0000-000000000001', 'Licite Comigo Local', 'licite-comigo-local')
@@ -22,6 +23,20 @@ ON CONFLICT (id) DO UPDATE SET
   nome = EXCLUDED.nome,
   papel = EXCLUDED.papel,
   password_hash = EXCLUDED.password_hash;
+
+INSERT INTO auth_credentials (tenant_id, usuario_id, email, password_hash, email_verificado_em)
+VALUES (
+  '00000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000002',
+  'admin@local.test',
+  'scrypt$16384$8$1$bGljaXRlLWNvbWlnby1sb2NhbC1zYWx0$Hkc28dUl61j-hf-QCX1ZJQgPiNgjl3yb2cdx-xF5vtDJ57qYCGdTmubKsQAmHQ8LpB1GjxuEBK2TppPINjCG7Q',
+  now()
+)
+ON CONFLICT (tenant_id, usuario_id) DO UPDATE SET
+  email = EXCLUDED.email,
+  password_hash = EXCLUDED.password_hash,
+  email_verificado_em = EXCLUDED.email_verificado_em,
+  ativo = true;
 
 INSERT INTO empresas (id, tenant_id, cnpj, razao_social, nome_fantasia, porte, segmento, cidade, uf)
 VALUES (

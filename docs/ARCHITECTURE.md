@@ -63,8 +63,10 @@ Ana é read-only nesta fase. As ferramentas permitidas são `buscar_editais`, `l
 
 ## Deploy e readiness
 
-`docker-compose.prod.yml` sobe PostgreSQL com pgvector, Redis, RabbitMQ, o serviço one-shot `migrate`, APIs, gateways e web em rede privada sem portas internas publicadas. Cada serviço tem `/health` liveness e `/ready`; o core/AI/ingest verificam dependências. O web recebe domínio por configuração, e WebSocket usa `/ws` com reconexão exponencial no cliente.
+Na Fase 3.3, produção usa um recurso Coolify por serviço, com contexto na raiz e Dockerfile multi-stage não-root. PostgreSQL usa `pgvector/pgvector:pg16`; `db/Dockerfile.migrate` aplica migrations com advisory lock e fica separado dos processos HTTP. Site e web expõem `/health` e `/ready`; core/AI/ingest também verificam dependências; worker e scheduler Celery não têm HTTP e são observados por logs/processo. O Compose produtivo foi movido para `infra/reference/` apenas como referência.
+
+Contas públicas usam `auth_credentials`, tokens temporários com hash, consentimento versionado, rate limit e SMTP configurável. Leads entram por endpoint público sem leitura pública e aparecem apenas no painel admin autenticado. `editais` permanece tenant-scoped nesta parada, conforme ADR-0013; a ingestão não cria catálogo global nem compartilha dados entre tenants.
 
 ## Evolução planejada
 
-A Fase 3.1 está concluída nesta parada para revisão. As fases posteriores só começam após a revisão solicitada; Hunter, Pricer e Writer continuam como skeletons.
+A Fase 3.3 está concluída nesta parada para revisão. O MVP 2 não foi iniciado; Hunter, Pricer e Writer continuam como skeletons e automações/aprovações continuam marcadas como “Em breve” no shell.
