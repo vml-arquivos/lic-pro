@@ -3,10 +3,12 @@ import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const connectionString = process.env.TEST_DATABASE_URL;
-const rlsSuite = describe.skipIf(!connectionString);
+const setupConnectionString = process.env.TEST_ADMIN_DATABASE_URL;
+const rlsSuite = describe.skipIf(!connectionString || !setupConnectionString);
 
 rlsSuite('isolamento RLS efetivo por tenant com role de aplicação', () => {
-  let pool: Pool;
+  let pool!: Pool;
+  let setupPool!: Pool;
   const tenantA = randomUUID();
   const tenantB = randomUUID();
   const userA = randomUUID();
@@ -17,10 +19,12 @@ rlsSuite('isolamento RLS efetivo por tenant com role de aplicação', () => {
   const conversaA = randomUUID();
 
   beforeAll(async () => {
-    pool = new Pool({ connectionString });
-    const client = await pool.connect();
+    pool = new Pool({ connectionString: connectionString! });
+    setupPool = new Pool({ connectionString: setupConnectionString! });
+
+    const appClient = await pool.connect();
     try {
-      const role = await client.query<{
+      const role = await appClient.query<{
         rolname: string;
         rolsuper: boolean;
         rolbypassrls: boolean;
@@ -32,10 +36,13 @@ rlsSuite('isolamento RLS efetivo por tenant com role de aplicação', () => {
       expect(role.rows[0]?.rolname).toBe(process.env.TEST_APP_ROLE ?? 'licite_core');
       expect(role.rows[0]?.rolsuper).toBe(false);
       expect(role.rows[0]?.rolbypassrls).toBe(false);
+    } finally {
+      appClient.release();
+    }
 
+    const client = await setupPool.connect();
+    try {
       await client.query('BEGIN');
-      await client.query("SELECT set_config('app.tenant_id', $1, true)", [tenantA]);
-      await client.query("SELECT set_config('app.user_id', $1, true)", [userA]);
       await client.query('INSERT INTO tenants (id, nome, slug) VALUES ($1, $2, $3)', [
         tenantA,
         'Tenant A integração',
@@ -51,7 +58,6 @@ rlsSuite('isolamento RLS efetivo por tenant com role de aplicação', () => {
          VALUES ($1, $2, '12345678000199', 'Empresa A')`,
         [empresaA, tenantA],
       );
-      await client.query("SELECT set_config('app.empresa_id', $1, true)", [empresaA]);
       await client.query(
         `INSERT INTO empresa_usuarios (tenant_id, empresa_id, usuario_id, papel)
          VALUES ($1, $2, $3, 'proprietario')`,
@@ -101,8 +107,6 @@ rlsSuite('isolamento RLS efetivo por tenant com role de aplicação', () => {
       await client.query('COMMIT');
 
       await client.query('BEGIN');
-      await client.query("SELECT set_config('app.tenant_id', $1, true)", [tenantB]);
-      await client.query("SELECT set_config('app.user_id', $1, true)", [randomUUID()]);
       await client.query('INSERT INTO tenants (id, nome, slug) VALUES ($1, $2, $3)', [
         tenantB,
         'Tenant B integração',
@@ -119,6 +123,7 @@ rlsSuite('isolamento RLS efetivo por tenant com role de aplicação', () => {
 
   afterAll(async () => {
     await pool.end();
+    await setupPool.end();
   });
 
   it('não permite que tenant B leia dados sensíveis de tenant A', async () => {

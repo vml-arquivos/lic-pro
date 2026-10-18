@@ -5,10 +5,12 @@ import { buildApp } from '../src/server.js';
 import { loadConfig } from '../src/config.js';
 
 const connectionString = process.env.TEST_DATABASE_URL;
-const suite = describe.skipIf(!connectionString);
+const setupConnectionString = process.env.TEST_ADMIN_DATABASE_URL;
+const suite = describe.skipIf(!connectionString || !setupConnectionString);
 
 suite('histórico da Ana', () => {
-  let pool: Pool;
+  let pool!: Pool;
+  let setupPool!: Pool;
   const tenantA = randomUUID();
   const tenantB = randomUUID();
   const userA = randomUUID();
@@ -16,19 +18,25 @@ suite('histórico da Ana', () => {
   const conversationA = randomUUID();
   const conversationB = randomUUID();
   const conversationOtherTenant = randomUUID();
-  const app = buildApp({
-    jwtSecret: 'test-secret',
-    logger: false,
-    config: loadConfig({ NODE_ENV: 'test', JWT_SECRET: 'test-secret' }),
-  });
+  let app!: ReturnType<typeof buildApp>;
 
   beforeAll(async () => {
-    pool = new Pool({ connectionString });
-    const client = await pool.connect();
+    pool = new Pool({ connectionString: connectionString! });
+    setupPool = new Pool({ connectionString: setupConnectionString! });
+    app = buildApp({
+      jwtSecret: 'test-secret',
+      logger: false,
+      pool,
+      config: loadConfig({
+        NODE_ENV: 'test',
+        JWT_SECRET: 'test-secret',
+        DATABASE_URL: connectionString!,
+      }),
+    });
+
+    const client = await setupPool.connect();
     try {
       await client.query('BEGIN');
-      await client.query("SELECT set_config('app.tenant_id', $1, true)", [tenantA]);
-      await client.query("SELECT set_config('app.user_id', $1, true)", [userA]);
       await client.query('INSERT INTO tenants (id, nome, slug) VALUES ($1, $2, $3)', [
         tenantA,
         'Tenant histórico A',
@@ -60,8 +68,6 @@ suite('histórico da Ana', () => {
       await client.query('COMMIT');
 
       await client.query('BEGIN');
-      await client.query("SELECT set_config('app.tenant_id', $1, true)", [tenantB]);
-      await client.query("SELECT set_config('app.user_id', $1, true)", [randomUUID()]);
       await client.query('INSERT INTO tenants (id, nome, slug) VALUES ($1, $2, $3)', [
         tenantB,
         'Tenant histórico B',
@@ -91,6 +97,7 @@ suite('histórico da Ana', () => {
   afterAll(async () => {
     await app.close();
     await pool.end();
+    await setupPool.end();
   });
 
   it('lista e apaga somente conversas do usuário autenticado', async () => {

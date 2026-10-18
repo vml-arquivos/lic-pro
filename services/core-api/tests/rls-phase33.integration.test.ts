@@ -3,10 +3,12 @@ import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const connectionString = process.env.TEST_DATABASE_URL;
-const suite = describe.skipIf(!connectionString);
+const setupConnectionString = process.env.TEST_ADMIN_DATABASE_URL;
+const suite = describe.skipIf(!connectionString || !setupConnectionString);
 
 suite('RLS Fase 3.3 por empresa e concessão', () => {
-  let pool: Pool;
+  let pool!: Pool;
+  let setupPool!: Pool;
   const tenantId = randomUUID();
   const adminId = randomUUID();
   const mentorId = randomUUID();
@@ -22,13 +24,12 @@ suite('RLS Fase 3.3 por empresa e concessão', () => {
   const routineB = randomUUID();
 
   beforeAll(async () => {
-    pool = new Pool({ connectionString });
-    const client = await pool.connect();
+    pool = new Pool({ connectionString: connectionString! });
+    setupPool = new Pool({ connectionString: setupConnectionString! });
+
+    const client = await setupPool.connect();
     try {
       await client.query('BEGIN');
-      await client.query("SELECT set_config('app.tenant_id', $1, true)", [tenantId]);
-      await client.query("SELECT set_config('app.user_id', $1, true)", [adminId]);
-      await client.query("SELECT set_config('app.role', 'admin', true)");
       await client.query('INSERT INTO tenants (id, nome, slug) VALUES ($1, $2, $3)', [
         tenantId,
         'Tenant escopo 3.3',
@@ -42,7 +43,6 @@ suite('RLS Fase 3.3 por empresa e concessão', () => {
         "INSERT INTO empresas (id, tenant_id, cnpj, razao_social) VALUES ($1, $3, '11111111000111', 'Empresa A'), ($2, $3, '22222222000122', 'Empresa B')",
         [companyA, companyB, tenantId],
       );
-      await client.query("SELECT set_config('app.empresa_id', $1, true)", [companyA]);
       await client.query(
         "INSERT INTO empresa_usuarios (tenant_id, empresa_id, usuario_id, papel) VALUES ($1, $2, $3, 'proprietario')",
         [tenantId, companyA, adminId],
@@ -90,6 +90,7 @@ suite('RLS Fase 3.3 por empresa e concessão', () => {
 
   afterAll(async () => {
     await pool.end();
+    await setupPool.end();
   });
 
   it('usuário da empresa A não lê checklist, rotina ou notificação da empresa B', async () => {
