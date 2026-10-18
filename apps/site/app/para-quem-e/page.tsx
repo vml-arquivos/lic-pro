@@ -1,5 +1,10 @@
 import { ContentPage } from '../../components/ContentPage';
 
+export const metadata = {
+  title: 'Para quem é',
+  description:
+    'O Licite Comigo organiza o caminho de empresas, mentorados e quem está começando em licitações.',
+};
 export default function AudiencePage() {
   return (
     <ContentPage

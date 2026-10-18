@@ -1,6 +1,11 @@
 import { ContentPage } from '../../components/ContentPage';
 import { LeadForm } from '../../components/LeadForm';
 
+export const metadata = {
+  title: 'Mentoria',
+  description:
+    'Acompanhamento para estudar, praticar e organizar próximos passos em licitações públicas.',
+};
 export default function MentoringPage() {
   return (
     <ContentPage

@@ -5,27 +5,35 @@ import { CookieBanner } from '../components/CookieBanner';
 
 const siteUrl = process.env.SITE_URL ?? 'http://localhost:3100';
 const appUrl = process.env.APP_URL ?? '/';
+const description =
+  'Encontre oportunidades, confira editais e organize os próximos passos em licitações públicas.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'Licite Comigo | Apoio para licitações públicas',
+    default: 'Licite Comigo | Organize licitações públicas',
     template: '%s | Licite Comigo',
   },
-  description:
-    'Radar, leitura de editais com fontes, Academia e organização de prazos para quem participa de licitações públicas.',
+  description,
   alternates: { canonical: '/' },
   openGraph: {
     type: 'website',
     siteName: 'Licite Comigo',
     url: siteUrl,
-    title: 'Licite Comigo',
-    description: 'Apoio à decisão e formação para licitações públicas.',
+    title: 'Licite Comigo | Organize licitações públicas',
+    description,
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Licite Comigo' }],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Licite Comigo | Organize licitações públicas',
+    description,
+    images: ['/opengraph-image'],
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function SiteLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const slogan = process.env.BRAND_SLOGAN ?? 'Clareza para decidir o próximo passo';
   const signupEnabled = process.env.SIGNUP_ENABLED === 'true';
   return (
     <html lang="pt-BR">
@@ -38,7 +46,7 @@ export default function SiteLayout({ children }: Readonly<{ children: React.Reac
           <nav aria-label="Navegação principal">
             <Link href="/como-funciona">Como funciona</Link>
             <Link href="/recursos">Recursos</Link>
-            <Link href="/planos">Planos</Link>
+            <Link href="/para-quem-e">Para quem é</Link>
             <Link href="/faq">FAQ</Link>
           </nav>
           <div className="header-actions">
@@ -56,9 +64,6 @@ export default function SiteLayout({ children }: Readonly<{ children: React.Reac
             )}
           </div>
         </header>
-        <div className="draft-ribbon">
-          Slogan e textos institucionais em rascunho para revisão jurídica
-        </div>
         <main>{children}</main>
         <footer className="site-footer">
           <div>
@@ -66,7 +71,7 @@ export default function SiteLayout({ children }: Readonly<{ children: React.Reac
               <span className="mark">LC</span>
               <span>Licite Comigo</span>
             </span>
-            <p>{slogan}</p>
+            <p>Encontre, confira e organize licitações públicas.</p>
           </div>
           <div className="footer-links">
             <Link href="/sobre">Sobre</Link>
@@ -75,8 +80,8 @@ export default function SiteLayout({ children }: Readonly<{ children: React.Reac
             <Link href="/privacidade">Privacidade</Link>
           </div>
           <small>
-            Ferramenta de apoio. Não é consultoria jurídica, não promete resultado e não executa
-            lances ou automações em portais.
+            Ferramenta de apoio à decisão. Não é consultoria jurídica e não envia propostas ou
+            lances.
           </small>
         </footer>
         <CookieBanner />

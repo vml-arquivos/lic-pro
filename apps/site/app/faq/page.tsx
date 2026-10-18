@@ -22,6 +22,11 @@ const questions = [
     'Os planos ainda estão em definição; as condições serão publicadas antes de qualquer cobrança.',
   ],
 ];
+
+export const metadata = {
+  title: 'Perguntas frequentes',
+  description: 'Respostas diretas sobre o Radar, a Ana, fontes e os limites do Licite Comigo.',
+};
 export default function FaqPage() {
   return (
     <ContentPage

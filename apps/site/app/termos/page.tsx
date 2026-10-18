@@ -1,11 +1,16 @@
 import { ContentPage } from '../../components/ContentPage';
 
+export const metadata = {
+  title: 'Termos de uso',
+  description: 'Regras de uso da plataforma Licite Comigo e limites dos recursos oferecidos.',
+};
+
 export default function TermsPage() {
   return (
     <ContentPage
       eyebrow="Termos de Uso"
-      title="Rascunho para revisão jurídica."
-      intro="Este texto é informativo e não constitui a versão final dos Termos de Uso."
+      title="Regras claras para usar a plataforma."
+      intro="Conheça o que o Licite Comigo oferece e quais responsabilidades permanecem com cada usuário."
     >
       <h2>Objeto</h2>
       <p>
@@ -20,8 +25,8 @@ export default function TermsPage() {
       </p>
       <h2>Dados</h2>
       <p>
-        O tratamento de dados pessoais deve ser lido junto da Política de Privacidade. A versão
-        final será publicada após revisão jurídica.
+        O tratamento de dados pessoais deve ser lido junto da Política de Privacidade publicada
+        neste site.
       </p>
     </ContentPage>
   );

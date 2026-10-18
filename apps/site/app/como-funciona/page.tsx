@@ -1,5 +1,10 @@
 import { ContentPage } from '../../components/ContentPage';
 
+export const metadata = {
+  title: 'Como funciona',
+  description:
+    'Veja como encontrar oportunidades, conferir editais e organizar próximos passos no Licite Comigo.',
+};
 export default function HowPage() {
   return (
     <ContentPage

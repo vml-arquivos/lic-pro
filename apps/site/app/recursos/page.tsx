@@ -1,5 +1,10 @@
 import { ContentPage } from '../../components/ContentPage';
 
+export const metadata = {
+  title: 'Recursos',
+  description:
+    'Radar, fontes, empresas, Academia e Ana para apoiar decisões em licitações públicas.',
+};
 export default function ResourcesPage() {
   return (
     <ContentPage

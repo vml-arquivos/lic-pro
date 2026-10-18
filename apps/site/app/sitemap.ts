@@ -1,24 +1,26 @@
 import type { MetadataRoute } from 'next';
 
+const paths = [
+  '',
+  '/como-funciona',
+  '/recursos',
+  '/para-quem-e',
+  '/mentoria',
+  '/planos',
+  '/faq',
+  '/sobre',
+  '/contato',
+  '/termos',
+  '/privacidade',
+] as const;
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = process.env.SITE_URL ?? 'http://localhost:3100';
-  const paths = [
-    '',
-    '/para-quem-e',
-    '/como-funciona',
-    '/recursos',
-    '/mentoria',
-    '/planos',
-    '/faq',
-    '/sobre',
-    '/contato',
-    '/termos',
-    '/privacidade',
-  ];
+  const origin = base.replace(/\/$/, '');
   return paths.map((path) => ({
-    url: `${base.replace(/\/$/, '')}${path}`,
+    url: `${origin}${path}`,
     lastModified: new Date(),
-    changeFrequency: 'monthly',
+    changeFrequency: path === '' ? 'weekly' : 'monthly',
     priority: path === '' ? 1 : 0.7,
   }));
 }

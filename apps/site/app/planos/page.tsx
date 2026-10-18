@@ -1,5 +1,9 @@
 import { ContentPage } from '../../components/ContentPage';
 
+export const metadata = {
+  title: 'Planos',
+  description: 'Conheça o estágio atual dos planos do Licite Comigo antes de qualquer cobrança.',
+};
 export default function PlansPage() {
   return (
     <ContentPage

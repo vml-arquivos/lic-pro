@@ -6,28 +6,35 @@ const whatsapp = process.env.WHATSAPP_NUMBER
   ? `https://wa.me/${process.env.WHATSAPP_NUMBER.replace(/\D/g, '')}`
   : '/contato';
 
+const faq = [
+  {
+    q: 'O Licite Comigo envia propostas ou lances?',
+    a: 'Não. A plataforma organiza informação, documentos, prazos e decisões sob responsabilidade do usuário.',
+  },
+  {
+    q: 'A leitura do edital substitui uma análise jurídica?',
+    a: 'Não. A leitura ajuda a localizar informações e fontes. Dúvidas jurídicas devem ser avaliadas por um profissional habilitado.',
+  },
+  {
+    q: 'Vocês prometem vencer uma licitação?',
+    a: 'Não. O produto não promete vitória, contrato, lucro ou qualquer outro resultado.',
+  },
+];
+
+export const metadata = {
+  title: 'Licite Comigo | Organize licitações públicas',
+  description:
+    'Encontre oportunidades, confira editais e organize os próximos passos da sua empresa em licitações públicas.',
+};
+
 export default function HomePage() {
-  const slogan = process.env.BRAND_SLOGAN ?? 'Clareza para decidir o próximo passo';
-  const faq = [
-    {
-      q: 'O Licite Comigo envia propostas ou lances?',
-      a: 'Não. O produto organiza informação, documentos, prazos e decisões sob responsabilidade do usuário.',
-    },
-    {
-      q: 'A análise do edital substitui um advogado?',
-      a: 'Não. O Reader é uma leitura de apoio com fontes e evidências; não é conclusão jurídica.',
-    },
-    {
-      q: 'Existem resultados garantidos?',
-      a: 'Não. Não prometemos vitória, contrato, lucro ou qualquer resultado.',
-    },
-  ];
+  const siteUrl = process.env.SITE_URL;
   const organization = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'Licite Comigo',
-    url: process.env.SITE_URL ?? '',
-    description: slogan,
+    url: siteUrl,
+    description: 'Plataforma para encontrar, ler e organizar licitações públicas.',
   };
   const faqSchema = {
     '@context': 'https://schema.org',
@@ -38,6 +45,7 @@ export default function HomePage() {
       acceptedAnswer: { '@type': 'Answer', text: item.a },
     })),
   };
+
   return (
     <>
       <script
@@ -50,81 +58,86 @@ export default function HomePage() {
       />
       <section className="hero section-wrap">
         <div className="hero-copy">
-          <p className="eyebrow">Licitações públicas com mais clareza</p>
-          <h1>{slogan}</h1>
+          <p className="eyebrow">Licitações públicas</p>
+          <h1>Encontre oportunidades. Leia o edital. Organize o próximo passo.</h1>
           <p className="hero-lead">
-            Radar, leitura de editais com fontes, formação e organização de prazos em um só lugar —
-            sem promessas de resultado e sem automação de lances.
+            Radar de oportunidades, leitura assistida com fontes e organização de prazos para
+            empresas e profissionais que participam de compras públicas.
           </p>
           <div className="cta-row">
             <a className="button button-primary" href={appUrl}>
-              Entrar no app
+              Acessar a plataforma
             </a>
             <a className="button button-secondary" href={whatsapp}>
               Falar pelo WhatsApp
             </a>
           </div>
-          <p className="legal-note">Ferramenta de apoio à decisão. Não é consultoria jurídica.</p>
+          <p className="legal-note">
+            Ferramenta de apoio à decisão. Não é consultoria jurídica e não envia lances.
+          </p>
         </div>
         <div className="hero-panel">
-          <span className="panel-kicker">ANA recomenda</span>
-          <h2>Comece pelo próximo passo que você consegue verificar.</h2>
-          <p>Ana pode explicar conceitos e apontar fontes, sempre em modo somente leitura.</p>
-          <Link href="/recursos">Conhecer recursos →</Link>
+          <span className="panel-kicker">O que você encontra</span>
+          <h2>Informação organizada para decidir melhor.</h2>
+          <p>Menos procura espalhada. Mais clareza sobre o que conferir antes de participar.</p>
+          <ul className="product-list">
+            <li>Oportunidades com fonte original</li>
+            <li>Trechos e prazos para conferência</li>
+            <li>Empresas, documentos e próximos passos</li>
+          </ul>
+          <Link href="/recursos">Ver recursos →</Link>
         </div>
       </section>
       <section className="section-wrap" aria-labelledby="audience">
         <div className="section-heading">
           <p className="eyebrow">Para quem é</p>
-          <h2 id="audience">Uma jornada que se adapta ao seu momento</h2>
+          <h2 id="audience">Um ponto de partida para cada momento.</h2>
         </div>
         <div className="card-grid three">
           <Link className="info-card" href="/para-quem-e#empresario">
             <span className="card-number">01</span>
             <h3>Empresário</h3>
-            <p>Organize oportunidades, equipe, documentos e prazos antes de decidir.</p>
+            <p>Organize oportunidades, dados da empresa, documentos e prazos para sua equipe.</p>
           </Link>
           <Link className="info-card" href="/para-quem-e#mentorado">
             <span className="card-number">02</span>
             <h3>Mentorado</h3>
-            <p>Estude com uma trilha e compartilhe contexto com seu mentor mediante concessão.</p>
+            <p>Estude uma trilha e compartilhe contexto com seu mentor mediante concessão.</p>
           </Link>
           <Link className="info-card" href="/para-quem-e#iniciante">
             <span className="card-number">03</span>
-            <h3>Iniciante</h3>
-            <p>
-              Aprenda termos e fundamentos com explicações simples e conteúdo em revisão editorial.
-            </p>
+            <h3>Quem está começando</h3>
+            <p>Aprenda termos e fundamentos com explicações simples e fontes para conferir.</p>
           </Link>
         </div>
       </section>
       <section className="section-wrap tinted" aria-labelledby="resources">
         <div className="section-heading">
           <p className="eyebrow">Como funciona</p>
-          <h2 id="resources">Três passos, sem atalhos escondidos</h2>
+          <h2 id="resources">Três passos para sair da busca e chegar à decisão.</h2>
         </div>
         <div className="steps">
           <div>
             <b>1</b>
             <h3>Encontre</h3>
-            <p>Consulte oportunidades a partir de fontes oficiais documentadas.</p>
+            <p>Pesquise oportunidades por assunto, localidade e modalidade.</p>
           </div>
           <div>
             <b>2</b>
-            <h3>Entenda</h3>
-            <p>Leia o edital com trechos, páginas e evidências para validar.</p>
+            <h3>Confira</h3>
+            <p>Leia o edital, veja a fonte original e separe o que está confirmado.</p>
           </div>
           <div>
             <b>3</b>
             <h3>Organize</h3>
-            <p>Salve a oportunidade, acompanhe prazos e registre sua decisão.</p>
+            <p>Registre documentos, prazos e a próxima ação da sua empresa.</p>
           </div>
         </div>
       </section>
-      <section className="section-wrap lead-section">
+      <section className="section-wrap lead-section" id="lista-de-espera">
         <div>
           <p className="eyebrow">Próxima abertura</p>
-          <h2>Receba novidades sem compromisso</h2>
+          <h2>Receba novidades quando houver uma nova etapa.</h2>
           <p>
             Conte seu momento. Usaremos seus dados apenas para responder e comunicar novidades, com
             consentimento.
@@ -134,7 +147,7 @@ export default function HomePage() {
       </section>
       <section className="section-wrap faq-section" aria-labelledby="faq">
         <p className="eyebrow">Perguntas frequentes</p>
-        <h2 id="faq">Transparência antes da conversão</h2>
+        <h2 id="faq">Transparência antes de começar.</h2>
         <div className="faq-list">
           {faq.map((item) => (
             <details key={item.q}>

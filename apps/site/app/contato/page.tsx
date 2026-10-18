@@ -1,6 +1,10 @@
 import { ContentPage } from '../../components/ContentPage';
 import { LeadForm } from '../../components/LeadForm';
 
+export const metadata = {
+  title: 'Contato',
+  description: 'Fale com o Licite Comigo sobre produto, lista de espera e mentoria.',
+};
 export default function ContactPage() {
   const whatsapp = process.env.WHATSAPP_NUMBER
     ? `https://wa.me/${process.env.WHATSAPP_NUMBER.replace(/\D/g, '')}`

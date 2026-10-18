@@ -1,5 +1,10 @@
 import { ContentPage } from '../../components/ContentPage';
 
+export const metadata = {
+  title: 'Sobre',
+  description:
+    'Conheça o propósito do Licite Comigo e os limites da tecnologia para compras públicas.',
+};
 export default function AboutPage() {
   return (
     <ContentPage
