@@ -1,5 +1,7 @@
 -- Etapa 0.2 — o cluster e o runner usam licite_admin; licite_owner só possui objetos.
--- Não alterar migrations históricas: esta migration corrige instalações já existentes.
+-- Esta migration remove o LOGIN de licite_owner (ele passa a ser apenas dono dos objetos)
+-- e normaliza o dono de schema_migrations. Não altera migrations históricas.
+-- Ver também 0012_owner_schema_usage.sql (USAGE no schema public para licite_owner).
 
 DO $$
 BEGIN

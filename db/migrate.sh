@@ -45,10 +45,16 @@ for role_and_password in \
   "licite_realtime:$REALTIME_DB_PASSWORD"; do
   role="${role_and_password%%:*}"
   password="${role_and_password#*:}"
-  psql "$MIGRATION_DATABASE_URL" --set ON_ERROR_STOP=1 \
-    --set role_name="$role" --set role_password="$password" \
-    --command "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'role_name') THEN EXECUTE format('CREATE ROLE %I', :'role_name'); END IF; END \$\$;" \
-    --command "ALTER ROLE :role_name LOGIN PASSWORD :'role_password' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS"
+  # O psql só interpola variáveis (:'nome') quando o SQL vem pela entrada padrão;
+  # em --command e dentro de blocos $$ ... $$ elas não são substituídas.
+  # Por isso o SQL é gerado com format() e executado com \gexec.
+  psql "$MIGRATION_DATABASE_URL" --set ON_ERROR_STOP=1 --quiet \
+    --set role_name="$role" --set role_password="$password" <<'SQL'
+SELECT format('CREATE ROLE %I', :'role_name')
+WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'role_name') \gexec
+SELECT format('ALTER ROLE %I LOGIN PASSWORD %L NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS', :'role_name', :'role_password') \gexec
+SQL
+  echo "role de aplicação configurada: $role"
 done
 
 if [ "${MIGRATE_IDLE_AFTER:-false}" = "true" ]; then

@@ -121,6 +121,44 @@ jobs:
           fi
           psql postgresql://licite_admin@127.0.0.1:5432/licite_comigo -c "SELECT filename, applied_at FROM schema_migrations ORDER BY filename;"
           psql postgresql://licite_admin@127.0.0.1:5432/licite_comigo -c "SELECT rolname, rolsuper, rolbypassrls, rolcanlogin FROM pg_roles WHERE rolname IN ('licite_admin', 'licite_owner', 'licite_core', 'licite_ingest', 'licite_ai', 'licite_bid', 'licite_realtime') ORDER BY rolname;"
+      - name: Run migration image a second time (idempotency)
+        env:
+          MIGRATION_DATABASE_URL: postgresql://licite_admin:change-me-ci-only@127.0.0.1:5432/licite_comigo
+          CORE_DB_PASSWORD: change-me-core-ci-only
+          INGEST_DB_PASSWORD: change-me-ingest-ci-only
+          AI_DB_PASSWORD: change-me-ai-ci-only
+          BID_DB_PASSWORD: change-me-bid-ci-only
+          REALTIME_DB_PASSWORD: change-me-realtime-ci-only
+        run: |
+          docker run --rm --network host \
+            --env MIGRATION_DATABASE_URL \
+            --env CORE_DB_PASSWORD \
+            --env INGEST_DB_PASSWORD \
+            --env AI_DB_PASSWORD \
+            --env BID_DB_PASSWORD \
+            --env REALTIME_DB_PASSWORD \
+            licite-migrate:ci
+      - name: Verify ownership, RLS and foreign-key path
+        env:
+          PGPASSWORD: change-me-ci-only
+        run: |
+          ADMIN=postgresql://licite_admin@127.0.0.1:5432/licite_comigo
+          # Toda tabela, sequência ou view de public pertence a licite_owner.
+          wrong_owner="$(psql "$ADMIN" -tAc "SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relkind IN ('r','S','v','m','p') AND pg_get_userbyid(c.relowner) <> 'licite_owner'")"
+          if [ -n "$wrong_owner" ]; then echo "objetos com dono diferente de licite_owner:" >&2; echo "$wrong_owner" >&2; exit 1; fi
+          # Toda tabela com tenant_id/empresa_id tem RLS habilitado.
+          no_rls="$(psql "$ADMIN" -tAc "SELECT DISTINCT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace JOIN information_schema.columns col ON col.table_schema = 'public' AND col.table_name = c.relname WHERE n.nspname = 'public' AND c.relkind = 'r' AND col.column_name IN ('tenant_id','empresa_id') AND NOT c.relrowsecurity")"
+          if [ -n "$no_rls" ]; then echo "tabelas com tenant_id/empresa_id sem RLS:" >&2; echo "$no_rls" >&2; exit 1; fi
+          # A role da aplicação consegue gravar com chaves estrangeiras (cadastro). Falha
+          # com "permission denied for schema public" se licite_owner perder o USAGE.
+          PGPASSWORD=change-me-core-ci-only psql postgresql://licite_core@127.0.0.1:5432/licite_comigo -v ON_ERROR_STOP=1 <<'SQL'
+          BEGIN;
+          SELECT set_config('app.tenant_id', '00000000-0000-0000-0000-0000000000aa', true);
+          SELECT set_config('app.user_id', '00000000-0000-0000-0000-0000000000bb', true);
+          INSERT INTO tenants (id, nome, slug) VALUES ('00000000-0000-0000-0000-0000000000aa', 'CI', 'ci-fk-smoke');
+          INSERT INTO usuarios (id, tenant_id, email, nome, papel) VALUES ('00000000-0000-0000-0000-0000000000bb', '00000000-0000-0000-0000-0000000000aa', 'ci@example.test', 'CI', 'admin');
+          ROLLBACK;
+          SQL
 
   python:
     name: Python (${{ matrix.service }})
