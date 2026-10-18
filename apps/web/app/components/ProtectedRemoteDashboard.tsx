@@ -81,7 +81,7 @@ const dashboardConfig: Record<
     allowedRoles: ['admin'],
     resources: [
       { label: 'Usuários', endpoint: '/api/core/users' },
-      { label: 'Auditoria', endpoint: '/api/core/admin/audit' },
+      { label: 'Auditoria', endpoint: '/api/core/admin/users/audit' },
       { label: 'Ingestão', endpoint: '/api/core/operations/ingest' },
     ],
   },
@@ -113,7 +113,7 @@ function isAllowed(kind: DashboardKind, me: Me) {
   const config = dashboardConfig[kind];
   const role = roleName(me);
   if (config.allowedRoles && !config.allowedRoles.includes(role)) return false;
-  if (config.requiredProfile && config.requiredProfile !== me.perfil_jornada && role !== 'admin') {
+  if (config.requiredProfile && config.requiredProfile !== me.perfil_jornada) {
     return false;
   }
   return true;

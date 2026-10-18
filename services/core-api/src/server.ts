@@ -151,6 +151,20 @@ const diagnosisSchema = z.object({
   perfil_jornada: journeyProfileSchema.optional(),
   nichos: nicheListSchema.optional(),
 });
+const accountProfileSchema = z.object({
+  nome: z.string().trim().min(2).max(160).optional(),
+  publico: z.enum(['empresa', 'mentoria']).optional(),
+  nivel_diagnostico: z
+    .enum(['sem_diagnostico', 'iniciante', 'em_evolucao', 'pronto_para_operar'])
+    .optional(),
+  perfil_jornada: journeyProfileSchema.optional(),
+  onboarding_concluido: z.boolean().optional(),
+  nichos: nicheListSchema.optional(),
+});
+const passwordChangeSchema = z.object({
+  current_password: z.string().min(1).max(200),
+  new_password: z.string().min(1).max(200),
+});
 const concessionSchema = z.object({
   mentor_id: z.string().uuid(),
   empresa_id: z.string().uuid(),
@@ -515,6 +529,47 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
   });
 
+  app.post('/auth/password-change', async (request, reply) => {
+    const body = passwordChangeSchema.parse(request.body);
+    if (body.current_password === body.new_password) {
+      return reply.code(400).send({ error: 'password_must_change' });
+    }
+    try {
+      assertStrongPassword(body.new_password);
+    } catch {
+      return reply.code(400).send({ error: 'weak_password' });
+    }
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const changed = await withTenant(pool, authContext(request), async (client) => {
+      await client.query("SELECT set_config('app.auth_flow', 'true', true)");
+      const current = await client.query<{ password_hash: string }>(
+        `SELECT password_hash FROM auth_credentials
+          WHERE tenant_id = $1 AND usuario_id = $2 AND ativo = true
+          LIMIT 1`,
+        [request.user.tenantId, request.user.sub],
+      );
+      if (!verifyPassword(body.current_password, current.rows[0]?.password_hash ?? null)) {
+        return false;
+      }
+      const passwordHash = hashPassword(body.new_password);
+      await client.query(
+        `UPDATE auth_credentials
+            SET password_hash = $3, reset_token_hash = NULL, reset_token_expires_at = NULL,
+                updated_at = now()
+          WHERE tenant_id = $1 AND usuario_id = $2`,
+        [request.user.tenantId, request.user.sub, passwordHash],
+      );
+      await client.query(
+        'UPDATE usuarios SET password_hash = $3, updated_at = now() WHERE tenant_id = $1 AND id = $2',
+        [request.user.tenantId, request.user.sub, passwordHash],
+      );
+      await audit(client, request, 'auth.password_changed', 'usuario', request.user.sub);
+      return true;
+    });
+    if (!changed) return reply.code(401).send({ error: 'current_password_invalid' });
+    return reply.send({ message: 'senha atualizada' });
+  });
+
   app.post('/auth/signup', async (request, reply) => {
     if (!config.signupEnabled) return reply.code(404).send({ error: 'signup_disabled' });
     publicRateLimiter.check(`signup:${request.ip}`);
@@ -840,6 +895,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       client.query(
         `SELECT u.id, u.tenant_id, u.email, u.nome, u.papel, u.publico, u.nivel_diagnostico,
                 u.perfil_jornada, u.onboarding_concluido, u.nicho_preferencias,
+                u.email_verificado_em, u.termos_versao, u.termos_aceitos_em,
+                u.politica_versao, u.politica_aceita_em, u.created_at, u.updated_at,
                 eu.empresa_id, eu.papel AS empresa_papel
            FROM usuarios u
            LEFT JOIN empresa_usuarios eu
@@ -852,6 +909,43 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     );
     if (!result.rows[0]) return reply.code(404).send({ error: 'user_not_found' });
     return reply.send(result.rows[0]);
+  });
+
+  app.patch('/me', async (request, reply) => {
+    const body = accountProfileSchema.parse(request.body);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const updated = await client.query(
+        `UPDATE usuarios
+            SET nome = COALESCE($3, nome),
+                publico = COALESCE($4, publico),
+                nivel_diagnostico = COALESCE($5, nivel_diagnostico),
+                perfil_jornada = COALESCE($6, perfil_jornada),
+                onboarding_concluido = COALESCE($7, onboarding_concluido),
+                nicho_preferencias = COALESCE($8::jsonb, nicho_preferencias),
+                updated_at = now()
+          WHERE tenant_id = $1 AND id = $2
+          RETURNING id, tenant_id, email, nome, papel, publico, nivel_diagnostico,
+                    perfil_jornada, onboarding_concluido, nicho_preferencias,
+                    email_verificado_em, termos_versao, termos_aceitos_em,
+                    politica_versao, politica_aceita_em, created_at, updated_at`,
+        [
+          request.user.tenantId,
+          request.user.sub,
+          body.nome ?? null,
+          body.publico ?? null,
+          body.nivel_diagnostico ?? null,
+          body.perfil_jornada ?? null,
+          body.onboarding_concluido ?? null,
+          body.nichos ? JSON.stringify(body.nichos) : null,
+        ],
+      );
+      if (updated.rows[0])
+        await audit(client, request, 'account.profile_updated', 'usuario', request.user.sub);
+      return updated.rows[0];
+    });
+    if (!result) return reply.code(404).send({ error: 'user_not_found' });
+    return reply.send(result);
   });
 
   app.patch('/me/diagnostico', async (request, reply) => {
@@ -994,16 +1088,17 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.get('/mentor/companies', async (request, reply) => {
-    if (!requireRoles(reply, request, ['mentor'])) return;
+    if (!requireRoles(reply, request, ['admin', 'mentor'])) return;
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) =>
       client.query(
-        `SELECT e.id, e.cnpj, e.razao_social, e.nome_fantasia, cm.escopo, cm.fim_em
+        `SELECT cm.id, cm.mentor_id, cm.empresa_id, e.razao_social, e.cnpj, cm.escopo, cm.inicio_em, cm.fim_em
            FROM concessoes_mentor cm
-           JOIN empresas e ON e.id = cm.empresa_id
-          WHERE cm.tenant_id = $1 AND cm.mentor_id = $2 AND cm.revogada_em IS NULL
+           JOIN empresas e ON e.id = cm.empresa_id AND e.tenant_id = cm.tenant_id
+          WHERE cm.tenant_id = $1 AND cm.revogada_em IS NULL
+            AND (cm.mentor_id = $2 OR $3 = 'admin')
           ORDER BY e.razao_social`,
-        [request.user.tenantId, request.user.sub],
+        [request.user.tenantId, request.user.sub, request.user.role],
       ),
     );
     return reply.send({ data: result.rows });
@@ -2052,7 +2147,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.get('/mentorado/dashboard', async (request, reply) => {
-    if (!requireRoles(reply, request, ['aluno'])) return;
+    if (!requireRoles(reply, request, ['admin', 'aluno'])) return;
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
       const [profile, progress, alerts] = await Promise.all([
@@ -2089,7 +2184,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.get('/professional/dashboard', async (request, reply) => {
-    if (!requireRoles(reply, request, ['aluno'])) return;
+    if (!requireRoles(reply, request, ['admin', 'aluno', 'operador'])) return;
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
       const profile = await client.query<{ id: string }>(

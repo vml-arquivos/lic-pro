@@ -57,7 +57,18 @@
 
 ## 7. IA em produção
 
-- [ ] Implementar e testar provider real de LLM e embeddings, obter credenciais de produção por canal seguro e publicar `licite-ai`; providers `fake`/`deterministic` permanecem proibidos em produção e o adapter OpenAI atual ainda falha explicitamente.
+- [x] Implementar provider OpenAI-compatible real para chat, Reader e embeddings; providers `fake`/`deterministic` continuam proibidos em produção.
+- [x] Transformar a Ana em conversa real com histórico por usuário/tenant, prompt versionado no código, limites somente-leitura, resposta SSE e estados honestos de erro no widget.
+- [x] Testar Ruff, mypy, pytest e uma conversa real com `gpt-5-mini` no ambiente de validação; a resposta foi recebida e o histórico manteve usuário + assistente.
+- [ ] Obter credencial autorizada do provider pelo formulário seguro, configurar `LLM_PROVIDER=openai`, `EMBEDDING_PROVIDER=openai` e publicar `licite-ai` privado no Coolify.
+
+## 9. Conta, perfil e segurança
+
+- [x] Criar `/conta` com dados da conta, e-mail somente leitura, perfil de jornada, público, nível, nichos, status de verificação e links para os painéis reais.
+- [x] Criar alteração autenticada de senha, logout que limpa o cookie HttpOnly e tornar recuperação de senha encontrável na área de segurança.
+- [x] Corrigir os painéis por acesso: auditoria admin usa a rota real, contexto de jornada não libera telas incompatíveis e concessões do mentor respeitam admin/mentor.
+- [ ] Publicar o Core API e o web com essa etapa após a CI verde; não abrir signup enquanto SMTP estiver adiado.
+- [ ] Alteração de e-mail, troca de tenant/empresa e convite de usuários administrativos permanecem etapas posteriores porque exigem verificação e fluxos de concessão próprios.
 
 ## 8. Nichos, filtros e painéis por contexto
 

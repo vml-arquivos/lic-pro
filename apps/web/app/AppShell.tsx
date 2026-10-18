@@ -88,16 +88,17 @@ export function AppShell({ children }: AppShellProps) {
     const items = [...publicMenu];
     if (sessionChecked && me) {
       items.push(
+        { label: 'Minha conta', href: '/conta', icon: '◎' },
         { label: 'Alertas', href: '/alertas', icon: '◌' },
         { label: 'Buscas salvas', href: '/buscas-salvas', icon: '⌑' },
       );
       if (role === 'mentor' || role === 'admin') {
         items.push({ label: 'Painel do mentor', href: '/mentor', icon: '◉' });
       }
-      if (role === 'aluno' || profile === 'mentorado' || role === 'admin') {
+      if (role === 'aluno' || profile === 'mentorado') {
         items.push({ label: 'Área do mentorado', href: '/mentorado', icon: '◉' });
       }
-      if (profile === 'profissional' || role === 'operador' || role === 'admin') {
+      if (profile === 'profissional' || role === 'operador') {
         items.push({ label: 'Profissional', href: '/profissional', icon: '◈' });
       }
       if (role === 'admin') {
@@ -206,9 +207,14 @@ export function AppShell({ children }: AppShellProps) {
                 ◌
               </Link>
             ) : null}
-            <span className="user-avatar" title={name} aria-label={`Conta de ${name}`}>
+            <Link
+              className="user-avatar"
+              href={me ? '/conta' : '/login'}
+              title={name}
+              aria-label={`Conta de ${name}`}
+            >
               {initials(name)}
-            </span>
+            </Link>
           </div>
         </header>
         <div className="app-shell-content">{children}</div>

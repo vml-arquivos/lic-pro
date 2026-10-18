@@ -41,6 +41,8 @@ O site institucional será reescrito com comunicação objetiva, visual claro e 
 - `services/ingest/src/clients.py`, `normalizer.py`, `storage.py`, `control.py`: conectores PNCP públicos, normalização sem inferência e persistência retomável.
 - `services/core-api/src/search.ts`, `alerts.ts`, `capabilities.ts`, `server.ts`: filtros nacionais, alertas in-app e autorização por papel/escopo.
 - `apps/web/app/components/ProtectedRemoteDashboard.tsx` e rotas de `admin`, `mentor`, `mentorado`, `profissional`, `alertas` e `buscas-salvas`: painéis reais sem dados fictícios.
+- `apps/web/app/conta/AccountSettings.tsx`, `apps/web/app/api/auth/logout/route.ts`: dados, segurança, logout e links dos painéis da conta.
+- `services/ai/src/providers.py`, `ana.py`, `postgres.py` e `apps/web/app/ana/AnaWidget.tsx`: provider OpenAI-compatible, histórico tenant/user e conversa real somente-leitura.
 
 ## Estado após publicação
 
@@ -51,7 +53,7 @@ O site institucional será reescrito com comunicação objetiva, visual claro e 
 - Canonical, Open Graph, robots e sitemap do site usam `https://licitecomigo.buscarr.com.br`.
 - SMTP continua adiado e o cadastro aberto permanece bloqueado; contas cliente/mentor dependem dos e-mails e concessões que ainda serão informados.
 - RabbitMQ, ingest HTTP, scheduler e worker permanecem privados e `Running`; uma execução controlada do scheduler concluiu o checkpoint PNCP sem erro, com 25 editais já persistidos com `fonte='pncp'`.
-- A IA não foi criada em produção: falta provider real de LLM/embeddings e credencial autorizada; não usar providers falsos, determinísticos ou o adapter OpenAI ainda não implementado.
+- O código do provider real de LLM/embeddings e o chatbot da Ana estão implementados e testados no ambiente de validação, incluindo uma resposta real de `gpt-5-mini`. A IA ainda não foi criada em produção porque falta a credencial autorizada e a configuração segura no Coolify; não usar providers falsos ou determinísticos.
 
 ## Evolução aprovada — nichos, filtros e painéis
 
@@ -62,3 +64,9 @@ O menu exporá somente rotas reais de Radar, pregões publicados, oportunidades 
 ## Expansão pesquisada
 
 O blueprint versionado em `docs/research/expansao-fontes-paineis-2026-10.md` registra as fontes oficiais, limites de consulta, fronteiras de automação e o desenho de capacidades. O produto não deve prometer pregão em tempo real, lance, chat, proposta, scraping autenticado ou cobertura nacional sem contrato/fonte autorizada. O rótulo operacional para o baseline é “última captura” ou “atualização observada”, não “ao vivo”.
+
+## Conta e Ana — etapa atual
+
+`/conta` concentra dados editáveis do perfil, escopo de nichos, segurança, logout e links para os painéis autorizados. O e-mail permanece somente leitura até existir fluxo de troca com nova verificação; troca de tenant, empresa ativa e convites administrativos também exigem fluxos próprios.
+
+A Ana agora mantém conversa por usuário/tenant, usa um provider OpenAI-compatible configurável e responde pelo endpoint protegido existente. O prompt impõe fonte, somente-leitura e limites jurídicos; a implantação no Coolify fica condicionada à credencial real do provider, que não deve ser inventada nem substituída por respostas fake.

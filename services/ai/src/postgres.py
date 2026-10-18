@@ -9,7 +9,7 @@ from typing import Any
 from psycopg import connect
 from psycopg.rows import dict_row
 
-from .ana import ConversationStore, ToolCallAuditor
+from .ana import ChatMessage, ConversationStore, ToolCallAuditor
 from .models import DocumentChunk, ReaderResult, StoredAnalysis
 from .privacy import mask_sensitive
 from .reader import AnalysisStore, ChunkStore
@@ -153,6 +153,22 @@ class PostgresConversationStore(ConversationStore):
                 """,
                 (tenant_id, conversa_id, message_type, text),
             )
+
+    def recent(self, tenant_id: str, user_id: str, conversa_id: str, limit: int = 12) -> list[ChatMessage]:
+        with connect(self.database_url, row_factory=dict_row) as connection:
+            _set_context(connection, tenant_id, user_id)
+            rows = connection.execute(
+                """
+                SELECT m.tipo::text AS role, m.conteudo AS text
+                  FROM ana_mensagens m
+                  JOIN ana_conversas c ON c.id = m.conversa_id AND c.tenant_id = m.tenant_id
+                 WHERE m.tenant_id = %s AND m.conversa_id = %s AND c.usuario_id = %s
+                 ORDER BY m.created_at DESC
+                 LIMIT %s
+                """,
+                (tenant_id, conversa_id, user_id, limit),
+            ).fetchall()
+        return [ChatMessage(row["role"], row["text"]) for row in reversed(rows)]
 
 
 class PostgresToolCallAuditor(ToolCallAuditor):

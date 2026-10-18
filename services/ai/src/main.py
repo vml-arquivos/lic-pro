@@ -25,7 +25,7 @@ from .postgres import (
     PostgresConversationStore,
     PostgresToolCallAuditor,
 )
-from .providers import build_embedding_provider, build_llm_provider
+from .providers import LLMProviderError, build_embedding_provider, build_llm_provider
 from .reader import InMemoryAnalysisStore, InMemoryChunkStore, ReaderAgent
 from .usage import PostgresUsageStore
 
@@ -57,18 +57,18 @@ rate_limiter = RateLimiter(limits)
 database_url = os.getenv("DATABASE_URL")
 chunks = PostgresChunkStore(database_url) if database_url else InMemoryChunkStore()
 analyses = PostgresAnalysisStore(database_url) if database_url else InMemoryAnalysisStore()
-reader = ReaderAgent(
-    build_llm_provider(
-        os.getenv("LLM_PROVIDER", "fake"),
-        model=os.getenv("LLM_MODEL", "offline-reader-v1"),
-    ),
-    chunks,
-    analyses,
+llm_provider = build_llm_provider(
+    os.getenv("LLM_PROVIDER", "fake"),
+    model=os.getenv("LLM_MODEL", "gpt-5-mini"),
 )
-embedding_provider = build_embedding_provider(os.getenv("EMBEDDING_PROVIDER", "deterministic"))
+reader = ReaderAgent(llm_provider, chunks, analyses)
+embedding_provider = build_embedding_provider(
+    os.getenv("EMBEDDING_PROVIDER", "deterministic"),
+    model=os.getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
+)
 history = PostgresConversationStore(database_url) if database_url else InMemoryConversationStore()
 auditor = PostgresToolCallAuditor(database_url) if database_url else InMemoryToolCallAuditor()
-ana = AnaService(analyses, history, auditor)
+ana = AnaService(analyses, history, auditor, llm_provider)
 usage = PostgresUsageStore(database_url, limits) if database_url else InMemoryUsageStore(limits)
 app = FastAPI(title="Licite Comigo AI", version="0.3.2")
 
@@ -130,7 +130,10 @@ def ana_chat_stream(request: AnaChatRequest, auth: AuthDependency) -> StreamingR
         _uuid(request.conversa_id, "conversa_id")
     _guard_rate(auth.tenant_id, auth.user_id)
     _consume_usage(auth.tenant_id, auth.user_id, request.mensagem, 1)
-    response = ana.chat(auth.tenant_id, auth.user_id, request.conversa_id, request.mensagem)
+    try:
+        response = ana.chat(auth.tenant_id, auth.user_id, request.conversa_id, request.mensagem)
+    except LLMProviderError as error:
+        raise HTTPException(status_code=503, detail="llm_unavailable") from error
 
     def stream() -> Iterator[str]:
         yield f"data: {json.dumps(response.model_dump(mode='json'), ensure_ascii=False)}\n\n"

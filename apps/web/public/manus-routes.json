@@ -15,6 +15,7 @@
     { "path": "/mentorado", "title": "Mentorado" },
     { "path": "/profissional", "title": "Profissional" },
     { "path": "/admin", "title": "Admin" },
+    { "path": "/conta", "title": "Minha conta" },
     { "path": "/alertas", "title": "Alertas" },
     { "path": "/buscas-salvas", "title": "Buscas salvas" },
     { "path": "/ana", "title": "Ana" },
