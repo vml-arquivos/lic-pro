@@ -129,6 +129,7 @@ rlsSuite('isolamento RLS efetivo por tenant com role de aplicação', () => {
   it('não permite que tenant B leia dados sensíveis de tenant A', async () => {
     const client = await pool.connect();
     try {
+      await expect(client.query('SELECT count(*) FROM lances_log')).rejects.toThrow();
       await client.query('BEGIN');
       await client.query("SELECT set_config('app.tenant_id', $1, true)", [tenantB]);
       const tables = [
@@ -143,7 +144,6 @@ rlsSuite('isolamento RLS efetivo por tenant com role de aplicação', () => {
         'empresa_usuarios',
         'oportunidades_salvas',
       ];
-      await expect(client.query('SELECT count(*) FROM lances_log')).rejects.toThrow();
       for (const table of tables) {
         const result = await client.query<{ count: string }>(
           `SELECT count(*)::text AS count FROM ${table}`,
@@ -175,6 +175,9 @@ rlsSuite('isolamento RLS efetivo por tenant com role de aplicação', () => {
       await expect(
         client.query('UPDATE lances_log SET decisao = $1', ['enviar']),
       ).rejects.toThrow();
+      await client.query('ROLLBACK');
+
+      await client.query('BEGIN');
       await expect(client.query('DELETE FROM lances_log')).rejects.toThrow();
       await client.query('ROLLBACK');
     } finally {

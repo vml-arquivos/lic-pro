@@ -108,7 +108,7 @@ suite('RLS Fase 3.3 por empresa e concessão', () => {
       await client.query('BEGIN');
       await client.query("SELECT set_config('app.tenant_id', $1, true)", [tenantId]);
       await client.query("SELECT set_config('app.user_id', $1, true)", [adminId]);
-      await client.query("SELECT set_config('app.role', 'admin', true)");
+      await client.query("SELECT set_config('app.role', 'usuario', true)");
       await client.query("SELECT set_config('app.empresa_id', $1, true)", [companyA]);
       expect(
         (
