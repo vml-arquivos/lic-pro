@@ -39,3 +39,17 @@
 - [x] Criar ou confirmar o administrador existente somente depois do core-api saudável.
 - [x] Preservar todos os recursos do Coolify, inclusive `licite-db`.
 - [ ] Provisionar contas separadas de cliente e mentor e suas concessões quando os respectivos e-mails forem informados; o signup permanece fechado enquanto SMTP estiver adiado.
+
+## 6. Radar nacional, alertas e painéis por perfil
+
+- [x] Pesquisar PNCP, Compras.gov.br Dados Abertos e referências de mercado sem copiar APIs ou automatizar operações autenticadas.
+- [x] Registrar no blueprint a matriz de fontes, limites, proveniência, fronteiras de “pregão ao vivo” e capacidades por perfil.
+- [x] Criar migration idempotente para campos canônicos de contratação, eventos/documentos, buscas salvas, regras/entregas de alertas e checkpoints retomáveis.
+- [x] Ampliar o cliente PNCP para publicação, atualização e proposta com paginação 10–50, hash de consulta e retomada pela próxima página.
+- [x] Persistir os campos observáveis do PNCP sem transformar ausência, sigilo ou atraso em valor inventado.
+- [x] Expor filtros nacionais no Radar, buscas salvas, alertas in-app idempotentes e painéis protegidos para admin, operação, empresário, mentorado e mentor.
+- [x] Manter o alternador de contexto dependente de público autorizado e sem concessão de acesso no cliente.
+- [ ] Aplicar a migration 0013 em produção e verificar RLS/grants com uma consulta de integração no pgvector.
+- [ ] Publicar os commits separados após CI verde e redeployar core-api/web; revalidar endpoints, painel e health/readiness no Coolify.
+- [ ] Criar o job assíncrono de documentos, resultados, retificações, prazos 7/3/1 dias e entrega por outbox; SMTP continua fora desta etapa.
+- [ ] Só anunciar “pregões ao vivo” após feed oficial autorizado; até lá, exibir status publicado, última captura e link para o portal oficial.

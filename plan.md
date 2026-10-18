@@ -25,6 +25,7 @@ O site institucional será reescrito com comunicação objetiva, visual claro e 
 3. Restringir menu, manifesto e rotas do app às capacidades reais. Páginas experimentais devolverão 404 fora do modo demo; o alternador de público seguirá a mesma regra.
 4. Reescrever a home do site, metadata, sitemap e robots com conteúdo público real e sem texto de rascunho.
 5. Confirmar checks locais e CI verde antes de qualquer deploy. Depois publicar core-api, site e web no Coolify e verificar saúde pública.
+6. Expandir o radar como produto de evidências: PNCP como fonte primária, Compras.gov.br como enriquecimento federal, filtros locais versionados, proveniência, buscas salvas, alertas in-app idempotentes e painéis separados por capacidade.
 
 ## Estrutura
 
@@ -36,6 +37,10 @@ O site institucional será reescrito com comunicação objetiva, visual claro e 
 - `apps/web/public/manus-routes.json`: manifesto público das rotas reais.
 - `apps/site/app/page.tsx`: home institucional.
 - `apps/site/app/layout.tsx`, `robots.ts`, `sitemap.ts`: SEO técnico e metadados.
+- `db/migrations/0013_feature_expansion.sql`: campos canônicos de fontes, documentos/eventos, buscas, alertas e checkpoints retomáveis.
+- `services/ingest/src/clients.py`, `normalizer.py`, `storage.py`, `control.py`: conectores PNCP públicos, normalização sem inferência e persistência retomável.
+- `services/core-api/src/search.ts`, `alerts.ts`, `capabilities.ts`, `server.ts`: filtros nacionais, alertas in-app e autorização por papel/escopo.
+- `apps/web/app/components/ProtectedRemoteDashboard.tsx` e rotas de `admin`, `mentor`, `mentorado`, `profissional`, `alertas` e `buscas-salvas`: painéis reais sem dados fictícios.
 
 ## Estado após publicação
 
@@ -45,3 +50,7 @@ O site institucional será reescrito com comunicação objetiva, visual claro e 
 - `https://applicitecomigo.buscarr.com.br/health` responde com o web saudável.
 - Canonical, Open Graph, robots e sitemap do site usam `https://licitecomigo.buscarr.com.br`.
 - SMTP continua adiado e o cadastro aberto permanece bloqueado; contas cliente/mentor dependem dos e-mails e concessões que ainda serão informados.
+
+## Expansão pesquisada
+
+O blueprint versionado em `docs/research/expansao-fontes-paineis-2026-10.md` registra as fontes oficiais, limites de consulta, fronteiras de automação e o desenho de capacidades. O produto não deve prometer pregão em tempo real, lance, chat, proposta, scraping autenticado ou cobertura nacional sem contrato/fonte autorizada. O rótulo operacional para o baseline é “última captura” ou “atualização observada”, não “ao vivo”.
