@@ -44,7 +44,7 @@ O site institucional será reescrito com comunicação objetiva, visual claro e 
 
 ## Estado após publicação
 
-- Código publicado no `main` até `65777a4`, com CI verde (`39141418481`) antes do deploy; os commits anteriores incluem o tratamento de `204 No Content` na paginação PNCP e a evolução de nichos, selects e painéis.
+- A imagem funcional implantada em produção corresponde ao commit `65777a4`, com CI verde (`39141418481`) antes do deploy; o `main` recebeu depois o commit documental `843ebc3`. Os commits funcionais incluem o tratamento de `204 No Content` na paginação PNCP e a evolução de nichos, selects e painéis.
 - A migration `0014_user_niche_preferences.sql` foi aplicada no deployment `3u9ssql4nonjobvh4me8gdst`; `licite-core-api` (`jmxla5ryeqjoeqeajf9e4eme`) e `licite-web` (`jbqyb69aiup7ew8vcctmi3hl`) terminaram com `Success` no Coolify. `licite-site` permanece saudável, sem alteração nesta etapa.
 - `https://apilicitecomigo.buscarr.com.br/health` e `/ready` respondem com banco e Redis prontos.
 - `https://applicitecomigo.buscarr.com.br/health` responde com o web saudável.
