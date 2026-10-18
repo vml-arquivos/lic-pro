@@ -51,7 +51,7 @@ apps/web ── sessão do usuário ──► services/ai
 
 O sistema é um monorepo com fronteiras claras: aplicações web e serviços TypeScript vivem em workspaces pnpm; ingestão e IA usam projetos Python isolados por serviço. O PostgreSQL é a fonte de verdade para dados de negócio e auditoria. Redis fica reservado para estado efêmero, locks e coordenação; RabbitMQ transporta eventos assíncronos.
 
-Toda chamada sensível deve carregar o tenant e o usuário da sessão. Migrations usam `licite_owner`; runtime usa roles próprias `NOSUPERUSER`/`NOBYPASSRLS`, com grants mínimos e `FORCE ROW LEVEL SECURITY`. Nenhum serviço da fundação usa conexão privilegiada para a Ana. Recursos de lances deverão depender de `PortalAdapter`; as Fases 2, 3 e 3.1 apenas consultam fontes públicas e leem documentos, sem operar portais reais.
+Toda chamada sensível deve carregar o tenant e o usuário da sessão. O cluster inicia com `licite_admin`, que também executa migrations e bootstrap; `licite_owner` fica sem login e apenas como owner dos objetos. Runtime usa roles próprias `NOSUPERUSER`/`NOBYPASSRLS`, com grants mínimos e `FORCE ROW LEVEL SECURITY`. RabbitMQ usa o vhost `licite_comigo` sem barra no nome. Nenhum serviço da fundação usa conexão privilegiada para a Ana. Recursos de lances deverão depender de `PortalAdapter`; as Fases 2, 3 e 3.1 apenas consultam fontes públicas e leem documentos, sem operar portais reais.
 
 ## Reader/RAG
 

@@ -12,7 +12,7 @@ Conforme solicitado, as fases posteriores não foram iniciadas. A automação de
 
 ## Requisitos locais
 
-Use Node.js 22+, pnpm 9+, Python 3.12+ e Docker Compose apenas para desenvolvimento local. Copie `.env.example` para `.env` e substitua os valores locais quando necessário. O `MIGRATION_DATABASE_URL` usa a role de migrations; cada serviço usa sua URL de role de aplicação.
+Use Node.js 22+, pnpm 9+, Python 3.12+ e Docker Compose apenas para desenvolvimento local. Copie `.env.example` para `.env` e substitua os valores locais quando necessário. O cluster inicia com `POSTGRES_ADMIN_USER=licite_admin`; `MIGRATION_DATABASE_URL` e `pnpm admin:bootstrap` usam essa role administrativa, enquanto cada serviço usa sua própria URL de role de aplicação.
 
 ```bash
 cp .env.example .env
@@ -27,7 +27,7 @@ pnpm test
 pnpm format:check
 ```
 
-`pnpm db:migrate` executa todas as migrations em ordem com `MIGRATION_DATABASE_URL`, provisiona as senhas das roles de aplicação a partir das variáveis de ambiente e nunca é chamado pelo processo web. `db/seed.sh` recusa execução sem `DEMO_MODE=true` e insere o tenant local e o usuário `admin@local.test`. Depois do seed, abra `/login`; em modo demo a tela pode preencher a credencial local, enquanto o login normal pede apenas e-mail e senha e solicita a organização somente se houver mais de uma. Para produção, rode `pnpm admin:bootstrap` como job one-shot com senha forte e use `db/Dockerfile.migrate` no recurso separado do Coolify.
+`pnpm db:migrate` executa todas as migrations em ordem com `MIGRATION_DATABASE_URL`, rejeita `licite_owner` como usuário de conexão, provisiona as senhas das roles de aplicação a partir das variáveis de ambiente e nunca é chamado pelo processo web. `licite_owner` fica apenas como owner dos objetos. `db/seed.sh` recusa execução sem `DEMO_MODE=true` e insere o tenant local e o usuário `admin@local.test`. Depois do seed, abra `/login`; em modo demo a tela pode preencher a credencial local, enquanto o login normal pede apenas e-mail e senha e solicita a organização somente se houver mais de uma. Para produção, rode `pnpm admin:bootstrap` como job one-shot usando o mesmo `MIGRATION_DATABASE_URL` administrativo e use `db/Dockerfile.migrate` no recurso separado do Coolify.
 
 Para validar os serviços Python:
 

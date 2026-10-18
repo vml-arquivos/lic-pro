@@ -10,9 +10,9 @@ Todos os recursos de aplicação usam **Base Directory `/`** e o repositório co
 
 | Recurso          | Dockerfile / imagem                    | Base Directory |        Porta | Domínio              | Health                                       | Variáveis principais                                                      |
 | ---------------- | -------------------------------------- | -------------: | -----------: | -------------------- | -------------------------------------------- | ------------------------------------------------------------------------- |
-| PostgreSQL       | `pgvector/pgvector:pg16`               |              — | 5432 privado | —                    | `pg_isready`                                 | `POSTGRES_DB`, `POSTGRES_OWNER_USER`, `POSTGRES_OWNER_PASSWORD`           |
+| PostgreSQL       | `pgvector/pgvector:pg16`               |              — | 5432 privado | —                    | `pg_isready`                                 | `POSTGRES_DB`, `POSTGRES_ADMIN_USER`, `POSTGRES_ADMIN_PASSWORD`           |
 | Redis            | `redis:7.4-alpine` com AOF             |              — | 6379 privado | —                    | `redis-cli ping`                             | `REDIS_PASSWORD`                                                          |
-| RabbitMQ         | `rabbitmq:3.13-management-alpine`      |              — | 5672 privado | —                    | `rabbitmq-diagnostics -q ping`               | `RABBITMQ_USER`, `RABBITMQ_PASSWORD`                                      |
+| RabbitMQ         | `rabbitmq:3.13-management-alpine`      |              — | 5672 privado | —                    | `rabbitmq-diagnostics -q ping`               | `RABBITMQ_USER`, `RABBITMQ_PASSWORD`, `RABBITMQ_VHOST=licite_comigo`      |
 | migrate          | `db/Dockerfile.migrate`                |            `/` |            — | —                    | one-shot, sem HTTP                           | `MIGRATION_DATABASE_URL`, cinco `*_DB_PASSWORD`, `MIGRATE_IDLE_AFTER`     |
 | core-api         | `services/core-api/Dockerfile`         |            `/` |         3001 | opcional `API_URL`   | `/health`, `/ready`                          | JWT, `DATABASE_URL`, Redis, signup e SMTP                                 |
 | ai               | `services/ai/Dockerfile`               |            `/` |         8000 | somente rede privada | `/health`, `/ready`                          | JWT AI, providers, limites, `AI_DATABASE_URL` mapeada para `DATABASE_URL` |
@@ -26,14 +26,14 @@ Todos os recursos de aplicação usam **Base Directory `/`** e o repositório co
 
 ## Ordem de criação
 
-1. Crie PostgreSQL usando `pgvector/pgvector:pg16`, Redis com AOF e RabbitMQ em rede privada.
+1. Crie PostgreSQL usando `pgvector/pgvector:pg16` com `POSTGRES_ADMIN_USER=licite_admin`, Redis com AOF e RabbitMQ em rede privada usando o vhost `licite_comigo` (sem barra no nome do vhost).
 2. Configure DNS para `SITE_URL` e `APP_URL`. Publique somente site e web; core, AI e ingest permanecem privados, salvo decisão de expor `API_URL`.
-3. Crie o recurso one-shot `migrate` com `db/Dockerfile.migrate`. Configure `MIGRATION_DATABASE_URL` apontando para o hostname interno do PostgreSQL e `MIGRATE_IDLE_AFTER=true` quando o Coolify precisar manter o recurso saudável após o sucesso.
-4. Execute o migrate e confirme o código 0. Ele usa lock advisory, tabela `schema_migrations`, aplica arquivos em ordem, provisiona `licite_core`, `licite_ingest`, `licite_ai`, `licite_bid` e `licite_realtime` e termina; nunca é executado dentro de outro serviço.
+3. Crie o recurso one-shot `migrate` com `db/Dockerfile.migrate`. Configure `MIGRATION_DATABASE_URL` usando `licite_admin`, apontando para o hostname interno do PostgreSQL, e `MIGRATE_IDLE_AFTER=true` quando o Coolify precisar manter o recurso saudável após o sucesso. Nunca use `licite_owner` para conectar.
+4. Execute o migrate e confirme o código 0. Ele usa lock advisory, tabela `schema_migrations`, mantém `licite_owner` apenas como owner dos objetos, provisiona `licite_core`, `licite_ingest`, `licite_ai`, `licite_bid` e `licite_realtime` e termina; nunca é executado dentro de outro serviço.
 5. Crie core-api, AI, ingest HTTP, worker, scheduler, site e web apontando para seus Dockerfiles. Aguarde `/ready` dos serviços HTTP antes de publicar links no app.
-6. Execute `pnpm admin:bootstrap` como job one-shot com `MIGRATION_DATABASE_URL`, `BOOTSTRAP_TENANT_NAME`, `BOOTSTRAP_ADMIN_EMAIL` e `BOOTSTRAP_ADMIN_PASSWORD`. O comando exige senha forte, é idempotente e não é o seed demo.
+6. Execute `pnpm admin:bootstrap` como job one-shot com `MIGRATION_DATABASE_URL` conectado por `licite_admin`, `BOOTSTRAP_TENANT_NAME`, `BOOTSTRAP_ADMIN_EMAIL` e `BOOTSTRAP_ADMIN_PASSWORD`. O comando exige senha forte, é idempotente e não é o seed demo.
 
-Hostnames esperados na rede interna são os nomes dos recursos, por exemplo `postgres:5432`, `redis:6379`, `rabbitmq:5672`, `http://core-api:3001`, `http://ai:8000` e `http://ingest:8100`. Não coloque esses valores no código; configure-os no recurso.
+Hostnames esperados na rede interna são os nomes dos recursos, por exemplo `postgres:5432`, `redis:6379`, `rabbitmq:5672`, `http://core-api:3001`, `http://ai:8000` e `http://ingest:8100`. A URL AMQP deve terminar em `/licite_comigo`, que representa o vhost `licite_comigo` sem barra no nome. Não coloque esses valores no código; configure-os no recurso.
 
 ## Backup e operação
 

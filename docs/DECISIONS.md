@@ -34,7 +34,7 @@
 
 ## ADR-0009 — Roles PostgreSQL separadas por serviço
 
-**Status:** aceito. **Contexto:** superusuário e dono de tabela podem ignorar RLS, tornando um teste com uma única role enganoso. **Decisão:** `licite_owner` fica restrita a migrations; `licite_core`, `licite_ingest`, `licite_ai`, `licite_bid` e `licite_realtime` são `NOSUPERUSER`, `NOBYPASSRLS`, não são donas de tabelas e recebem grants mínimos. Tabelas tenant-scoped usam `FORCE ROW LEVEL SECURITY`. **Consequência:** CI e produção devem conectar aplicações somente com suas roles próprias e verificar `pg_roles` no teste de isolamento.
+**Status:** aceito. **Contexto:** superusuário e dono de tabela podem ignorar RLS, tornando um teste com uma única role enganoso. **Decisão:** `licite_admin` é o usuário inicial do cluster e o usuário do runner de migrations; `licite_owner` fica sem login e apenas como owner dos objetos; `licite_core`, `licite_ingest`, `licite_ai`, `licite_bid` e `licite_realtime` são `NOSUPERUSER`, `NOBYPASSRLS`, não são donas de tabelas e recebem grants mínimos. Tabelas tenant-scoped usam `FORCE ROW LEVEL SECURITY`. **Consequência:** CI e produção devem conectar aplicações somente com suas roles próprias e verificar `pg_roles` no teste de isolamento.
 
 ## ADR-0010 — Compose de produção com migration one-shot
 

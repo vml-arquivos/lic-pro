@@ -12,6 +12,12 @@ until pg_isready --dbname "$MIGRATION_DATABASE_URL" >/dev/null 2>&1; do
   sleep 2
 done
 
+migration_user="$(psql "$MIGRATION_DATABASE_URL" --tuples-only --no-align --command 'SELECT current_user')"
+if [ "$migration_user" = 'licite_owner' ]; then
+  echo "MIGRATION_DATABASE_URL deve usar licite_admin (ou outro administrador), não licite_owner" >&2
+  exit 1
+fi
+
 psql "$MIGRATION_DATABASE_URL" --set ON_ERROR_STOP=1 --single-transaction \
   --command "SELECT pg_advisory_xact_lock(hashtextextended('licite-comigo:migrations', 0));" \
   --command "CREATE TABLE IF NOT EXISTS schema_migrations (filename TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now());"

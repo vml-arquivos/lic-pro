@@ -1,4 +1,4 @@
-.PHONY: install dev lint test build format infra-up infra-down db-migrate db-seed ingest-smoke
+.PHONY: install dev lint test build format infra-up infra-down db-migrate db-seed ingest-smoke env-check
 
 install:
 	pnpm install
@@ -17,6 +17,9 @@ db-seed:
 
 ingest-smoke:
 	pnpm ingest:smoke
+
+env-check:
+	pnpm env:check
 
 lint:
 	pnpm lint
