@@ -32,6 +32,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
     throw new Error(`Variáveis obrigatórias ausentes no core-api: ${missing.join(', ')}`);
   }
 
+  const signupEnabled = env.SIGNUP_ENABLED === 'true';
   const emailProvider =
     env.EMAIL_PROVIDER === 'smtp'
       ? 'smtp'
@@ -40,6 +41,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
         : 'fake';
   if (nodeEnv === 'production' && emailProvider === 'fake') {
     throw new Error('EMAIL_PROVIDER=fake é proibido em produção');
+  }
+  if (nodeEnv === 'production' && emailProvider === 'disabled' && signupEnabled) {
+    throw new Error(
+      'Configuração inválida em produção: EMAIL_PROVIDER=disabled não pode ser usado com SIGNUP_ENABLED=true. Configure SMTP antes de habilitar o cadastro aberto ou defina SIGNUP_ENABLED=false.',
+    );
   }
   if (nodeEnv === 'production' && emailProvider === 'smtp') {
     const smtpMissing = ['SMTP_HOST', 'SMTP_FROM'].filter((variable) => !env[variable]);
@@ -57,7 +63,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
       .map((origin) => origin.trim())
       .filter(Boolean),
     nodeEnv,
-    signupEnabled: env.SIGNUP_ENABLED === 'true',
+    signupEnabled,
     emailProvider,
     smtpPort: Number(env.SMTP_PORT ?? 587),
     termsVersion: env.TERMS_VERSION ?? '2026-10-17-draft',
