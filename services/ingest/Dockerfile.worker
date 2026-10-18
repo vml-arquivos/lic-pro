@@ -14,4 +14,4 @@ COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /build/src ./src
 USER app
 # Worker deliberadamente sem HTTP e sem HEALTHCHECK HTTP.
-CMD ["celery", "-A", "src.worker.celery_app", "worker", "--loglevel=INFO", "--queues=ingest"]
+CMD ["celery", "-A", "src.worker.celery_app", "worker", "--loglevel=INFO", "--queues=ingest,ingest.scheduler,ingest.dlq"]
