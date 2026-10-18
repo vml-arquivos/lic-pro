@@ -24,17 +24,18 @@
 
 ## 4. Site institucional e SEO
 
-- [ ] Remover faixa de rascunho, slogan genérico e linguagem que pareça texto de IA.
-- [ ] Reescrever a home com headline objetiva, benefícios verificáveis, três passos, CTA para app/lista e FAQ curto.
-- [ ] Não exibir prova social, números, fotos ou resultados sem fonte real.
-- [ ] Definir metadata por rota pública, canonical absoluto, Open Graph, Twitter Card, robots com bloqueio de `/api/` e sitemap somente com páginas públicas reais.
-- [ ] Confirmar HTML inicial com conteúdo, status HTTP e documentos SEO servidos pelo domínio institucional.
+- [x] Remover faixa de rascunho, slogan genérico e linguagem que pareça texto de IA.
+- [x] Reescrever a home com headline objetiva, benefícios verificáveis, três passos, CTA para app/lista e FAQ curto.
+- [x] Não exibir prova social, números, fotos ou resultados sem fonte real.
+- [x] Definir metadata por rota pública, canonical absoluto, Open Graph, Twitter Card, robots com bloqueio de `/api/` e sitemap somente com páginas públicas reais.
+- [x] Confirmar HTML inicial com conteúdo, status HTTP e documentos SEO servidos pelo domínio institucional.
 
 ## 5. Deploy e operação
 
-- [ ] Confirmar CI verde no commit final.
-- [ ] Publicar core-api e validar `/health` e `/ready`.
-- [ ] Manter SMTP adiado; não habilitar signup aberto enquanto o e-mail estiver desativado.
-- [ ] Publicar web/site e validar domínio, login admin, Radar, Empresas, Leads, Academia e ANA.
-- [ ] Criar ou confirmar o administrador existente somente depois do core-api saudável.
-- [ ] Preservar todos os recursos do Coolify, inclusive `licite-db`.
+- [x] Confirmar CI verde no commit final.
+- [x] Publicar core-api e validar `/health` e `/ready`.
+- [x] Manter SMTP adiado; não habilitar signup aberto enquanto o e-mail estiver desativado.
+- [x] Publicar web/site e validar HTTPS, domínio, health do web e as rotas públicas de Leads e Academia/mentor.
+- [x] Criar ou confirmar o administrador existente somente depois do core-api saudável.
+- [x] Preservar todos os recursos do Coolify, inclusive `licite-db`.
+- [ ] Provisionar contas separadas de cliente e mentor e suas concessões quando os respectivos e-mails forem informados; o signup permanece fechado enquanto SMTP estiver adiado.

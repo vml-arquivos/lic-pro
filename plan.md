@@ -36,3 +36,12 @@ O site institucional será reescrito com comunicação objetiva, visual claro e 
 - `apps/web/public/manus-routes.json`: manifesto público das rotas reais.
 - `apps/site/app/page.tsx`: home institucional.
 - `apps/site/app/layout.tsx`, `robots.ts`, `sitemap.ts`: SEO técnico e metadados.
+
+## Estado após publicação
+
+- Código publicado no `main` até `d4ad468`, com CI verde antes do deploy.
+- `licite-core-api`, `licite-web` e `licite-site` estão saudáveis no Coolify.
+- `https://apilicitecomigo.buscarr.com.br/health` e `/ready` respondem com banco e Redis prontos.
+- `https://applicitecomigo.buscarr.com.br/health` responde com o web saudável.
+- Canonical, Open Graph, robots e sitemap do site usam `https://licitecomigo.buscarr.com.br`.
+- SMTP continua adiado e o cadastro aberto permanece bloqueado; contas cliente/mentor dependem dos e-mails e concessões que ainda serão informados.
