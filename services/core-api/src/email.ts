@@ -9,7 +9,7 @@ export type EmailMessage = {
 };
 
 export async function sendEmail(config: RuntimeConfig, message: EmailMessage): Promise<void> {
-  if (config.emailProvider === 'fake') return;
+  if (config.emailProvider === 'fake' || config.emailProvider === 'disabled') return;
   if (!config.smtpHost || !config.emailFrom) {
     throw new Error('SMTP_HOST e SMTP_FROM são obrigatórios para envio de e-mail');
   }
