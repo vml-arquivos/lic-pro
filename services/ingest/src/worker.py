@@ -141,20 +141,17 @@ def dead_letter(payload: dict[str, Any], error: str) -> dict[str, Any]:
 
 
 @celery_app.task(name="ingest.schedule_radar")  # type: ignore[untyped-decorator]
-def schedule_radar() -> dict[str, str]:
+def schedule_radar() -> dict[str, int | str]:
     tenant_id = os.getenv("INGEST_SCHEDULE_TENANT_ID")
     if not tenant_id:
         return {"status": "not_configured"}
     today = date.today()
     start = today - timedelta(days=int(os.getenv("INGEST_WINDOW_DAYS", "1")))
-    result = run_checkpoint.apply(
-        args=[
-            tenant_id,
-            int(os.getenv("INGEST_SCHEDULE_MODALITY_CODE", "6")),
-            start.isoformat(),
-            today.isoformat(),
-            os.getenv("INGEST_SCHEDULE_UF") or None,
-        ],
+    checkpoint_result = run_checkpoint.run(
+        tenant_id,
+        int(os.getenv("INGEST_SCHEDULE_MODALITY_CODE", "6")),
+        start.isoformat(),
+        today.isoformat(),
+        os.getenv("INGEST_SCHEDULE_UF") or None,
     )
-    result.get(propagate=True)
-    return {"status": "completed", "task_id": str(result.id)}
+    return {"status": "completed", **checkpoint_result}
