@@ -4,6 +4,7 @@ RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
+COPY services/tsconfig.service.json services/tsconfig.service.json
 COPY services/core-api/package.json services/core-api/package.json
 COPY packages/shared/package.json packages/shared/package.json
 RUN pnpm install --frozen-lockfile
