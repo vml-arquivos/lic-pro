@@ -12,29 +12,34 @@ export function LeadForm({ id = 'lista-de-espera' }: LeadFormProps) {
     setPending(true);
     const data = new FormData(event.currentTarget);
     const params = new URLSearchParams(window.location.search);
-    const response = await fetch('/api/leads', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        nome: data.get('nome'),
-        email: data.get('email'),
-        whatsapp: data.get('whatsapp'),
-        perfil: data.get('perfil'),
-        consentimento_lgpd: data.get('consentimento_lgpd') === 'on',
-        origem: document.referrer || 'site',
-        utm_source: params.get('utm_source'),
-        utm_medium: params.get('utm_medium'),
-        utm_campaign: params.get('utm_campaign'),
-        website: data.get('website'),
-      }),
-    });
-    setPending(false);
-    setMessage(
-      response.ok
-        ? 'Recebemos seu interesse. Obrigado.'
-        : 'Não foi possível enviar agora. Tente novamente em instantes.',
-    );
-    if (response.ok) event.currentTarget.reset();
+    try {
+      const response = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          nome: data.get('nome'),
+          email: data.get('email'),
+          whatsapp: data.get('whatsapp'),
+          perfil: data.get('perfil'),
+          consentimento_lgpd: data.get('consentimento_lgpd') === 'on',
+          origem: document.referrer || 'site',
+          utm_source: params.get('utm_source'),
+          utm_medium: params.get('utm_medium'),
+          utm_campaign: params.get('utm_campaign'),
+          website: data.get('website'),
+        }),
+      });
+      setMessage(
+        response.ok
+          ? 'Recebemos seu interesse. Obrigado.'
+          : 'Não foi possível enviar agora. Tente novamente em instantes.',
+      );
+      if (response.ok) event.currentTarget.reset();
+    } catch {
+      setMessage('Não foi possível enviar agora. Tente novamente em instantes.');
+    } finally {
+      setPending(false);
+    }
   }
   return (
     <form id={id} className="lead-form" onSubmit={(event) => void submit(event)}>

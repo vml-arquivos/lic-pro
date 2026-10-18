@@ -1,0 +1,85 @@
+# CONTEXTO
+
+Projeto Licite Comigo, repositório vml-arquivos/lic-pro, branch main. Uma revisão de 17/10/2026 (leitura do código e chamadas reais à API pública do PNCP) concluiu que a base de segurança é sólida, mas o produto ainda não é funcional. Constatações verificadas:
+
+1. `editais`, `itens_edital` e `edital_versoes` são por tenant. Cada cadastro novo cria um tenant e veria o Radar vazio. A ingestão agendada cobre um único tenant (`INGEST_SCHEDULE_TENANT_ID`), uma modalidade, uma UF e uma janela de 1 dia.
+2. O normalizador PNCP descarta campos que a API real devolve: `dataAberturaProposta`, `dataEncerramentoProposta`, `situacaoCompraNome`, `modoDisputaNome`, `srp`, `amparoLegal`, `anoCompra`, `sequencialCompra`, `numeroCompra`, `processo`, `valorTotalHomologado`, `linkProcessoEletronico`, `unidadeOrgao.codigoIbge/municipioNome`, `orgaoEntidade.cnpj`. O código não usa `/v1/contratacoes/proposta` (só exige `dataFinal`; lista compras com propostas abertas; ~17.900 registros hoje) nem `/v1/contratacoes/atualizacao`.
+3. A fixture `services/ingest/tests/fixtures/pncp_publicacao_page_1.json` foi escrita à mão e está errada (modalidadeId 8 rotulado como "Pregão - Eletrônico"; na API real 6 = Pregão - Eletrônico). Os conectores nunca foram validados contra a API real.
+4. `itens_edital` nunca é gravada, então `catmat_catser` fica vazio e o filtro CATMAT/CATSER não funciona. O OpenAPI de consulta do PNCP (https://pncp.gov.br/pncp-consulta/v3/api-docs) NÃO expõe itens nem arquivos de uma contratação.
+5. `services/ai/src/providers.py`: o provider "openai" lança "ainda depende de adapter revisado" e o "fake" é proibido em produção. `main.py` instancia o provider na importação, então o serviço `ai` não sobe em produção com nenhuma configuração.
+6. A Ana (`services/ai/src/ana.py`) é um roteador por palavra-chave: glossário fixo de 4 termos e a ferramenta `buscar_editais` devolve texto pronto, sem buscar. O Reader usa embeddings determinísticos por hash e a recuperação lista todos os chunks e ordena por contagem de palavras em Python; o pgvector não é usado. Hunter, Pricer e Writer lançam NotImplementedError.
+7. As tabelas `prazos_agenda`, `tarefas`, `checklists`, `rotinas`, `rotina_execucoes`, `aprovacoes` e `notificacoes` não têm endpoint nem tela. `/dashboard/summary` conta zero.
+8. A documentação manda usar `licite_owner` como POSTGRES_USER (usuário inicial do cluster). A migration 0004 executa `ALTER ROLE licite_owner NOSUPERUSER`, o que falha no PG16 para o usuário inicial. O CI só passa porque usa outro usuário (`licite`).
+9. Vhost do RabbitMQ: o compose cria `/licite_comigo`; `RABBITMQ_URL` usa `/licite_comigo`, que o cliente interpreta como o vhost `licite_comigo`. Há divergência.
+10. Os Dockerfiles do site e do web não definem `HOSTNAME=0.0.0.0`. O servidor standalone do Next.js passa a escutar só no hostname do container e o healthcheck em 127.0.0.1 falha. O botão "Criar conta" do site aponta para /login em vez de /signup.
+
+OBJETIVO: fase FUNCIONAL. Bancos em uso real, ingestão real, IA real, filtros e APIs, e interface funcionando de ponta a ponta, sem rótulos de "teste". Execute as etapas na ordem. PARE ao final da Etapa 1 e aguarde minha mensagem "Etapa 1 aprovada".
+
+# REGRAS
+
+1. Git: um commit por item (Conventional Commits em português), `git push origin main` ao final de cada etapa. Se o push falhar, informe o erro exato.
+2. Sem segredos no repositório. Tudo por env; mantenha `.env.example` e `pnpm env:check` atualizados.
+3. Fontes oficiais: NÃO invente endpoints. Consulte OpenAPI/manuais oficiais e registre em `docs/research/`. Se não achar fonte documentada, não implemente e registre a pendência.
+4. Sem automação de portais reais, sem lance, sem assinatura, sem protocolo de peças. Ações de Nível C (envio em portal, assinatura, lance, impugnação, recurso, pagamento, contratação) são sempre recusadas.
+5. Seja honesto: relate o que rodou e o que não rodou. Rode lint, typecheck, testes e build, e teste cada Dockerfile com `docker run` sem sobrescrever HOSTNAME.
+6. Deploy: Coolify, um recurso por serviço, build por Dockerfile. Sem docker compose em produção.
+7. Copie os anexos (protótipo v2 e especificação v2) para `docs/produto/` e remova `prototipo-v2-pendente.md`.
+8. Respeite o rate limit das fontes públicas, com User-Agent identificável e sem carga desnecessária.
+
+# ETAPA 0 — Bloqueios de deploy
+
+0.1 `ENV HOSTNAME=0.0.0.0` nos Dockerfiles do site e do web, porta única por serviço (PORT/EXPOSE/HEALTHCHECK iguais). Corrija o link "Criar conta" do site para /signup. No formulário de leads, trate falha de rede com try/catch (não deixe `pending` travado).
+0.2 Postgres: o usuário inicial do cluster NÃO pode ser `licite_owner`. Introduza `POSTGRES_ADMIN_USER` (padrão `licite_admin`). `MIGRATION_DATABASE_URL`, `admin:bootstrap`, compose de desenvolvimento, `.env.example`, docs e `infra/coolify/README.md` devem usar o admin. `licite_owner` fica só como dono dos objetos (crie migration nova, não altere migrations já aplicadas). Adicione ao CI um job que roda o caminho real de produção: `db/Dockerfile.migrate` contra um `pgvector/pgvector:pg16` novo com POSTGRES_USER=licite_admin, e verifica `schema_migrations` e `pg_roles` (app roles sem superuser e sem bypassrls).
+0.3 RabbitMQ: use o vhost `licite_comigo` (sem barra) em compose, `.env.example`, docs e URLs. Adicione teste de integração com RabbitMQ real no CI (publicar e consumir `edital.novo`).
+
+# ETAPA 1 — Dados reais e Radar
+
+1.1 Editais globais. Nova migration: `editais`, `itens_edital` e `edital_versoes` passam a ser dados públicos globais (sem tenant_id obrigatório; leitura liberada a qualquer tenant autenticado; escrita só pela role de ingestão). Unicidade `(fonte, id_externo)`. Migre os dados existentes sem duplicar. Remova `INGEST_SCHEDULE_TENANT_ID`. Dados privados (oportunidades, checklists, chunks de PDFs enviados, análises) continuam por tenant/empresa e referenciam o edital global. Atualize os testes de RLS: tenants A e B leem o mesmo edital global, nenhum deles escreve nele, e os dados privados continuam isolados.
+1.2 Ingestão completa, validada contra a API real:
+  - Use `/v1/contratacoes/proposta` para "abertas agora" (varredura paginada com teto configurável), `/v1/contratacoes/publicacao` para novas e histórico, e `/v1/contratacoes/atualizacao` para mudanças. Leia os parâmetros no OpenAPI oficial.
+  - Itere por todas as modalidades relevantes, lendo a tabela de domínio oficial do PNCP (não fixe códigos sem fonte).
+  - Persista todos os campos listados na constatação 2, mais `raw_payload` JSONB, em colunas tipadas e indexáveis.
+  - Substitua a fixture inventada por respostas reais gravadas da API (dados públicos), mantendo testes offline.
+  - Comando idempotente de backfill (`pnpm ingest:backfill --days 30`) com checkpoint. Scheduler: `proposta` a cada N minutos e `publicacao`/`atualizacao` em intervalos configuráveis. Registre cada execução em `ingest_runs` (contagens, duração, erro) e exponha em `/ready` e na Central de Automações.
+  - Quando o hash mudar, grave nova linha em `edital_versoes` com resumo dos campos alterados (retificação/atualização).
+1.3 Itens e documentos: pesquise as fontes oficiais (Swagger/manual do PNCP, base `https://pncp.gov.br/api/pncp`, "Consultar Itens de uma Contratação"; e o módulo de contratações 14.133 dos Dados Abertos do Compras.gov.br, que pode trazer itens com CATMAT/CATSER). Implemente SOMENTE o que estiver documentado e for de consulta pública, com busca sob demanda (ao abrir ou salvar um edital) e cache em `itens_edital`. Se não houver endpoint documentado para o PDF do edital, mantenha link da fonte oficial + upload pelo usuário (sem raspar portais).
+1.4 Filtros completos (spec §4): palavra-chave (FTS em português + pg_trgm), UF, município (IBGE), órgão (nome/CNPJ), UASG, modalidade (múltipla), modo de disputa, situação, período de publicação, prazo de encerramento (de/até e "encerra em até N dias"), faixa de valor, SRP, plataforma de origem (catálogo `portais` derivado do domínio de `linkSistemaOrigem`), exclusividade ME/EPP (apenas se informada; senão "não informado"), CATMAT/CATSER. Ordenação: encerramento, publicação, valor, relevância. Paginação, total e contagens por faceta. Índices adequados e teste de performance com ≥100 mil linhas (anexe o EXPLAIN). Resultado exibe órgão, objeto, identificador, fonte, modalidade, valores, datas, plataforma e campos ausentes como "não informado", com carimbo de atualização.
+1.5 Buscas salvas e alertas (rotina Nível A): `buscas_salvas` por empresa, avaliação a cada ingestão, criação de `notificacoes` in-app (idempotente) e e-mail resumido opcional com preferências e frequência máxima.
+1.6 Compatibilidade (substitui "Win Rate Score"): pontuação 0–100 determinística por perfil da empresa (segmento/CNAE por palavras-chave, UF, porte, faixa de valor, modalidade) com decomposição explicável e rótulos Alta/Média/Baixa. Nunca use "probabilidade de vitória".
+1.7 Tela do Radar usando tudo isto (filtros, ordenação, paginação, salvar oportunidade, busca salva), sem avisos de teste.
+
+PARE AQUI. Informe: o que foi feito por item, resultado do backfill real (contagens), campos que a API real devolveu e que não estavam no modelo, comandos de teste e hashes dos commits.
+
+# ETAPA 2 — IA real
+
+2.1 Providers: implemente `anthropic` (Messages API com tool use e streaming) e `openai_compatible` (chat completions com tools via `LLM_API_BASE_URL`), escolhidos por env; `fake` só em desenvolvimento e testes. Timeouts, retry com backoff, contagem de tokens real vinda do provider gravada em `uso_ia`, `modelo` e `prompt_version` registrados. Saída estruturada validada por Pydantic com uma tentativa de reparo. Aplique mascaramento de CPF/e-mail antes de enviar contexto ao LLM. O serviço `ai` deve subir em produção com provider real configurado e falhar com mensagem clara se não houver.
+   Embeddings: interface com (a) endpoint `/embeddings` compatível com OpenAI e (b) modelo multilíngue local via ONNX (verifique na documentação da biblioteca o modelo suportado cuja dimensão seja 1024, igual à coluna `vector(1024)`). A Anthropic não tem API de embeddings. Remova o embedding determinístico de qualquer caminho de produção.
+2.2 Reader real: recuperação híbrida (pgvector + FTS com fusão de ranking), consultas dirigidas por tema (índices contábeis, amostra, vistoria, prazos, habilitação jurídica/fiscal/técnica/econômica, garantias, sanções, critérios de julgamento, ME/EPP, cláusulas restritivas). Extração em schema Pydantic com evidência por campo (página + trecho literal) verificada por busca do trecho no chunk. Campo sem evidência fica nulo com "não encontrado". Confiança calculada pela evidência, não só pelo LLM. OCR real com tesseract no Dockerfile do `ai` (flag `ENABLE_OCR`, detecção automática de páginas sem texto). Processamento assíncrono com status para PDFs grandes (o timeout síncrono de 30s não serve para 200 páginas). Gere `checklists`/`checklist_itens` a partir da extração, com origem e página. Reanálise quando o edital tiver nova versão. Crie um harness de avaliação em `evals/` com 5 editais públicos de exemplo e esquema de anotação (a anotação final é humana; sinalize isso).
+2.3 Ana real: laço de tool calling com streaming SSE por tokens, ferramentas que chamam a core-api com o JWT do usuário (nunca conexão privilegiada).
+  - Nível A (executa direto): buscar_editais (todos os filtros), ler_edital, ler_analise_edital, explicar_conceito (glossário do banco), resumir_edital (com citações), compatibilidade_empresa_edital, pesquisar_preco, listar_prazos/tarefas/oportunidades, e ações internas salvar_oportunidade, criar_tarefa, criar_prazo, mostradas na conversa com opção de desfazer.
+  - Nível B (exige aprovação): rascunho de proposta/declaração, comunicação externa, qualquer envio de e-mail. A ferramenta cria registro em `aprovacoes` (resumo em linguagem simples, fonte, riscos) e só executa depois de o usuário aprovar na tela, por endpoint que a Ana não consegue chamar.
+  - Nível C: sempre recusado.
+  Contexto da tela (edital/oportunidade aberta) enviado ao widget. Linguagem adaptada a `publico` e `nivel_diagnostico`. Citações como chips de fonte "[edital, p. X]". "Não encontrei" quando não houver evidência. Memória: últimas N mensagens + resumo da conversa. Conteúdo de PDF, edital ou chat é dado, nunca instrução: teste com PDF malicioso provando que não dispara ferramenta alguma. O aviso fixo sai de toda mensagem; aparece uma vez no topo da conversa e só de forma breve em temas de legalidade, impugnação ou recurso.
+2.4 Pricer: consulta a pesquisa de preços do Compras.gov.br (`/modulo-pesquisa-preco/1_consultarMaterial` e `/3_consultarServico`) por CATMAT/CATSER, UF e período; estatísticas (n, mediana, média, quartis, tratamento de outliers documentado) com fonte, amostra e período. Calculadora de preço mínimo (custo, tributos por regime, frete, margem, capital de giro) em funções puras com testes. Sem "preço ótimo garantido".
+2.5 Writer (Nível B): rascunhos de declaração e proposta com dados validados da empresa e do edital, campos faltantes marcados, versionamento, status rascunho/revisado, exportação DOCX/PDF somente após confirmação dos campos críticos. Nada é "enviado".
+
+# ETAPA 3 — Produto (APIs e telas)
+
+3.1 APIs e telas reais: oportunidades (pipeline), agenda/prazos (prazo de encerramento entra automaticamente ao salvar a oportunidade), tarefas, checklists, notificações (sino + lista + marcar lida), aprovações (Aprovar / Devolver / Rejeitar), Central de Automações (radar e prazos com liga/desliga, última execução real, próxima execução e falhas; as demais rotinas aparecem como "indisponível nesta versão").
+3.2 Diagnóstico de prontidão: questionário que define `nivel_diagnostico` e gera checklist de prontidão. Itens e exigências devem citar fonte oficial (gov.br/SICAF/legislação); na dúvida, "verificar na norma vigente". Não invente exigência.
+3.3 Interface conforme o protótipo v2: sidebar escura, topbar, Início com as 8 ações e o destaque "ANA recomenda" alimentado por dados reais (prazos da semana, diagnóstico pendente), chip flutuante da Ana, menu só com o que existe. Tokens apenas em `packages/ui/brand/` (navy #10273b, teal #0f937f, mint #dff9ef, ink #172a37, muted #718191, line #dce5ea, bg #f4f7f8, acento #57deb9, gradiente #102d42 → #176c69, cabeçalho da Ana #0e6f67, fonte Inter). "Alternar público" só com `DEMO_MODE=true`. Leads e Empresas visíveis só ao admin; Onboarding fora do menu.
+3.4 Academia: status por aula (`rascunho_para_revisao`, `revisado`, `publicado`), alterável só por admin, com auditoria. O aviso de revisão aparece somente nas aulas que não estão `publicado`. Não marque nada como publicado: a revisão é minha.
+
+# ETAPA 4 — Site e avisos
+
+4.1 Site (apps/site): conteúdo completo e honesto. Home, Recursos (um bloco por módulo real), Para quem é, Como funciona, Mentoria de 30 dias (sem promessa de resultado), FAQ (≥12 perguntas reais), Sobre, Contato (WhatsApp por env, e-mail), Planos orientados por configuração (sem preço definido, "Fale conosco"), Termos e Privacidade completos com versão e data. CTAs coerentes: "Criar conta" → /signup quando `SIGNUP_ENABLED=true`; senão lista de espera. Capturas de tela reais do app (Playwright) nas seções de recursos. Sem depoimentos, números, logos ou prêmios inventados.
+4.2 Avisos: remova a faixa "rascunho para revisão jurídica", os títulos "Rascunho…", "Planos em definição / Em breve", o chip "Modo demo" fora de `DEMO_MODE`, os "Em breve" de recursos já construídos, a frase da home sobre conteúdos da Academia em revisão e o sufixo `-draft` das versões de termos. MANTENHA: rodapé e Termos com "Ferramenta de apoio à decisão. Não é consultoria jurídica e não garante resultado"; rótulo curto "Extraído automaticamente do edital — confira na fonte" ao lado de saídas da IA; a recusa da Ana a conclusões jurídicas. Crie `docs/legal/PENDENCIAS.md` listando o que depende de revisão profissional (termos, privacidade, base legal, retenção, provedor de LLM), como controle interno, sem rótulo público.
+4.3 E2E (Playwright) com stack local: cadastro → verificação de e-mail → login → empresa → diagnóstico → ingestão de amostra → busca com filtros → salvar oportunidade → upload de PDF → análise do Reader → Ana usando ferramenta → fluxo de aprovação. Em CI, use provider fake.
+
+# ETAPA 5 — Prontidão para deploy
+
+Atualize `infra/coolify/README.md`: usuário admin do Postgres, vhost, tabela de variáveis por recurso (origem, se é segredo, como gerar), ordem de criação, DNS (`app.` e site), jobs one-shot, health e backup. Cubra as novas variáveis no `env:check`. Entregue `pnpm smoke:prod` que, dadas as URLs, verifica `/health`, `/ready` e os fluxos públicos.
+
+# FORMATO DAS RESPOSTAS
+
+Ao fim de cada etapa: (1) o que foi feito por item, indicando o que já existia; (2) comandos para rodar e testar; (3) hashes dos commits e confirmação do push; (4) o que NÃO foi testado e as pendências.

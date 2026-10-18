@@ -46,7 +46,7 @@ export default function SiteLayout({ children }: Readonly<{ children: React.Reac
               Entrar
             </a>
             {signupEnabled ? (
-              <a className="button button-primary" href={`${appUrl.replace(/\/$/, '')}/login`}>
+              <a className="button button-primary" href={`${appUrl.replace(/\/$/, '')}/signup`}>
                 Criar conta
               </a>
             ) : (

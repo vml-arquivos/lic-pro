@@ -16,10 +16,11 @@ RUN pnpm --filter @licitecomigo/ui build && pnpm --filter @licitecomigo/site bui
 FROM node:22-alpine AS runtime
 WORKDIR /app
 RUN addgroup --system --gid 1001 app && adduser --system --uid 1001 app
-ENV NODE_ENV=production PORT=3100
+ENV NODE_ENV=production PORT=3100 HOSTNAME=0.0.0.0
 COPY --from=build --chown=app:app /app/apps/site/.next/standalone ./
 COPY --from=build --chown=app:app /app/apps/site/.next/static ./apps/site/.next/static
 COPY --from=build --chown=app:app /app/apps/site/public ./apps/site/public
 USER app
 EXPOSE 3100
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD wget -q -O - "http://127.0.0.1:3100/health" >/dev/null || exit 1
 CMD ["node", "apps/site/server.js"]
