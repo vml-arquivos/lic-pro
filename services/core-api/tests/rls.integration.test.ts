@@ -142,8 +142,8 @@ rlsSuite('isolamento RLS efetivo por tenant com role de aplicação', () => {
         'empresas',
         'empresa_usuarios',
         'oportunidades_salvas',
-        'lances_log',
       ];
+      await expect(client.query('SELECT count(*) FROM lances_log')).rejects.toThrow();
       for (const table of tables) {
         const result = await client.query<{ count: string }>(
           `SELECT count(*)::text AS count FROM ${table}`,

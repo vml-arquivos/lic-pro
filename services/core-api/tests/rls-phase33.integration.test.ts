@@ -56,8 +56,17 @@ suite('RLS Fase 3.3 por empresa e concessão', () => {
         [opportunityA, companyA, opportunityB, adminId, tenantId, editalA, companyB, editalB],
       );
       await client.query(
-        "INSERT INTO checklists (id, tenant_id, empresa_id, oportunidade_id, titulo) VALUES ($1, $5, $2, $4, 'Checklist A'), ($3, $5, $7, $8, 'Checklist B')",
-        [checklistA, companyA, opportunityA, adminId, tenantId, checklistB, companyB, opportunityB],
+        "INSERT INTO checklists (id, tenant_id, empresa_id, oportunidade_id, titulo) VALUES ($1, $2, $3, $4, 'Checklist A'), ($5, $6, $7, $8, 'Checklist B')",
+        [
+          checklistA,
+          tenantId,
+          companyA,
+          opportunityA,
+          checklistB,
+          tenantId,
+          companyB,
+          opportunityB,
+        ],
       );
       await client.query(
         "INSERT INTO checklist_itens (tenant_id, empresa_id, checklist_id, titulo) VALUES ($1, $2, $3, 'Item A'), ($1, $4, $5, 'Item B')",
