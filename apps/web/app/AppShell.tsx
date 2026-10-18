@@ -4,101 +4,165 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
-type Audience = 'empresario' | 'mentorado';
-type AppShellProps = Readonly<{ children: React.ReactNode; demoMode: boolean }>;
+type Me = {
+  nome?: string;
+  email?: string;
+  papel?: string;
+  publico?: 'empresa' | 'mentoria' | string | null;
+  perfil_jornada?: string | null;
+  nivel_diagnostico?: string | null;
+};
 
-type Me = { nome?: string; papel?: string };
+type MenuItem = { label: string; href: string; icon: string };
+type AppShellProps = Readonly<{ children: React.ReactNode }>;
 
-const menu = [
-  ['Início', '/', '⌂'],
-  ['Explorar licitações', '/radar', '⌕'],
-  ['Empresas', '/empresas', '▥'],
-  ['Academia', '/academia', '◎'],
-  ['Ana', '/ana', '✦'],
-] as const;
+const publicMenu: MenuItem[] = [
+  { label: 'Início', href: '/painel', icon: '⌂' },
+  { label: 'Explorar licitações', href: '/radar', icon: '⌕' },
+  { label: 'Empresas', href: '/empresas', icon: '▥' },
+  { label: 'Academia', href: '/academia', icon: '◎' },
+  { label: 'Ana', href: '/ana', icon: '✦' },
+];
+
+function normalized(value?: string | null) {
+  return (value ?? '').trim().toLowerCase();
+}
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   return (
-    parts.length > 1 ? `${parts[0]?.[0]}${parts.at(-1)?.[0]}` : parts[0]?.slice(0, 2) || 'UM'
+    parts.length > 1 ? `${parts[0]?.[0]}${parts.at(-1)?.[0]}` : parts[0]?.slice(0, 2) || 'LC'
   ).toUpperCase();
 }
 
-export function AppShell({ children, demoMode }: AppShellProps) {
+function isCurrent(pathname: string, href: string) {
+  return href === '/painel'
+    ? pathname === href
+    : pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
-  const [audience, setAudience] = useState<Audience>('empresario');
-  const [name, setName] = useState('Usuário Licite Comigo');
-  const [role, setRole] = useState('');
+  const [me, setMe] = useState<Me | null>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [switchingProfile, setSwitchingProfile] = useState(false);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem('lc-audience');
-    if (demoMode && (saved === 'empresario' || saved === 'mentorado')) setAudience(saved);
-    const onAudienceChange = () => {
-      const next = window.localStorage.getItem('lc-audience');
-      if (demoMode && (next === 'empresario' || next === 'mentorado')) setAudience(next);
-    };
-    window.addEventListener('lc-audience-change', onAudienceChange);
-    void fetch('/api/core/me', { cache: 'no-store' })
-      .then(async (response) => (response.ok ? ((await response.json()) as Me) : null))
-      .then((me) => {
-        if (!me) return;
-        if (me.nome) setName(me.nome);
-        if (me.papel) setRole(me.papel);
+    const controller = new AbortController();
+    void fetch('/api/core/me', { cache: 'no-store', signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return (await response.json()) as Me;
       })
-      .catch(() => undefined);
-    return () => window.removeEventListener('lc-audience-change', onAudienceChange);
-  }, [demoMode]);
+      .then((account) => {
+        if (!controller.signal.aborted) {
+          setMe(account);
+          setSessionChecked(true);
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setSessionChecked(true);
+      });
+    return () => controller.abort();
+  }, []);
+
+  const role = normalized(me?.papel);
+  const profile = normalized(me?.perfil_jornada);
+  const canSwitchProfile = Boolean(me && (me.publico === 'empresa' || me.publico === 'mentoria'));
+  const currentAudience = me?.publico === 'mentoria' ? 'mentorado' : 'empresário';
+
+  const menu = useMemo(() => {
+    const items = [...publicMenu];
+    if (sessionChecked && me) {
+      items.push(
+        { label: 'Alertas', href: '/alertas', icon: '◌' },
+        { label: 'Busca salva', href: '/buscas-salvas', icon: '⌑' },
+      );
+      if (role === 'mentor' || role === 'admin') {
+        items.push({ label: 'Painel do mentor', href: '/mentor', icon: '◉' });
+      }
+      if (role === 'aluno' || profile === 'mentorado' || role === 'admin') {
+        items.push({ label: 'Área do mentorado', href: '/mentorado', icon: '◉' });
+      }
+      if (profile === 'profissional' || role === 'operador' || role === 'admin') {
+        items.push({ label: 'Profissional', href: '/profissional', icon: '◈' });
+      }
+      if (role === 'admin') {
+        items.push({ label: 'Leads / admin', href: '/leads', icon: '✉' });
+        items.push({ label: 'Admin', href: '/admin', icon: '⚙' });
+      }
+    }
+    return items;
+  }, [me, profile, role, sessionChecked]);
 
   const currentLabel = useMemo(
-    () => menu.find(([, href]) => href === pathname)?.[0] ?? 'Início',
-    [pathname],
+    () => menu.find((item) => isCurrent(pathname, item.href))?.label ?? 'Licite Comigo',
+    [menu, pathname],
   );
 
-  function toggleAudience() {
-    if (!demoMode) return;
-    const next = audience === 'empresario' ? 'mentorado' : 'empresario';
-    setAudience(next);
-    window.localStorage.setItem('lc-audience', next);
-    window.dispatchEvent(new Event('lc-audience-change'));
+  async function toggleProfile() {
+    if (!canSwitchProfile || switchingProfile) return;
+    const nextPublico = me?.publico === 'mentoria' ? 'empresa' : 'mentoria';
+    setSwitchingProfile(true);
+    try {
+      const response = await fetch('/api/core/me/diagnostico', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ publico: nextPublico }),
+      });
+      if (!response.ok) return;
+      const updated = (await response.json()) as Partial<Me>;
+      setMe((current) => (current ? { ...current, ...updated, publico: nextPublico } : current));
+    } finally {
+      setSwitchingProfile(false);
+    }
   }
+
+  const name = me?.nome ?? me?.email ?? 'Conta';
+  const context =
+    me?.perfil_jornada ??
+    me?.papel ??
+    (sessionChecked ? 'Conta não conectada' : 'Validando sessão…');
 
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
-        <Link href="/" className="sidebar-brand" aria-label="Licite Comigo — Início">
+        <Link href="/painel" className="sidebar-brand" aria-label="Licite Comigo — Início">
           <span className="sidebar-wordmark">
             Licite<span>Comigo</span>
           </span>
         </Link>
         <p className="sidebar-label">Meu espaço</p>
         <nav aria-label="Menu do aplicativo">
-          {menu.map(([label, href, icon]) => (
+          {menu.map((item) => (
             <Link
-              href={href}
-              key={href}
-              className={`sidebar-link ${pathname === href ? 'active' : ''}`}
+              href={item.href}
+              key={item.href}
+              className={`sidebar-link ${isCurrent(pathname, item.href) ? 'active' : ''}`}
             >
-              <span aria-hidden="true">{icon}</span>
-              {label}
+              <span aria-hidden="true">{item.icon}</span>
+              {item.label}
             </Link>
           ))}
         </nav>
-        {demoMode ? (
+        {canSwitchProfile ? (
           <>
-            <p className="sidebar-label sidebar-experience-label">Experiência</p>
-            <button className="audience-toggle" type="button" onClick={toggleAudience}>
-              Alternar público <span aria-hidden="true">↔</span>
+            <p className="sidebar-label sidebar-experience-label">Perfil autorizado</p>
+            <button
+              className="audience-toggle"
+              type="button"
+              onClick={toggleProfile}
+              disabled={switchingProfile}
+            >
+              {switchingProfile ? 'Atualizando…' : `Contexto ${currentAudience}`}{' '}
+              <span aria-hidden="true">↔</span>
             </button>
           </>
         ) : null}
         {role === 'admin' ? (
-          <>
-            <p className="sidebar-label">Administração</p>
-            <Link className={`sidebar-link ${pathname === '/leads' ? 'active' : ''}`} href="/leads">
-              <span aria-hidden="true">✉</span>
-              Leads
-            </Link>
-          </>
+          <div className="sidebar-admin-note">
+            Permissões administrativas validadas pelo backend.
+          </div>
         ) : null}
         <div className="sidebar-bottom">
           <span className="status-dot" /> Serviços operacionais protegidos
@@ -108,19 +172,24 @@ export function AppShell({ children, demoMode }: AppShellProps) {
         <header className="app-topbar">
           <div className="topbar-title">
             <strong>{currentLabel}</strong>
-            <small>Informação para decidir o próximo passo.</small>
+            <small>{context}</small>
           </div>
           <div className="topbar-actions">
-            {demoMode ? (
-              <button className="audience-pill" type="button" onClick={toggleAudience}>
-                {audience === 'empresario' ? '👔 Empresário' : '🎓 Mentorado'}
+            {canSwitchProfile ? (
+              <button
+                className="audience-pill"
+                type="button"
+                onClick={toggleProfile}
+                disabled={switchingProfile}
+              >
+                {currentAudience}
               </button>
-            ) : (
-              <span className="audience-pill">👔 Empresário</span>
-            )}
-            <button className="notification-button" type="button" aria-label="Notificações">
-              🔔
-            </button>
+            ) : null}
+            {me ? (
+              <Link className="notification-button" href="/alertas" aria-label="Alertas">
+                ◌
+              </Link>
+            ) : null}
             <span className="user-avatar" title={name} aria-label={`Conta de ${name}`}>
               {initials(name)}
             </span>

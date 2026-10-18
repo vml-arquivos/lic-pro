@@ -1,6 +1,7 @@
 {
   "routes": [
     { "path": "/", "title": "Início" },
+    { "path": "/painel", "title": "Painel" },
     { "path": "/radar", "title": "Explorar licitações" },
     { "path": "/radar/:editalId", "title": "Oportunidade" },
     { "path": "/empresas", "title": "Empresas" },
@@ -8,6 +9,12 @@
     { "path": "/academia", "title": "Academia" },
     { "path": "/academia/trilhas/:slug", "title": "Trilha da Academia" },
     { "path": "/academia/mentor", "title": "Painel do mentor" },
+    { "path": "/mentor", "title": "Painel do mentor" },
+    { "path": "/mentorado", "title": "Mentorado" },
+    { "path": "/profissional", "title": "Profissional" },
+    { "path": "/admin", "title": "Admin" },
+    { "path": "/alertas", "title": "Alertas" },
+    { "path": "/buscas-salvas", "title": "Buscas salvas" },
     { "path": "/ana", "title": "Ana" },
     { "path": "/onboarding", "title": "Onboarding" },
     { "path": "/login", "title": "Entrar" },

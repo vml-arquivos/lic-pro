@@ -7,16 +7,18 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Licite Comigo',
-  description: 'Radar, empresas, Academia e Ana para organizar licitações públicas.',
+  description:
+    'Painéis protegidos, licitações, empresas e Academia para organizar decisões públicas.',
+  applicationName: 'Licite Comigo',
+  manifest: '/site.webmanifest',
+  themeColor: '#10273b',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const demoMode = process.env.DEMO_MODE === 'true';
-
   return (
     <html lang="pt-BR">
       <body>
-        <AppShell demoMode={demoMode}>{children}</AppShell>
+        <AppShell>{children}</AppShell>
         <AnaWidget />
       </body>
     </html>
