@@ -22,5 +22,5 @@ COPY --from=build --chown=app:app /app/apps/site/.next/static ./apps/site/.next/
 COPY --from=build --chown=app:app /app/apps/site/public ./apps/site/public
 USER app
 EXPOSE 3100
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD wget -q -O - "http://127.0.0.1:${PORT}/health" >/dev/null || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || '3000') + '/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
 CMD ["node", "apps/site/server.js"]
