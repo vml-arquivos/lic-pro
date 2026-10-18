@@ -57,10 +57,10 @@
 
 ## 7. IA em produção
 
-- [x] Implementar provider OpenAI-compatible real para chat, Reader e embeddings; providers `fake`/`deterministic` continuam proibidos em produção.
+- [x] Implementar adapter real compatível com o protocolo OpenAI, apontado para a API Gemini da Google, para chat, Reader e embeddings; providers `fake`/`deterministic` continuam proibidos em produção.
 - [x] Transformar a Ana em conversa real com histórico por usuário/tenant, prompt versionado no código, limites somente-leitura, resposta SSE e estados honestos de erro no widget.
-- [x] Testar Ruff, mypy, pytest e uma conversa real com `gpt-5-mini` no ambiente de validação; a resposta foi recebida e o histórico manteve usuário + assistente.
-- [ ] Obter credencial autorizada do provider pelo formulário seguro, configurar `LLM_PROVIDER=openai`, `EMBEDDING_PROVIDER=openai` e publicar `licite-ai` privado no Coolify.
+- [x] Testar Ruff, mypy, pytest e uma conversa real com um modelo compatível no ambiente de validação; a resposta foi recebida e o histórico manteve usuário + assistente.
+- [ ] Obter a `GEMINI_API_KEY` pelo formulário seguro, configurar `LLM_PROVIDER=gemini`, `EMBEDDING_PROVIDER=gemini` e publicar `licite-ai` privado no Coolify.
 
 ## 9. Conta, perfil e segurança
 

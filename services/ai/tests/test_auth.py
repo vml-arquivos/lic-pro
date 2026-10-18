@@ -53,3 +53,18 @@ def test_production_does_not_accept_fake_provider(monkeypatch: pytest.MonkeyPatc
         build_llm_provider("fake")
     with pytest.raises(RuntimeError, match="determinístico"):
         build_embedding_provider("deterministic")
+
+
+def test_gemini_provider_uses_google_openai_compatibility(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("NODE_ENV", "development")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-gemini-key")
+    from src.providers import build_embedding_provider, build_llm_provider
+
+    llm = build_llm_provider("gemini")
+    embedding = build_embedding_provider("gemini")
+
+    assert llm.name == "gemini"
+    assert llm.model == "gemini-2.5-pro"
+    assert llm.base_url.startswith("https://generativelanguage.googleapis.com/v1beta/openai")
+    assert embedding.model == "gemini-embedding-001"
+    assert embedding.dimension == 1024

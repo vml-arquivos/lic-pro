@@ -56,9 +56,16 @@ class FakeLLMProvider:
 
 
 class OpenAICompatibleProvider:
-    name = "openai"
-
-    def __init__(self, *, model: str, api_key: str, base_url: str, timeout_seconds: float = 60.0) -> None:
+    def __init__(
+        self,
+        *,
+        model: str,
+        api_key: str,
+        base_url: str,
+        provider_name: str = "openai",
+        timeout_seconds: float = 60.0,
+    ) -> None:
+        self.name = provider_name
         self.model = model
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
@@ -180,11 +187,16 @@ def _post_json(url: str, api_key: str, payload: Mapping[str, Any], timeout_secon
     return parsed
 
 
-def _provider_connection(prefix: str) -> tuple[str, str, float]:
-    api_key = os.getenv(f"{prefix}_API_KEY")
+def _provider_connection(
+    prefix: str,
+    *,
+    key_names: Sequence[str] | None = None,
+    default_base_url: str = "https://api.openai.com/v1",
+) -> tuple[str, str, float]:
+    api_key = next((os.getenv(name) for name in (key_names or (f"{prefix}_API_KEY",)) if os.getenv(name)), None)
     if not api_key:
-        raise RuntimeError(f"{prefix}_API_KEY é obrigatório")
-    base_url = os.getenv(f"{prefix}_API_BASE_URL") or "https://api.openai.com/v1"
+        raise RuntimeError(f"{key_names[0] if key_names else f'{prefix}_API_KEY'} é obrigatório")
+    base_url = os.getenv(f"{prefix}_API_BASE_URL") or default_base_url
     try:
         timeout = float(os.getenv("LLM_TIMEOUT_SECONDS", "60"))
     except ValueError as error:
@@ -198,12 +210,22 @@ def build_llm_provider(provider_name: str = "fake", *, model: str | None = None)
         raise RuntimeError("LLM_PROVIDER=fake/deterministic é proibido em produção")
     if provider_name == "fake":
         return FakeLLMProvider(model or "offline-reader-v1")
-    if provider_name == "openai":
-        api_key, base_url, timeout = _provider_connection("LLM")
+    if provider_name in {"openai", "gemini"}:
+        is_gemini = provider_name == "gemini"
+        api_key, base_url, timeout = _provider_connection(
+            "LLM",
+            key_names=("GEMINI_API_KEY", "LLM_API_KEY") if is_gemini else None,
+            default_base_url=(
+                "https://generativelanguage.googleapis.com/v1beta/openai/"
+                if is_gemini
+                else "https://api.openai.com/v1"
+            ),
+        )
         return OpenAICompatibleProvider(
-            model=model or os.getenv("LLM_MODEL") or "gpt-5-mini",
+            model=model or os.getenv("LLM_MODEL") or ("gemini-2.5-pro" if is_gemini else "gpt-5-mini"),
             api_key=api_key,
             base_url=base_url,
+            provider_name=provider_name,
             timeout_seconds=timeout,
         )
     raise ValueError(f"provider de LLM não configurado: {provider_name}")
@@ -217,10 +239,21 @@ def build_embedding_provider(
         if environment == "production":
             raise RuntimeError("EMBEDDING_PROVIDER determinístico é proibido em produção")
         return DeterministicEmbeddingProvider()
-    if provider_name == "openai":
-        api_key, base_url, timeout = _provider_connection("EMBEDDING")
+    if provider_name in {"openai", "gemini"}:
+        is_gemini = provider_name == "gemini"
+        api_key, base_url, timeout = _provider_connection(
+            "EMBEDDING",
+            key_names=("GEMINI_API_KEY", "EMBEDDING_API_KEY") if is_gemini else None,
+            default_base_url=(
+                "https://generativelanguage.googleapis.com/v1beta/openai/"
+                if is_gemini
+                else "https://api.openai.com/v1"
+            ),
+        )
         return OpenAICompatibleEmbeddingProvider(
-            model=model or os.getenv("EMBEDDING_MODEL") or "text-embedding-3-small",
+            model=model or os.getenv("EMBEDDING_MODEL") or (
+                "gemini-embedding-001" if is_gemini else "text-embedding-3-small"
+            ),
             api_key=api_key,
             base_url=base_url,
             timeout_seconds=timeout,
