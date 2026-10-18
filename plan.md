@@ -44,12 +44,14 @@ O site institucional será reescrito com comunicação objetiva, visual claro e 
 
 ## Estado após publicação
 
-- Código publicado no `main` até `d4ad468`, com CI verde antes do deploy.
+- Código publicado no `main` até `b93738c`, com CI verde antes do deploy; o commit trata `204 No Content` na paginação PNCP.
 - `licite-core-api`, `licite-web` e `licite-site` estão saudáveis no Coolify.
 - `https://apilicitecomigo.buscarr.com.br/health` e `/ready` respondem com banco e Redis prontos.
 - `https://applicitecomigo.buscarr.com.br/health` responde com o web saudável.
 - Canonical, Open Graph, robots e sitemap do site usam `https://licitecomigo.buscarr.com.br`.
 - SMTP continua adiado e o cadastro aberto permanece bloqueado; contas cliente/mentor dependem dos e-mails e concessões que ainda serão informados.
+- RabbitMQ, ingest HTTP, scheduler e worker permanecem privados e `Running`; uma execução controlada do scheduler concluiu o checkpoint PNCP sem erro, com 25 editais já persistidos com `fonte='pncp'`.
+- A IA não foi criada em produção: falta provider real de LLM/embeddings e credencial autorizada; não usar providers falsos, determinísticos ou o adapter OpenAI ainda não implementado.
 
 ## Expansão pesquisada
 

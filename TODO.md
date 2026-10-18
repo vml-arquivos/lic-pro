@@ -49,7 +49,12 @@
 - [x] Persistir os campos observáveis do PNCP sem transformar ausência, sigilo ou atraso em valor inventado.
 - [x] Expor filtros nacionais no Radar, buscas salvas, alertas in-app idempotentes e painéis protegidos para admin, operação, empresário, mentorado e mentor.
 - [x] Manter o alternador de contexto dependente de público autorizado e sem concessão de acesso no cliente.
-- [ ] Aplicar a migration 0013 em produção e verificar RLS/grants com uma consulta de integração no pgvector.
-- [ ] Publicar os commits separados após CI verde e redeployar core-api/web; revalidar endpoints, painel e health/readiness no Coolify.
+- [x] Aplicar a migration 0013 em produção e verificar RLS/grants com consulta de integração no PostgreSQL/pgvector; o checkpoint do tenant real foi lido com `app.tenant_id` configurado.
+- [x] Publicar os commits separados após CI verde e redeployar core-api/web; revalidar endpoints públicos, o Radar sem sessão e health/readiness no Coolify.
+- [x] Publicar o worker no commit `b93738c`, tratar resposta PNCP `204 No Content` e executar uma tarefa controlada com resultado `SUCCESS`; o checkpoint ficou `concluida`, sem erro, e há 25 editais com `fonte='pncp'`.
 - [ ] Criar o job assíncrono de documentos, resultados, retificações, prazos 7/3/1 dias e entrega por outbox; SMTP continua fora desta etapa.
 - [ ] Só anunciar “pregões ao vivo” após feed oficial autorizado; até lá, exibir status publicado, última captura e link para o portal oficial.
+
+## 7. IA em produção
+
+- [ ] Implementar e testar provider real de LLM e embeddings, obter credenciais de produção por canal seguro e publicar `licite-ai`; providers `fake`/`deterministic` permanecem proibidos em produção e o adapter OpenAI atual ainda falha explicitamente.
