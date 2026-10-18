@@ -1,4 +1,7 @@
 import Link from 'next/link';
+import { requireDemoMode } from '../../../../../workspace/demo';
+
+export const dynamic = 'force-dynamic';
 
 const checklist = [
   'Entendi qual é a fonte original da informação.',
@@ -11,6 +14,7 @@ type LessonPageProps = {
 };
 
 export default function LessonPage({ params }: LessonPageProps) {
+  requireDemoMode();
   return (
     <main className="academy-page lesson-page">
       <Link className="back-link" href={`/academia/trilhas/${params.slug}`}>

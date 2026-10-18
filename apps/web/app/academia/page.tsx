@@ -1,65 +1,63 @@
-import Link from 'next/link';
-import { GlossaryTooltip } from '@licitecomigo/ui';
+'use client';
 
-const tracks = [
-  {
-    slug: 'fundamentos',
-    title: 'Fundamentos das licitações',
-    description: 'Uma entrada guiada para entender oportunidade, edital, itens e fontes.',
-    progress: '0 de 4 aulas',
-  },
-  {
-    slug: 'leitura-de-edital',
-    title: 'Leitura de edital',
-    description: 'Checklist de leitura, anexos, critérios e pontos que pedem confirmação.',
-    progress: '0 de 4 aulas',
-  },
-];
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+
+type Track = {
+  id: string;
+  slug: string;
+  titulo: string;
+  descricao: string;
+  status: string;
+  modulos: number;
+  aulas: number;
+};
 
 export default function AcademyPage() {
-  const demoMode = process.env.DEMO_MODE === 'true';
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [message, setMessage] = useState('Carregando trilhas publicadas…');
+
+  useEffect(() => {
+    void fetch('/api/core/academy/tracks', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('academy_unavailable');
+        const payload = (await response.json()) as Track[];
+        setTracks(payload);
+        setMessage('');
+      })
+      .catch(() => setMessage('Não foi possível carregar as trilhas agora.'));
+  }, []);
+
   return (
     <main className="academy-page">
       <Link className="back-link" href="/">
-        ← Licite Comigo
+        ← Início
       </Link>
       <div className="page-heading">
         <p className="eyebrow">Academia</p>
-        <h1>Aprenda no seu ritmo e pratique com responsabilidade.</h1>
+        <h1>Conteúdo publicado para estudar licitações.</h1>
         <p>
-          O modo guiado explica o porquê de cada etapa. No modo profissional, a mesma base aparece
-          de forma mais direta, com atalhos para quem já conhece o processo.
+          As trilhas abaixo vêm do conteúdo publicado no ambiente. Quando não houver conteúdo, a
+          página informa o estado real em vez de exibir exemplos.
         </p>
       </div>
-
-      <section className="journey-callout">
-        {demoMode ? (
-          <strong className="demo-warning">
-            Modo demo ativo: não use estes dados como conteúdo de produção.
-          </strong>
-        ) : null}
-        <strong>Próximo passo sugerido: fundamentos.</strong>
-        <span>
-          Glossário rápido:{' '}
-          <GlossaryTooltip
-            term="edital"
-            simpleDefinition="Documento que reúne regras, prazos e requisitos da oportunidade."
-          />
-        </span>
-        <small>Conteúdo em revisão, confirme na norma vigente.</small>
-      </section>
-
-      <section className="track-grid" aria-label="Trilhas disponíveis">
+      {message ? <p className="notice">{message}</p> : null}
+      {!message && !tracks.length ? (
+        <section className="dashboard-empty">
+          <h2>Nenhuma trilha publicada</h2>
+          <p>O conteúdo da Academia ainda não está disponível para esta conta.</p>
+        </section>
+      ) : null}
+      <section className="track-grid" aria-label="Trilhas publicadas">
         {tracks.map((track) => (
-          <article className="track-card" key={track.slug}>
-            <p className="eyebrow">Trilha em revisão</p>
-            <h2>{track.title}</h2>
-            <p>{track.description}</p>
-            <div className="progress-line">
-              <span style={{ width: '8%' }} />
-            </div>
+          <article className="track-card" key={track.id}>
+            <p className="eyebrow">{track.status}</p>
+            <h2>{track.titulo}</h2>
+            <p>{track.descricao}</p>
             <div className="track-footer">
-              <span>{track.progress}</span>
+              <span>
+                {track.modulos} módulo(s) · {track.aulas} aula(s)
+              </span>
               <Link className="button-secondary" href={`/academia/trilhas/${track.slug}`}>
                 Abrir trilha
               </Link>
@@ -67,7 +65,6 @@ export default function AcademyPage() {
           </article>
         ))}
       </section>
-
       <section className="academy-links">
         <Link href="/academia/mentor">Painel do mentor</Link>
         <Link href="/onboarding">Revisar meu onboarding</Link>

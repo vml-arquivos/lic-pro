@@ -3,16 +3,20 @@ import { AnaWidget } from './ana/AnaWidget';
 import { AppShell } from './AppShell';
 import './globals.css';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Licite Comigo',
-  description: 'Apoio à decisão e formação para licitações públicas brasileiras.',
+  description: 'Radar, empresas, Academia e Ana para organizar licitações públicas.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const demoMode = process.env.DEMO_MODE === 'true';
+
   return (
     <html lang="pt-BR">
       <body>
-        <AppShell>{children}</AppShell>
+        <AppShell demoMode={demoMode}>{children}</AppShell>
         <AnaWidget />
       </body>
     </html>

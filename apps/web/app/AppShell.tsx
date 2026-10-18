@@ -1,29 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+
+type Audience = 'empresario' | 'mentorado';
+type AppShellProps = Readonly<{ children: React.ReactNode; demoMode: boolean }>;
+
+type Me = { nome?: string; papel?: string };
 
 const menu = [
   ['Início', '/', '⌂'],
-  ['Central de automações', '/automacoes', '⚡'],
-  ['Aprovações da ANA', '/aprovacoes', '✓'],
-  ['Minha jornada', '/jornada', '◎'],
   ['Explorar licitações', '/radar', '⌕'],
-  ['Analisar oportunidade', '/oportunidade', '◈'],
-  ['Analisar edital', '/edital', '▤'],
-  ['Precificação', '/precificacao', '▦'],
-  ['Documentos', '/documentos', '▣'],
-  ['Pregões ao vivo', '/pregoes', '◉'],
-  ['Mercado e concorrentes', '/mercado', '▥'],
-  ['Agenda e participações', '/agenda', '▦'],
-  ['Meus fornecedores', '/fornecedores', '♧'],
-  ['Plano de 30 dias', '/plano-30-dias', '◷'],
-  ['Mentoria', '/mentoria', '✧'],
-  ['Assinatura e notas', '/assinatura', '◉'],
+  ['Empresas', '/empresas', '▥'],
+  ['Academia', '/academia', '◎'],
+  ['Ana', '/ana', '✦'],
 ] as const;
-
-type Audience = 'empresario' | 'mentorado';
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -32,7 +24,7 @@ function initials(name: string) {
   ).toUpperCase();
 }
 
-export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) {
+export function AppShell({ children, demoMode }: AppShellProps) {
   const pathname = usePathname();
   const [audience, setAudience] = useState<Audience>('empresario');
   const [name, setName] = useState('Usuário Licite Comigo');
@@ -40,30 +32,22 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
 
   useEffect(() => {
     const saved = window.localStorage.getItem('lc-audience');
-    if (saved === 'empresario' || saved === 'mentorado') setAudience(saved);
+    if (demoMode && (saved === 'empresario' || saved === 'mentorado')) setAudience(saved);
     const onAudienceChange = () => {
       const next = window.localStorage.getItem('lc-audience');
-      if (next === 'empresario' || next === 'mentorado') setAudience(next);
+      if (demoMode && (next === 'empresario' || next === 'mentorado')) setAudience(next);
     };
     window.addEventListener('lc-audience-change', onAudienceChange);
     void fetch('/api/core/me', { cache: 'no-store' })
-      .then(async (response) =>
-        response.ok
-          ? ((await response.json()) as { nome?: string; publico?: string; papel?: string })
-          : null,
-      )
+      .then(async (response) => (response.ok ? ((await response.json()) as Me) : null))
       .then((me) => {
         if (!me) return;
         if (me.nome) setName(me.nome);
         if (me.papel) setRole(me.papel);
-        if (!saved && (me.publico === 'mentoria' || me.papel === 'mentor')) {
-          setAudience('mentorado');
-          window.localStorage.setItem('lc-audience', 'mentorado');
-        }
       })
       .catch(() => undefined);
     return () => window.removeEventListener('lc-audience-change', onAudienceChange);
-  }, []);
+  }, [demoMode]);
 
   const currentLabel = useMemo(
     () => menu.find(([, href]) => href === pathname)?.[0] ?? 'Início',
@@ -71,6 +55,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
   );
 
   function toggleAudience() {
+    if (!demoMode) return;
     const next = audience === 'empresario' ? 'mentorado' : 'empresario';
     setAudience(next);
     window.localStorage.setItem('lc-audience', next);
@@ -98,16 +83,20 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
             </Link>
           ))}
         </nav>
-        <p className="sidebar-label sidebar-experience-label">Experiência</p>
-        <button className="audience-toggle" type="button" onClick={toggleAudience}>
-          Alternar público <span aria-hidden="true">↔</span>
-        </button>
+        {demoMode ? (
+          <>
+            <p className="sidebar-label sidebar-experience-label">Experiência</p>
+            <button className="audience-toggle" type="button" onClick={toggleAudience}>
+              Alternar público <span aria-hidden="true">↔</span>
+            </button>
+          </>
+        ) : null}
         {role === 'admin' ? (
           <>
             <p className="sidebar-label">Administração</p>
             <Link className={`sidebar-link ${pathname === '/leads' ? 'active' : ''}`} href="/leads">
               <span aria-hidden="true">✉</span>
-              Painel administrativo
+              Leads
             </Link>
           </>
         ) : null}
@@ -119,12 +108,16 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
         <header className="app-topbar">
           <div className="topbar-title">
             <strong>{currentLabel}</strong>
-            <small>Da oportunidade ao contrato fechado!</small>
+            <small>Informação para decidir o próximo passo.</small>
           </div>
           <div className="topbar-actions">
-            <button className="audience-pill" type="button" onClick={toggleAudience}>
-              {audience === 'empresario' ? '👔 Empresário' : '🎓 Mentorado'}
-            </button>
+            {demoMode ? (
+              <button className="audience-pill" type="button" onClick={toggleAudience}>
+                {audience === 'empresario' ? '👔 Empresário' : '🎓 Mentorado'}
+              </button>
+            ) : (
+              <span className="audience-pill">👔 Empresário</span>
+            )}
             <button className="notification-button" type="button" aria-label="Notificações">
               🔔
             </button>
