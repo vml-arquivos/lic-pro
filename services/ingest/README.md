@@ -21,7 +21,7 @@ Cada execução usa uma chave de checkpoint `(tenant, fonte, modalidade, janela)
 
 O endpoint `/ready` informa `last_execution` (`never`, `processando`, `concluida`, `erro` ou `unavailable`) além de banco e Redis. A readiness não transforma uma falha de uma janela em dado válido; o erro permanece visível para operação.
 
-Para integrar o serviço a um ambiente, configure `PNCP_BASE_URL`, `COMPRAS_GOV_BASE_URL`, `INGEST_RATE_LIMIT_SECONDS`, `INGEST_MAX_RETRIES`, `INGEST_PAGE_SIZE` e `RABBITMQ_URL` a partir do `.env.example`. O publisher usa tópicos `edital.novo` e `edital.atualizado`.
+Para integrar o serviço a um ambiente, configure `PNCP_BASE_URL`, `COMPRAS_GOV_BASE_URL`, `INGEST_RATE_LIMIT_SECONDS`, `INGEST_MAX_RETRIES`, `INGEST_PAGE_SIZE` e `RABBITMQ_URL` a partir do `.env.example`. O vhost RabbitMQ canônico é `licite_comigo` (sem barra no nome; a URL AMQP termina em `/licite_comigo`). O publisher usa tópicos `edital.novo` e `edital.atualizado`.
 
 ## Smoke test opt-in
 
