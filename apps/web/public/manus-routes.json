@@ -4,6 +4,8 @@
     { "path": "/painel", "title": "Painel" },
     { "path": "/radar", "title": "Explorar licitações" },
     { "path": "/radar/:editalId", "title": "Oportunidade" },
+    { "path": "/pregoes", "title": "Pregões publicados" },
+    { "path": "/oportunidades", "title": "Oportunidades" },
     { "path": "/empresas", "title": "Empresas" },
     { "path": "/leads", "title": "Leads (admin)" },
     { "path": "/academia", "title": "Academia" },

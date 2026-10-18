@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { nicheSearchExpression } from '@licitecomigo/shared';
 
 const stringOrStrings = z.union([
   z.string().trim().min(1).max(160),
@@ -15,6 +16,7 @@ const booleanish = z.preprocess((value) => {
 /** Search contract. Legacy aliases remain accepted while new fields are additive. */
 export const editalSearchSchema = z.object({
   q: z.string().trim().min(1).max(200).optional(),
+  nicho: stringOrStrings.optional(),
   fonte: stringOrStrings.optional(),
   sistema_origem: stringOrStrings.optional(),
   esfera: stringOrStrings.optional(),
@@ -79,6 +81,12 @@ export function buildEditalSearchQuery(filters: EditalSearchFilters): SearchQuer
   };
 
   if (filters.q) add("search_vector @@ plainto_tsquery('portuguese', $VALUE)", filters.q);
+  if (filters.nicho) {
+    const nicheExpression = nicheSearchExpression(asList(filters.nicho));
+    if (nicheExpression) {
+      add("search_vector @@ websearch_to_tsquery('portuguese', $VALUE)", nicheExpression);
+    }
+  }
   if (filters.fonte) addText('fonte', filters.fonte);
   if (filters.sistema_origem) addText('sistema_origem', filters.sistema_origem);
   if (filters.esfera) addText('esfera', filters.esfera);

@@ -1,4 +1,4 @@
-import { ProtectedRemoteDashboard } from '../components/ProtectedRemoteDashboard';
+import { DashboardCards } from '../dashboard/DashboardCards';
 
 export const metadata = {
   title: 'Painel | Licite Comigo',
@@ -6,5 +6,9 @@ export const metadata = {
 };
 
 export default function PainelPage() {
-  return <ProtectedRemoteDashboard kind="painel" />;
+  return (
+    <main className="account-dashboard">
+      <DashboardCards />
+    </main>
+  );
 }

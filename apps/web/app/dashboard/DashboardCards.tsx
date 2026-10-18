@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { NICHE_CATALOG } from '@licitecomigo/shared';
 
 type Summary = {
   oportunidades?: { total?: number; triagem?: number; em_analise?: number; proposta?: number };
@@ -10,7 +11,13 @@ type Summary = {
   notificacoes_nao_lidas?: number;
 };
 
-type Me = { nome?: string; publico?: string; nivel_diagnostico?: string; empresa_id?: string };
+type Me = {
+  nome?: string;
+  publico?: string;
+  nivel_diagnostico?: string;
+  empresa_id?: string;
+  nicho_preferencias?: string[];
+};
 
 type Company = { id: string; razao_social: string; cnpj: string; usuarios?: number };
 
@@ -68,6 +75,22 @@ export function DashboardCards() {
         <Link className="button-secondary" href="/onboarding">
           Atualizar diagnóstico
         </Link>
+      </section>
+      <section className="dashboard-card dashboard-scope-card">
+        <p className="eyebrow">Escopo do Radar</p>
+        <h2>Seus nichos de atuação</h2>
+        {me?.nicho_preferencias?.length ? (
+          <div className="tag-row">
+            {me.nicho_preferencias.map((code) => (
+              <span className="tag" key={code}>
+                {NICHE_CATALOG.find((niche) => niche.code === code)?.label ?? code}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p>Defina de um a três nichos para limitar Radar, buscas salvas e alertas.</p>
+        )}
+        <Link href="/onboarding">Atualizar nichos</Link>
       </section>
       <section className="metric-grid" aria-label="Resumo da operação">
         <article className="metric-card">

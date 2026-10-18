@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type Tender = {
   id: string;
@@ -15,12 +15,19 @@ type Tender = {
   fonte?: string;
 };
 
-export function RadarResults() {
+export function RadarResults({ initialQuery = '' }: { initialQuery?: string }) {
   const searchParams = useSearchParams();
   const [items, setItems] = useState<Tender[]>([]);
   const [total, setTotal] = useState<number | null>(null);
-  const [state, setState] = useState<'loading' | 'ready' | 'unauthorized' | 'error'>('loading');
-  const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  const [state, setState] = useState<
+    'loading' | 'ready' | 'unauthorized' | 'niche_required' | 'error'
+  >('loading');
+  const query = useMemo(() => {
+    const params = new URLSearchParams(initialQuery);
+    searchParams.forEach((value, key) => params.append(key, value));
+    const serialized = params.toString();
+    return serialized ? `?${serialized}` : '';
+  }, [initialQuery, searchParams]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -30,6 +37,13 @@ export function RadarResults() {
         if (response.status === 401) {
           setState('unauthorized');
           return;
+        }
+        if (response.status === 409) {
+          const payload = (await response.json().catch(() => ({}))) as { error?: string };
+          if (payload.error === 'niche_preferences_required') {
+            setState('niche_required');
+            return;
+          }
         }
         if (!response.ok) throw new Error('radar_failed');
         const payload = (await response.json()) as { data?: Tender[]; total?: number };
@@ -51,6 +65,19 @@ export function RadarResults() {
         <p>O escopo de busca é sempre o tenant da sessão.</p>
         <Link className="button-secondary" href="/login">
           Entrar
+        </Link>
+      </section>
+    );
+  if (state === 'niche_required')
+    return (
+      <section className="radar-empty">
+        <h2>Informe seus nichos para usar o Radar</h2>
+        <p>
+          Escolha de um a três nichos no onboarding. O Radar, as buscas salvas e os alertas usam
+          essa seleção como escopo da sua conta.
+        </p>
+        <Link className="button-secondary" href="/onboarding">
+          Configurar meus nichos
         </Link>
       </section>
     );

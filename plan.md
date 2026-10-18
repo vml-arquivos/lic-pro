@@ -53,6 +53,12 @@ O site institucional será reescrito com comunicação objetiva, visual claro e 
 - RabbitMQ, ingest HTTP, scheduler e worker permanecem privados e `Running`; uma execução controlada do scheduler concluiu o checkpoint PNCP sem erro, com 25 editais já persistidos com `fonte='pncp'`.
 - A IA não foi criada em produção: falta provider real de LLM/embeddings e credencial autorizada; não usar providers falsos, determinísticos ou o adapter OpenAI ainda não implementado.
 
+## Evolução aprovada — nichos, filtros e painéis
+
+O Radar terá filtros exclusivamente por seleção: de um a três nichos, UF, esfera, modalidade, modo de disputa, situação, instrumento, fonte, CATMAT/CATSER observado e prazo. Os nichos serão preferências de descoberta com origem declarada; não provam CNAE, habilitação ou elegibilidade. As preferências serão preenchidas no cadastro/onboarding e usadas como escopo padrão de Radar, buscas salvas e alertas.
+
+O menu exporá somente rotas reais de Radar, pregões publicados, oportunidades salvas, alertas, buscas, empresas, Academia, Ana e painéis autorizados. A troca de contexto entre iniciante, mentorado e profissional será apenas uma preferência de jornada; não concederá papel técnico, empresa, concessão ou acesso tenant-wide. Módulos demo continuarão fora do menu em produção. A pesquisa e a implementação estão registradas em `docs/research/nichos-filtros-paineis-2026-10.md`.
+
 ## Expansão pesquisada
 
 O blueprint versionado em `docs/research/expansao-fontes-paineis-2026-10.md` registra as fontes oficiais, limites de consulta, fronteiras de automação e o desenho de capacidades. O produto não deve prometer pregão em tempo real, lance, chat, proposta, scraping autenticado ou cobertura nacional sem contrato/fonte autorizada. O rótulo operacional para o baseline é “última captura” ou “atualização observada”, não “ao vivo”.

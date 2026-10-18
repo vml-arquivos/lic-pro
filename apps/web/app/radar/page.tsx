@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { RadarFilters } from './RadarFilters';
 import { RadarResults } from './RadarResults';
 
 export const metadata = {
@@ -30,25 +31,7 @@ export default function RadarPage() {
           confira sempre o edital e a fonte original antes de tomar uma decisão.
         </p>
       </div>
-      <form className="filter-card" action="/radar" method="get">
-        <label>
-          Palavra-chave
-          <input name="q" placeholder="ex.: material de escritório" />
-        </label>
-        <label>
-          UF
-          <input name="uf" maxLength={2} placeholder="DF" />
-        </label>
-        <label>
-          Modalidade
-          <input name="modalidade" placeholder="Pregão - Eletrônico" />
-        </label>
-        <label>
-          CATMAT/CATSER
-          <input name="catmat_catser" placeholder="código ou descrição" />
-        </label>
-        <button type="submit">Buscar editais</button>
-      </form>
+      <RadarFilters />
       <Suspense
         fallback={
           <section className="radar-empty">

@@ -11,6 +11,7 @@ type Me = {
   publico?: 'empresa' | 'mentoria' | string | null;
   perfil_jornada?: string | null;
   nivel_diagnostico?: string | null;
+  nicho_preferencias?: string[] | null;
 };
 
 type MenuItem = { label: string; href: string; icon: string };
@@ -19,6 +20,8 @@ type AppShellProps = Readonly<{ children: React.ReactNode }>;
 const publicMenu: MenuItem[] = [
   { label: 'Início', href: '/painel', icon: '⌂' },
   { label: 'Explorar licitações', href: '/radar', icon: '⌕' },
+  { label: 'Pregões publicados', href: '/pregoes', icon: '◫' },
+  { label: 'Oportunidades', href: '/oportunidades', icon: '▣' },
   { label: 'Empresas', href: '/empresas', icon: '▥' },
   { label: 'Academia', href: '/academia', icon: '◎' },
   { label: 'Ana', href: '/ana', icon: '✦' },
@@ -39,6 +42,16 @@ function isCurrent(pathname: string, href: string) {
   return href === '/painel'
     ? pathname === href
     : pathname === href || pathname.startsWith(`${href}/`);
+}
+
+const profileOptions = [
+  { value: 'iniciante', label: 'Iniciante' },
+  { value: 'mentorado', label: 'Mentorado' },
+  { value: 'profissional', label: 'Empresário avançado' },
+] as const;
+
+function profileLabel(value?: string | null) {
+  return profileOptions.find((option) => option.value === value)?.label ?? 'Perfil de jornada';
 }
 
 export function AppShell({ children }: AppShellProps) {
@@ -68,15 +81,15 @@ export function AppShell({ children }: AppShellProps) {
 
   const role = normalized(me?.papel);
   const profile = normalized(me?.perfil_jornada);
-  const canSwitchProfile = Boolean(me && (me.publico === 'empresa' || me.publico === 'mentoria'));
-  const currentAudience = me?.publico === 'mentoria' ? 'mentorado' : 'empresário';
+  const canSwitchProfile = Boolean(me);
+  const currentAudience = profileLabel(profile);
 
   const menu = useMemo(() => {
     const items = [...publicMenu];
     if (sessionChecked && me) {
       items.push(
         { label: 'Alertas', href: '/alertas', icon: '◌' },
-        { label: 'Busca salva', href: '/buscas-salvas', icon: '⌑' },
+        { label: 'Buscas salvas', href: '/buscas-salvas', icon: '⌑' },
       );
       if (role === 'mentor' || role === 'admin') {
         items.push({ label: 'Painel do mentor', href: '/mentor', icon: '◉' });
@@ -100,19 +113,25 @@ export function AppShell({ children }: AppShellProps) {
     [menu, pathname],
   );
 
-  async function toggleProfile() {
-    if (!canSwitchProfile || switchingProfile) return;
-    const nextPublico = me?.publico === 'mentoria' ? 'empresa' : 'mentoria';
+  async function switchProfile(nextProfile: string) {
+    if (
+      !canSwitchProfile ||
+      switchingProfile ||
+      !profileOptions.some((option) => option.value === nextProfile)
+    )
+      return;
     setSwitchingProfile(true);
     try {
       const response = await fetch('/api/core/me/diagnostico', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ publico: nextPublico }),
+        body: JSON.stringify({ perfil_jornada: nextProfile }),
       });
       if (!response.ok) return;
       const updated = (await response.json()) as Partial<Me>;
-      setMe((current) => (current ? { ...current, ...updated, publico: nextPublico } : current));
+      setMe((current) =>
+        current ? { ...current, ...updated, perfil_jornada: nextProfile } : current,
+      );
     } finally {
       setSwitchingProfile(false);
     }
@@ -147,16 +166,22 @@ export function AppShell({ children }: AppShellProps) {
         </nav>
         {canSwitchProfile ? (
           <>
-            <p className="sidebar-label sidebar-experience-label">Perfil autorizado</p>
-            <button
-              className="audience-toggle"
-              type="button"
-              onClick={toggleProfile}
-              disabled={switchingProfile}
-            >
-              {switchingProfile ? 'Atualizando…' : `Contexto ${currentAudience}`}{' '}
-              <span aria-hidden="true">↔</span>
-            </button>
+            <p className="sidebar-label sidebar-experience-label">Mudar público</p>
+            <label className="audience-select-label">
+              <span className="sr-only">Público da jornada</span>
+              <select
+                className="audience-select"
+                value={profile || 'iniciante'}
+                onChange={(event) => void switchProfile(event.target.value)}
+                disabled={switchingProfile}
+              >
+                {profileOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
           </>
         ) : null}
         {role === 'admin' ? (
@@ -175,16 +200,7 @@ export function AppShell({ children }: AppShellProps) {
             <small>{context}</small>
           </div>
           <div className="topbar-actions">
-            {canSwitchProfile ? (
-              <button
-                className="audience-pill"
-                type="button"
-                onClick={toggleProfile}
-                disabled={switchingProfile}
-              >
-                {currentAudience}
-              </button>
-            ) : null}
+            {canSwitchProfile ? <span className="audience-pill">{currentAudience}</span> : null}
             {me ? (
               <Link className="notification-button" href="/alertas" aria-label="Alertas">
                 ◌

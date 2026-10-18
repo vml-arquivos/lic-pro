@@ -58,3 +58,11 @@
 ## 7. IA em produção
 
 - [ ] Implementar e testar provider real de LLM e embeddings, obter credenciais de produção por canal seguro e publicar `licite-ai`; providers `fake`/`deterministic` permanecem proibidos em produção e o adapter OpenAI atual ainda falha explicitamente.
+
+## 8. Nichos, filtros e painéis por contexto
+
+- [ ] Criar catálogo versionado de nichos de descoberta com origem declarada, permitir de um a três nichos no cadastro/onboarding e persistir a preferência na conta.
+- [ ] Trocar o Radar para selects: nichos, UF, esfera, modalidade, modo de disputa, situação, instrumento, fonte, CATMAT/CATSER observado e prazo; não exibir campos livres para esses filtros.
+- [ ] Aplicar os nichos da conta como escopo padrão de Radar, buscas salvas e alertas; usuários comuns não podem buscar ou receber alertas fora dos nichos informados.
+- [ ] Ampliar o painel e o menu com rotas reais de Radar, pregões publicados, oportunidades, alertas, buscas, empresas, Academia, Ana e contextos autorizados de iniciante, mentorado e profissional; módulos demo permanecem fora da produção.
+- [ ] Manter a troca de contexto sem concessão de papel ou acesso, com autorização server-side e dados somente de PNCP/Compras.gov.br.

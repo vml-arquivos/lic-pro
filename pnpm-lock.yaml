@@ -65,6 +65,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@licitecomigo/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@licitecomigo/ui':
         specifier: workspace:*
         version: link:../../packages/ui

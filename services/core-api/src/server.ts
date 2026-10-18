@@ -4,7 +4,13 @@ import fastifyJwt from '@fastify/jwt';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import type { Pool } from 'pg';
 import { z } from 'zod';
-import { health } from '@licitecomigo/shared';
+import {
+  NICHE_CATALOG,
+  health,
+  isNicheCode,
+  nicheDefinitions,
+  normalizeNicheCodes,
+} from '@licitecomigo/shared';
 import { createOpaqueToken, hashIp, hashOpaqueToken, PublicRateLimiter } from './auth-public.js';
 import {
   assertTenant,
@@ -50,20 +56,31 @@ const tenantBodySchema = z.object({
     .min(1)
     .max(80),
 });
+const nicheListSchema = z
+  .array(z.string().trim().min(1).max(80))
+  .min(1)
+  .max(3)
+  .refine(
+    (values) => new Set(values).size === values.length && values.every(isNicheCode),
+    'Selecione entre um e três nichos disponíveis no catálogo.',
+  );
 const createUserSchema = z.object({
   email: z.string().email(),
   nome: z.string().trim().min(1).max(160),
   papel: z.enum(['admin', 'operador', 'mentor', 'aluno']).default('aluno'),
   perfil_jornada: journeyProfileSchema.default('iniciante'),
+  nichos: nicheListSchema.optional(),
 });
 const updateUserSchema = z.object({
   nome: z.string().trim().min(1).max(160).optional(),
   perfil_jornada: journeyProfileSchema.optional(),
   onboarding_concluido: z.boolean().optional(),
+  nichos: nicheListSchema.optional(),
 });
 const editalPathSchema = z.object({ editalId: z.string().uuid() });
 const onboardingSchema = z.object({
   perfil_jornada: journeyProfileSchema,
+  nichos: nicheListSchema,
   respostas: z.record(z.string().max(500)).default({}),
 });
 const slugPathSchema = z.object({ slug: z.string().trim().min(1).max(100) });
@@ -98,6 +115,7 @@ const signupSchema = z.object({
   empresa_nome: z.string().trim().min(2).max(200),
   email: z.string().email(),
   password: z.string().min(1).max(200),
+  nichos: nicheListSchema,
   termos_aceitos: z.literal(true),
   privacidade_aceita: z.literal(true),
 });
@@ -131,6 +149,7 @@ const diagnosisSchema = z.object({
     .enum(['sem_diagnostico', 'iniciante', 'em_evolucao', 'pronto_para_operar'])
     .optional(),
   perfil_jornada: journeyProfileSchema.optional(),
+  nichos: nicheListSchema.optional(),
 });
 const concessionSchema = z.object({
   mentor_id: z.string().uuid(),
@@ -188,6 +207,54 @@ const chunkCorrectionSchema = z.object({
   observacao_correcao: z.string().trim().max(2000).optional(),
 });
 const publicRateLimiter = new PublicRateLimiter(12);
+
+function rawNicheCodes(value: unknown): string[] {
+  if (value === undefined || value === null) return [];
+  return (Array.isArray(value) ? value : [value]).map(String);
+}
+
+function validatedNicheCodes(value: unknown): string[] {
+  const raw = rawNicheCodes(value);
+  const normalized = normalizeNicheCodes(raw);
+  if (raw.length !== normalized.length || new Set(raw).size !== raw.length) {
+    throw new Error('invalid_niche');
+  }
+  return normalized;
+}
+
+function nicheTerms(codes: readonly string[]): string[] {
+  return [...new Set(nicheDefinitions(codes).flatMap((niche) => niche.terms))];
+}
+
+async function readUserNiches(
+  client: Parameters<Parameters<typeof withTenant>[2]>[0],
+  tenantId: string,
+  userId: string,
+): Promise<string[]> {
+  const result = await client.query<{ nicho_preferencias: unknown }>(
+    'SELECT nicho_preferencias FROM usuarios WHERE tenant_id = $1 AND id = $2',
+    [tenantId, userId],
+  );
+  const value = result.rows[0]?.nicho_preferencias;
+  return Array.isArray(value) ? normalizeNicheCodes(value.map(String)) : [];
+}
+
+function applyNicheScope(
+  filters: Record<string, unknown>,
+  preferences: readonly string[],
+  role: string,
+): Record<string, unknown> {
+  const explicit = filters.nicho === undefined ? [] : validatedNicheCodes(filters.nicho);
+  const restricted = !['admin', 'operador'].includes(role);
+  if (restricted && preferences.length === 0) throw new Error('niche_preferences_required');
+  if (restricted && explicit.some((code) => !preferences.includes(code))) {
+    throw new Error('niche_not_allowed');
+  }
+  const selected = explicit.length > 0 ? explicit : [...preferences];
+  return selected.length
+    ? { ...filters, nicho: selected, nicho_termos: nicheTerms(selected) }
+    : filters;
+}
 
 function sendDatabaseUnavailable(reply: FastifyReply): void {
   reply
@@ -303,6 +370,24 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
     if (error instanceof Error && error.message === 'mentor_capability_forbidden') {
       reply.code(403).send({ error: 'forbidden' });
+      return;
+    }
+    if (error instanceof Error && error.message === 'niche_preferences_required') {
+      reply.code(409).send({
+        error: 'niche_preferences_required',
+        message: 'Selecione de um a três nichos no onboarding antes de usar o Radar e os alertas.',
+      });
+      return;
+    }
+    if (error instanceof Error && error.message === 'niche_not_allowed') {
+      reply.code(403).send({
+        error: 'niche_not_allowed',
+        message: 'A busca precisa permanecer dentro dos nichos informados na sua conta.',
+      });
+      return;
+    }
+    if (error instanceof Error && error.message === 'invalid_niche') {
+      reply.code(400).send({ error: 'invalid_niche' });
       return;
     }
     reply.send(error);
@@ -465,14 +550,15 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       await client.query(
         `INSERT INTO usuarios
           (id, tenant_id, email, nome, papel, perfil_jornada, password_hash, publico,
-           termos_versao, termos_aceitos_em, politica_versao, politica_aceita_em)
-         VALUES ($1, $2, $3, $4, 'admin', 'iniciante', $5, 'empresa', $6, now(), $7, now())`,
+           nicho_preferencias, termos_versao, termos_aceitos_em, politica_versao, politica_aceita_em)
+         VALUES ($1, $2, $3, $4, 'admin', 'iniciante', $5, 'empresa', $6::jsonb, $7, now(), $8, now())`,
         [
           userId,
           tenantId,
           body.email.toLowerCase(),
           body.nome,
           passwordHash,
+          JSON.stringify(body.nichos),
           config.termsVersion,
           config.privacyVersion,
         ],
@@ -753,7 +839,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     const result = await withTenant(pool, authContext(request), async (client) =>
       client.query(
         `SELECT u.id, u.tenant_id, u.email, u.nome, u.papel, u.publico, u.nivel_diagnostico,
-                u.perfil_jornada, u.onboarding_concluido, eu.empresa_id, eu.papel AS empresa_papel
+                u.perfil_jornada, u.onboarding_concluido, u.nicho_preferencias,
+                eu.empresa_id, eu.papel AS empresa_papel
            FROM usuarios u
            LEFT JOIN empresa_usuarios eu
              ON eu.usuario_id = u.id AND eu.tenant_id = u.tenant_id AND eu.ativo = true
@@ -776,15 +863,17 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
             SET publico = COALESCE($3, publico),
                 nivel_diagnostico = COALESCE($4, nivel_diagnostico),
                 perfil_jornada = COALESCE($5, perfil_jornada),
+                nicho_preferencias = COALESCE($6::jsonb, nicho_preferencias),
                 updated_at = now()
           WHERE tenant_id = $1 AND id = $2
-          RETURNING id, publico, nivel_diagnostico, perfil_jornada`,
+          RETURNING id, publico, nivel_diagnostico, perfil_jornada, nicho_preferencias`,
         [
           request.user.tenantId,
           request.user.sub,
           body.publico ?? null,
           body.nivel_diagnostico ?? null,
           body.perfil_jornada ?? null,
+          body.nichos ? JSON.stringify(body.nichos) : null,
         ],
       );
       if (updated.rows[0])
@@ -997,7 +1086,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) =>
       client.query(
-        `SELECT id, tenant_id, email, nome, papel, perfil_jornada, ativo, onboarding_concluido,
+        `SELECT id, tenant_id, email, nome, papel, perfil_jornada, nicho_preferencias,
+                ativo, onboarding_concluido,
                 created_at, updated_at
          FROM usuarios ORDER BY nome`,
       ),
@@ -1011,11 +1101,18 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
       const inserted = await client.query(
-        `INSERT INTO usuarios (tenant_id, email, nome, papel, perfil_jornada)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, tenant_id, email, nome, papel, perfil_jornada, ativo, onboarding_concluido,
+        `INSERT INTO usuarios (tenant_id, email, nome, papel, perfil_jornada, nicho_preferencias)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb)
+         RETURNING id, tenant_id, email, nome, papel, perfil_jornada, nicho_preferencias, ativo, onboarding_concluido,
                    created_at, updated_at`,
-        [request.user.tenantId, body.email, body.nome, body.papel, body.perfil_jornada],
+        [
+          request.user.tenantId,
+          body.email,
+          body.nome,
+          body.papel,
+          body.perfil_jornada,
+          JSON.stringify(body.nichos ?? []),
+        ],
       );
       await audit(client, request, 'user.created', 'user', inserted.rows[0].id);
       return inserted.rows[0];
@@ -1036,9 +1133,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
             SET nome = COALESCE($3, nome),
                 perfil_jornada = COALESCE($4, perfil_jornada),
                 onboarding_concluido = COALESCE($5, onboarding_concluido),
+                nicho_preferencias = COALESCE($6::jsonb, nicho_preferencias),
                 updated_at = now()
           WHERE tenant_id = $1 AND id = $2
-          RETURNING id, tenant_id, email, nome, papel, perfil_jornada, ativo, onboarding_concluido,
+          RETURNING id, tenant_id, email, nome, papel, perfil_jornada, nicho_preferencias, ativo, onboarding_concluido,
                     created_at, updated_at`,
         [
           request.user.tenantId,
@@ -1046,6 +1144,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           body.nome ?? null,
           body.perfil_jornada ?? null,
           body.onboarding_concluido ?? null,
+          body.nichos ? JSON.stringify(body.nichos) : null,
         ],
       );
       if (updated.rows[0]) await audit(client, request, 'user.updated', 'user', userId);
@@ -1115,20 +1214,92 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     const result = await withTenant(pool, authContext(request), async (client) => {
       const updated = await client.query(
         `UPDATE usuarios
-            SET perfil_jornada = $3, onboarding_concluido = true, updated_at = now()
+            SET perfil_jornada = $3, nicho_preferencias = $4::jsonb,
+                onboarding_concluido = true, updated_at = now()
           WHERE tenant_id = $1 AND id = $2
-          RETURNING id, tenant_id, nome, perfil_jornada, onboarding_concluido`,
-        [request.user.tenantId, request.user.sub, body.perfil_jornada],
+          RETURNING id, tenant_id, nome, perfil_jornada, nicho_preferencias, onboarding_concluido`,
+        [request.user.tenantId, request.user.sub, body.perfil_jornada, JSON.stringify(body.nichos)],
       );
       if (updated.rows[0]) {
         await audit(client, request, 'onboarding.completed', 'user', request.user.sub, {
           respostas: body.respostas,
+          nichos: body.nichos,
         });
       }
       return updated.rows[0];
     });
     if (!result) return reply.code(404).send({ error: 'user_not_found' });
     return reply.send(result);
+  });
+
+  app.get('/catalog/filters', async (request, reply) => {
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const ufs = [
+      'AC',
+      'AL',
+      'AP',
+      'AM',
+      'BA',
+      'CE',
+      'DF',
+      'ES',
+      'GO',
+      'MA',
+      'MT',
+      'MS',
+      'MG',
+      'PA',
+      'PB',
+      'PR',
+      'PE',
+      'PI',
+      'RJ',
+      'RN',
+      'RS',
+      'RO',
+      'RR',
+      'SC',
+      'SP',
+      'SE',
+      'TO',
+    ];
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const fields = [
+        'fonte',
+        'sistema_origem',
+        'esfera',
+        'poder',
+        'modalidade',
+        'modo_disputa',
+        'situacao',
+        'instrumento',
+        'catmat_catser',
+      ];
+      const values = await Promise.all(
+        fields.map(async (field) => {
+          const result = await client.query<{ value: string }>(
+            `SELECT DISTINCT ${field} AS value
+               FROM editais
+              WHERE tenant_id = $1 AND ${field} IS NOT NULL AND trim(${field}) <> ''
+              ORDER BY ${field}
+              LIMIT 200`,
+            [request.user.tenantId],
+          );
+          return [field, result.rows.map((row) => row.value)] as const;
+        }),
+      );
+      return Object.fromEntries(values);
+    });
+    return reply.send({
+      nichos: NICHE_CATALOG.map(({ code, label, description, source }) => ({
+        code,
+        label,
+        description,
+        source,
+      })),
+      ufs,
+      ...result,
+    });
   });
 
   app.get('/saved-searches', async (request, reply) => {
@@ -1171,6 +1342,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       ) {
         throw new Error('tenant_forbidden');
       }
+      const preferences = await readUserNiches(client, request.user.tenantId, request.user.sub);
+      const scopedFilters = applyNicheScope(body.filtros, preferences, request.user.role);
       const inserted = await client.query(
         `INSERT INTO buscas_salvas (tenant_id, usuario_id, empresa_id, nome, filtros, ativa)
          VALUES ($1, $2, $3, $4, $5::jsonb, $6)
@@ -1183,7 +1356,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           request.user.sub,
           empresaId ?? null,
           body.nome,
-          JSON.stringify(body.filtros),
+          JSON.stringify(scopedFilters),
           body.ativa,
         ],
       );
@@ -1200,7 +1373,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           request.user.sub,
           empresaId ?? null,
           body.nome,
-          JSON.stringify(body.filtros),
+          JSON.stringify(scopedFilters),
           body.ativa,
         ],
       );
@@ -1217,6 +1390,13 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     const body = savedSearchPatchSchema.parse(request.body);
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
+      const scopedFilters = body.filtros
+        ? applyNicheScope(
+            body.filtros,
+            await readUserNiches(client, request.user.tenantId, request.user.sub),
+            request.user.role,
+          )
+        : null;
       const updated = await client.query(
         `UPDATE buscas_salvas
             SET nome = COALESCE($3, nome), filtros = COALESCE($4::jsonb, filtros),
@@ -1228,7 +1408,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           savedSearchId,
           request.user.tenantId,
           body.nome ?? null,
-          body.filtros ? JSON.stringify(body.filtros) : null,
+          scopedFilters ? JSON.stringify(scopedFilters) : null,
           body.ativa ?? null,
           request.user.sub,
           request.user.role,
@@ -1244,7 +1424,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           request.user.tenantId,
           savedSearchId,
           body.nome ?? null,
-          body.filtros ? JSON.stringify(body.filtros) : null,
+          scopedFilters ? JSON.stringify(scopedFilters) : null,
           body.ativa ?? null,
         ],
       );
@@ -1280,6 +1460,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     const filters = alertQuerySchema.parse(request.query);
     const offset = (filters.page - 1) * filters.page_size;
     const result = await withTenant(pool, authContext(request), async (client) => {
+      const preferences = await readUserNiches(client, request.user.tenantId, request.user.sub);
+      const restricted = !['admin', 'operador'].includes(request.user.role);
+      if (restricted && preferences.length === 0) throw new Error('niche_preferences_required');
+      const preferenceTerms = restricted ? nicheTerms(preferences) : [];
       // A consulta pública não oferece webhook. Ao abrir a inbox, fazemos uma
       // reconciliação leve sobre os registros já ingeridos no tenant e a chave
       // de idempotência impede duplicidade entre acessos concorrentes.
@@ -1308,8 +1492,24 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
             AND (ar.regra->>'uf' IS NULL OR e.uf = ar.regra->>'uf')
             AND (ar.regra->>'modalidade' IS NULL OR e.modalidade = ar.regra->>'modalidade')
             AND (ar.regra->>'situacao' IS NULL OR e.situacao = ar.regra->>'situacao')
+            AND (
+              ar.regra->'nicho_termos' IS NULL
+              OR EXISTS (
+                SELECT 1
+                  FROM jsonb_array_elements_text(ar.regra->'nicho_termos') AS rule_term
+                 WHERE e.search_vector @@ plainto_tsquery('portuguese', rule_term)
+              )
+            )
+            AND (
+              $3::jsonb = '[]'::jsonb
+              OR EXISTS (
+                SELECT 1
+                  FROM jsonb_array_elements_text($3::jsonb) AS preference_term
+                 WHERE e.search_vector @@ plainto_tsquery('portuguese', preference_term)
+              )
+            )
          ON CONFLICT (tenant_id, idempotency_key) DO NOTHING`,
-        [request.user.tenantId, request.user.sub],
+        [request.user.tenantId, request.user.sub, JSON.stringify(preferenceTerms)],
       );
       return client.query(
         `SELECT ae.id, ae.alerta_regra_id, ae.edital_id, ae.canal, ae.status,
@@ -1536,8 +1736,13 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.get('/editais', async (request, reply) => {
     if (!pool) return sendDatabaseUnavailable(reply);
     const filters = editalSearchSchema.parse(request.query);
-    const search = buildEditalSearchQuery(filters);
     const result = await withTenant(pool, authContext(request), async (client) => {
+      const scopedFilters = applyNicheScope(
+        filters as unknown as Record<string, unknown>,
+        await readUserNiches(client, request.user.tenantId, request.user.sub),
+        request.user.role,
+      );
+      const search = buildEditalSearchQuery(editalSearchSchema.parse(scopedFilters));
       const [rows, count] = await Promise.all([
         client.query(search.text, search.values),
         client.query<{ total: number }>(search.countText, search.countValues),

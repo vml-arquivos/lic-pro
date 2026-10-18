@@ -44,4 +44,16 @@ describe('edital search query', () => {
       '2026-12-31T23:59:59Z',
     ]);
   });
+
+  it('scopes the search by the shared niche vocabulary', () => {
+    const filters = editalSearchSchema.parse({
+      nicho: ['tecnologia-comunicacao', 'saude-assistencia'],
+    });
+    const query = buildEditalSearchQuery(filters);
+
+    expect(query.text).toContain("websearch_to_tsquery('portuguese'");
+    expect(query.text).not.toContain('tecnologia da informação');
+    expect(query.values[0]).toContain('software');
+    expect(query.values[0]).toContain('saúde');
+  });
 });

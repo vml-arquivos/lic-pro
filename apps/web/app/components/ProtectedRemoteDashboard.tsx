@@ -13,7 +13,14 @@ type Me = {
 };
 
 type DashboardKind =
-  'painel' | 'mentor' | 'mentorado' | 'profissional' | 'admin' | 'alertas' | 'buscas-salvas';
+  | 'painel'
+  | 'mentor'
+  | 'mentorado'
+  | 'profissional'
+  | 'admin'
+  | 'alertas'
+  | 'buscas-salvas'
+  | 'oportunidades';
 
 type ResourceConfig = {
   label: string;
@@ -89,6 +96,12 @@ const dashboardConfig: Record<
     title: 'Buscas salvas',
     description: 'Consultas salvas e retornadas pelo backend para o seu escopo.',
     resources: [{ label: 'Buscas', endpoint: '/api/core/saved-searches' }],
+  },
+  oportunidades: {
+    eyebrow: 'Oportunidades',
+    title: 'Oportunidades salvas',
+    description: 'Editais que sua conta colocou no pipeline, sempre vinculados à fonte original.',
+    resources: [{ label: 'Pipeline', endpoint: '/api/core/opportunities' }],
   },
 };
 

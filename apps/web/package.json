@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@licitecomigo/shared": "workspace:*",
     "@licitecomigo/ui": "workspace:*",
     "next": "^14.2.25",
     "react": "^18.3.1",
