@@ -50,7 +50,7 @@
 - [x] Expor filtros nacionais no Radar, buscas salvas, alertas in-app idempotentes e painéis protegidos para admin, operação, empresário, mentorado e mentor.
 - [x] Manter o alternador de contexto dependente de público autorizado e sem concessão de acesso no cliente.
 - [x] Aplicar a migration 0013 em produção e verificar RLS/grants com consulta de integração no PostgreSQL/pgvector; o checkpoint do tenant real foi lido com `app.tenant_id` configurado.
-- [x] Publicar os commits separados após CI verde e redeployar core-api/web; revalidar endpoints públicos, o Radar sem sessão e health/readiness no Coolify.
+- [x] Publicar os commits separados após CI verde e redeployar core-api/web; revalidar endpoints públicos, o Radar sem sessão e health/readiness no Coolify. A CI `39141418481` ficou verde; a migration `0014` foi aplicada pelo deployment `3u9ssql4nonjobvh4me8gdst`; Core API (`jmxla5ryeqjoeqeajf9e4eme`) e web (`jbqyb69aiup7ew8vcctmi3hl`) terminaram `Success` no Coolify.
 - [x] Publicar o worker no commit `b93738c`, tratar resposta PNCP `204 No Content` e executar uma tarefa controlada com resultado `SUCCESS`; o checkpoint ficou `concluida`, sem erro, e há 25 editais com `fonte='pncp'`.
 - [ ] Criar o job assíncrono de documentos, resultados, retificações, prazos 7/3/1 dias e entrega por outbox; SMTP continua fora desta etapa.
 - [ ] Só anunciar “pregões ao vivo” após feed oficial autorizado; até lá, exibir status publicado, última captura e link para o portal oficial.
@@ -61,8 +61,8 @@
 
 ## 8. Nichos, filtros e painéis por contexto
 
-- [ ] Criar catálogo versionado de nichos de descoberta com origem declarada, permitir de um a três nichos no cadastro/onboarding e persistir a preferência na conta.
-- [ ] Trocar o Radar para selects: nichos, UF, esfera, modalidade, modo de disputa, situação, instrumento, fonte, CATMAT/CATSER observado e prazo; não exibir campos livres para esses filtros.
-- [ ] Aplicar os nichos da conta como escopo padrão de Radar, buscas salvas e alertas; usuários comuns não podem buscar ou receber alertas fora dos nichos informados.
-- [ ] Ampliar o painel e o menu com rotas reais de Radar, pregões publicados, oportunidades, alertas, buscas, empresas, Academia, Ana e contextos autorizados de iniciante, mentorado e profissional; módulos demo permanecem fora da produção.
-- [ ] Manter a troca de contexto sem concessão de papel ou acesso, com autorização server-side e dados somente de PNCP/Compras.gov.br.
+- [x] Criar catálogo versionado de nichos de descoberta com origem declarada, permitir de um a três nichos no cadastro/onboarding e persistir a preferência na conta; migration `0014_user_niche_preferences.sql` aplicada em produção.
+- [x] Trocar o Radar para selects: nichos, UF, esfera, modalidade, modo de disputa, situação, instrumento, fonte, CATMAT/CATSER observado e prazo; não exibir campos livres para esses filtros. A rota publicada foi validada sem sessão e expõe apenas controles `select`.
+- [x] Aplicar os nichos da conta como escopo padrão de Radar, buscas salvas e alertas; usuários comuns não podem buscar ou receber alertas fora dos nichos informados.
+- [x] Ampliar o painel e o menu com rotas reais de Radar, pregões publicados, oportunidades, alertas, buscas, empresas, Academia, Ana e contextos autorizados de iniciante, mentorado e profissional; módulos demo permanecem fora da produção.
+- [x] Manter a troca de contexto sem concessão de papel ou acesso, com autorização server-side e dados somente de PNCP/Compras.gov.br.
