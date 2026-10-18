@@ -13,7 +13,11 @@ FIXTURE = Path(__file__).parent / "fixtures" / "pncp_publicacao_page_1.json"
 
 
 class FixtureTransport:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, dict[str, str | int]]] = []
+
     def get(self, _url: str, _params: dict[str, str | int]) -> dict[str, Any]:
+        self.calls.append((_url, _params))
         return json.loads(FIXTURE.read_text())
 
 
@@ -52,3 +56,23 @@ def test_ingest_publishes_new_then_updated_event() -> None:
     assert first.inserted == 1
     assert second.updated == 1
     assert [event.event_type for event in publisher.events] == ["edital.novo", "edital.atualizado"]
+
+
+def test_ingest_uses_start_page_and_reports_next_page() -> None:
+    transport = FixtureTransport()
+    client = PncpClient(ResilientJsonClient(transport))
+    writer = InMemoryWriter()
+    publisher = InMemoryEventPublisher()
+    query = PncpPublicationQuery(date(2026, 10, 1), date(2026, 10, 2), 8)
+
+    stats = ingest_pncp(
+        client=client,
+        query=query,
+        tenant_id="00000000-0000-0000-0000-000000000001",
+        writer=writer,
+        publisher=publisher,
+        start_page=4,
+    )
+
+    assert transport.calls[0][1]["pagina"] == 4
+    assert stats.next_page == 5

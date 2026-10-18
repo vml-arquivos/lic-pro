@@ -48,6 +48,46 @@ def test_pncp_uses_documented_route_and_date_format_after_retry() -> None:
     assert sleeps == [0.01]
 
 
+def test_pncp_query_hash_is_stable_and_covers_optional_filters() -> None:
+    first = PncpPublicationQuery(
+        date(2026, 10, 1),
+        date(2026, 10, 2),
+        modality_code=8,
+        uf="DF",
+        municipality_ibge_code="5300108",
+    )
+    same = PncpPublicationQuery(
+        date(2026, 10, 1),
+        date(2026, 10, 2),
+        modality_code=8,
+        uf="DF",
+        municipality_ibge_code="5300108",
+    )
+    changed = PncpPublicationQuery(date(2026, 10, 1), date(2026, 10, 2), modality_code=8, uf="SP")
+
+    assert first.query_hash == same.query_hash
+    assert first.query_hash != changed.query_hash
+    assert "pagina" not in first.filter_params()
+
+
+def test_pncp_update_and_proposal_routes_honor_configured_start_page() -> None:
+    transport = FakeTransport(
+        {"data": [], "numeroPagina": 3, "totalPaginas": 3, "paginasRestantes": 0}
+    )
+    client = PncpClient(ResilientJsonClient(transport), start_page=3, page_size=10)
+    query = PncpPublicationQuery(date(2026, 10, 1), date(2026, 10, 2), modality_code=8)
+
+    list(client.iter_updates(query))
+    list(client.iter_proposals(query))
+
+    assert [call[0] for call in transport.calls] == [
+        "https://pncp.gov.br/api/consulta/v1/contratacoes/atualizacao",
+        "https://pncp.gov.br/api/consulta/v1/contratacoes/proposta",
+    ]
+    assert all(call[1]["pagina"] == 3 for call in transport.calls)
+    assert all(call[1]["tamanhoPagina"] == 10 for call in transport.calls)
+
+
 def test_compras_gov_uses_official_catalog_and_price_routes() -> None:
     transport = FakeTransport({"resultado": []})
     client = ComprasGovClient(ResilientJsonClient(transport))

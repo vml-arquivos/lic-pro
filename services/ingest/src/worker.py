@@ -60,6 +60,13 @@ def run_checkpoint(
     uf: str | None = None,
 ) -> dict[str, int | str]:
     database_url = _required("DATABASE_URL")
+    base_url = os.getenv("PNCP_BASE_URL", "https://pncp.gov.br/api/consulta")
+    query = PncpPublicationQuery(
+        start_date=date.fromisoformat(janela_inicio),
+        end_date=date.fromisoformat(janela_fim),
+        modality_code=modalidade,
+        uf=uf or None,
+    )
     control = PostgresIngestControl(database_url)
     key = CheckpointKey(
         tenant_id=tenant_id,
@@ -67,6 +74,9 @@ def run_checkpoint(
         modalidade=str(modalidade),
         janela_inicio=date.fromisoformat(janela_inicio),
         janela_fim=date.fromisoformat(janela_fim),
+        query_hash=query.query_hash,
+        endpoint="publicacao",
+        filtros=query.filter_params(),
     )
     checkpoint = control.claim(key)
     max_retries = int(os.getenv("INGEST_MAX_RETRIES", "3"))
@@ -79,12 +89,11 @@ def run_checkpoint(
             max_retries=max_retries,
             rate_limiter=RateLimiter(float(os.getenv("INGEST_RATE_LIMIT_SECONDS", "0.2"))),
         )
-        client = PncpClient(http, os.getenv("PNCP_BASE_URL", "https://pncp.gov.br/api/consulta"))
-        query = PncpPublicationQuery(
-            start_date=key.janela_inicio,
-            end_date=key.janela_fim,
-            modality_code=modalidade,
-            uf=uf or None,
+        client = PncpClient(
+            http,
+            base_url,
+            start_page=checkpoint.pagina,
+            page_size=int(os.getenv("INGEST_PAGE_SIZE", "50")),
         )
         with connect(database_url) as connection:
             connection.execute("SELECT set_config('app.tenant_id', %s, false)", (tenant_id,))
@@ -95,8 +104,11 @@ def run_checkpoint(
                 tenant_id=tenant_id,
                 writer=SqlTenderWriter(connection),
                 publisher=publisher,
+                start_page=checkpoint.pagina,
+                page_size=int(os.getenv("INGEST_PAGE_SIZE", "50")),
+                endpoint="publicacao",
             )
-        control.complete(checkpoint, page=checkpoint.pagina + 1)
+        control.complete(checkpoint, page=stats.next_page or checkpoint.pagina)
         return {
             "checkpoint_id": checkpoint.id,
             "processed": stats.processed,
