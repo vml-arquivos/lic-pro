@@ -147,11 +147,14 @@ def schedule_radar() -> dict[str, str]:
         return {"status": "not_configured"}
     today = date.today()
     start = today - timedelta(days=int(os.getenv("INGEST_WINDOW_DAYS", "1")))
-    task = run_checkpoint.delay(
-        tenant_id,
-        int(os.getenv("INGEST_SCHEDULE_MODALITY_CODE", "6")),
-        start.isoformat(),
-        today.isoformat(),
-        os.getenv("INGEST_SCHEDULE_UF") or None,
+    result = run_checkpoint.apply(
+        args=[
+            tenant_id,
+            int(os.getenv("INGEST_SCHEDULE_MODALITY_CODE", "6")),
+            start.isoformat(),
+            today.isoformat(),
+            os.getenv("INGEST_SCHEDULE_UF") or None,
+        ],
     )
-    return {"status": "enqueued", "task_id": str(task.id)}
+    result.get(propagate=True)
+    return {"status": "completed", "task_id": str(result.id)}
