@@ -129,8 +129,12 @@ export function HomeWorkspace() {
             {mentorado ? 'Aluno da Mentoria' : `${companies.length} empresa(s) vinculada(s)`}
           </p>
           <div className="workspace-divider" />
-          <p className="workspace-muted">📌 Participações acompanhadas: <strong>0</strong></p>
-          <p className="workspace-muted">📂 Documentos conferidos: <strong>0</strong></p>
+          <p className="workspace-muted">
+            📌 Participações acompanhadas: <strong>0</strong>
+          </p>
+          <p className="workspace-muted">
+            📂 Documentos conferidos: <strong>0</strong>
+          </p>
           <Link className="button-primary" href={mentorado ? '/mentoria' : '/empresas'}>
             {mentorado ? 'Ver minha mentoria' : 'Gerenciar empresas'}
           </Link>

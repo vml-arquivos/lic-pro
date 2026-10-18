@@ -27,7 +27,9 @@ type Audience = 'empresario' | 'mentorado';
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  return (parts.length > 1 ? `${parts[0]?.[0]}${parts.at(-1)?.[0]}` : parts[0]?.slice(0, 2) || 'UM').toUpperCase();
+  return (
+    parts.length > 1 ? `${parts[0]?.[0]}${parts.at(-1)?.[0]}` : parts[0]?.slice(0, 2) || 'UM'
+  ).toUpperCase();
 }
 
 export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -45,7 +47,11 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
     };
     window.addEventListener('lc-audience-change', onAudienceChange);
     void fetch('/api/core/me', { cache: 'no-store' })
-      .then(async (response) => (response.ok ? ((await response.json()) as { nome?: string; publico?: string; papel?: string }) : null))
+      .then(async (response) =>
+        response.ok
+          ? ((await response.json()) as { nome?: string; publico?: string; papel?: string })
+          : null,
+      )
       .then((me) => {
         if (!me) return;
         if (me.nome) setName(me.nome);

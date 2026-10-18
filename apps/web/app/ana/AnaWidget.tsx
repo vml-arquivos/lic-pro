@@ -45,12 +45,22 @@ export function AnaWidget() {
               −
             </button>
           </div>
-          <p className="ana-intro">Olá! Sou a ANA, sua assistente para vendas ao Governo. Em que etapa posso ajudar?</p>
+          <p className="ana-intro">
+            Olá! Sou a ANA, sua assistente para vendas ao Governo. Em que etapa posso ajudar?
+          </p>
           <div className="ana-quick-actions">
-            <button type="button" onClick={() => void askAna('Qual é o próximo passo?')}>Próximo passo</button>
-            <button type="button" onClick={() => void askAna('Quais documentos faltam?')}>Documentos</button>
-            <button type="button" onClick={() => void askAna('Avaliar uma oportunidade')}>Avaliar oportunidade</button>
-            <button type="button" onClick={() => void askAna('Quero automatizar tarefas')}>Automatizar tarefas ⚡</button>
+            <button type="button" onClick={() => void askAna('Qual é o próximo passo?')}>
+              Próximo passo
+            </button>
+            <button type="button" onClick={() => void askAna('Quais documentos faltam?')}>
+              Documentos
+            </button>
+            <button type="button" onClick={() => void askAna('Avaliar uma oportunidade')}>
+              Avaliar oportunidade
+            </button>
+            <button type="button" onClick={() => void askAna('Quero automatizar tarefas')}>
+              Automatizar tarefas ⚡
+            </button>
           </div>
           <div className="ana-answer" aria-live="polite">
             {answer || 'Pergunte sobre um conceito, um edital ou os próximos pontos para conferir.'}

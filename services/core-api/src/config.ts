@@ -32,7 +32,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
     throw new Error(`Variáveis obrigatórias ausentes no core-api: ${missing.join(', ')}`);
   }
 
-  const emailProvider = env.EMAIL_PROVIDER === 'smtp' ? 'smtp' : env.EMAIL_PROVIDER === 'disabled' ? 'disabled' : 'fake';
+  const emailProvider =
+    env.EMAIL_PROVIDER === 'smtp'
+      ? 'smtp'
+      : env.EMAIL_PROVIDER === 'disabled'
+        ? 'disabled'
+        : 'fake';
   if (nodeEnv === 'production' && emailProvider === 'fake') {
     throw new Error('EMAIL_PROVIDER=fake é proibido em produção');
   }
