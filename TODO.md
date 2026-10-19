@@ -50,7 +50,7 @@
 - [x] Expor filtros nacionais no Radar, buscas salvas, alertas in-app idempotentes e painéis protegidos para admin, operação, empresário, mentorado e mentor.
 - [x] Manter o alternador de contexto dependente de público autorizado e sem concessão de acesso no cliente.
 - [x] Aplicar a migration 0013 em produção e verificar RLS/grants com consulta de integração no PostgreSQL/pgvector; o checkpoint do tenant real foi lido com `app.tenant_id` configurado.
-- [x] Publicar os commits separados após CI verde e redeployar core-api/web; revalidar endpoints públicos, o Radar sem sessão e health/readiness no Coolify. A CI `39141418481` ficou verde; a migration `0014` foi aplicada pelo deployment `3u9ssql4nonjobvh4me8gdst`; Core API (`jmxla5ryeqjoeqeajf9e4eme`) e web (`jbqyb69aiup7ew8vcctmi3hl`) terminaram `Success` no Coolify.
+- [x] Publicar os commits separados após CI verde e redeployar core-api/web; revalidar endpoints públicos, o Radar sem sessão e health/readiness no Coolify. A CI `39197040629` ficou verde; a migration `0014` foi aplicada pelo deployment `3u9ssql4nonjobvh4me8gdst`; Core API (`ewfnlffxmxx4gpu70zphpkqr`) e web (`3ggg9d7xaazwpgv9hduk6oqo`) terminaram `Success` no Coolify no commit `261752e`.
 - [x] Publicar o worker no commit `b93738c`, tratar resposta PNCP `204 No Content` e executar uma tarefa controlada com resultado `SUCCESS`; o checkpoint ficou `concluida`, sem erro, e há 25 editais com `fonte='pncp'`.
 - [ ] Criar o job assíncrono de documentos, resultados, retificações, prazos 7/3/1 dias e entrega por outbox; SMTP continua fora desta etapa.
 - [ ] Só anunciar “pregões ao vivo” após feed oficial autorizado; até lá, exibir status publicado, última captura e link para o portal oficial.
@@ -60,14 +60,15 @@
 - [x] Implementar adapter real compatível com o protocolo OpenAI, apontado para a API Gemini da Google, para chat, Reader e embeddings; providers `fake`/`deterministic` continuam proibidos em produção.
 - [x] Transformar a Ana em conversa real com histórico por usuário/tenant, prompt versionado no código, limites somente-leitura, resposta SSE e estados honestos de erro no widget.
 - [x] Testar Ruff, mypy, pytest e uma conversa real com um modelo compatível no ambiente de validação; a resposta foi recebida e o histórico manteve usuário + assistente.
-- [ ] Obter a `GEMINI_API_KEY` pelo formulário seguro, configurar `LLM_PROVIDER=gemini`, `EMBEDDING_PROVIDER=gemini` e publicar `licite-ai` privado no Coolify.
+- [x] Criar e configurar a base do recurso `licite-ai` no Coolify com variáveis de runtime Gemini, banco, Redis e JWT transferidas somente dentro do painel; remover o domínio automático e manter o serviço com zero domínios públicos.
+- [ ] Preencher manualmente a `GEMINI_API_KEY`, redeployar `licite-ai` privado e validar `/health`, `/ready` e uma conversa protegida; não iniciar o serviço sem essa credencial real.
 
 ## 9. Conta, perfil e segurança
 
 - [x] Criar `/conta` com dados da conta, e-mail somente leitura, perfil de jornada, público, nível, nichos, status de verificação e links para os painéis reais.
 - [x] Criar alteração autenticada de senha, logout que limpa o cookie HttpOnly e tornar recuperação de senha encontrável na área de segurança.
 - [x] Corrigir os painéis por acesso: auditoria admin usa a rota real, contexto de jornada não libera telas incompatíveis e concessões do mentor respeitam admin/mentor.
-- [ ] Publicar o Core API e o web com essa etapa após a CI verde; não abrir signup enquanto SMTP estiver adiado.
+- [x] Publicar o Core API e o web com essa etapa após a CI verde; `/conta` responde no app publicado e o signup continua fechado enquanto SMTP estiver adiado.
 - [ ] Alteração de e-mail, troca de tenant/empresa e convite de usuários administrativos permanecem etapas posteriores porque exigem verificação e fluxos de concessão próprios.
 
 ## 8. Nichos, filtros e painéis por contexto

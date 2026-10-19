@@ -46,14 +46,14 @@ O site institucional será reescrito com comunicação objetiva, visual claro e 
 
 ## Estado após publicação
 
-- A imagem funcional implantada em produção corresponde ao commit `65777a4`, com CI verde (`39141418481`) antes do deploy; o `main` recebeu depois o commit documental `843ebc3`. Os commits funcionais incluem o tratamento de `204 No Content` na paginação PNCP e a evolução de nichos, selects e painéis.
-- A migration `0014_user_niche_preferences.sql` foi aplicada no deployment `3u9ssql4nonjobvh4me8gdst`; `licite-core-api` (`jmxla5ryeqjoeqeajf9e4eme`) e `licite-web` (`jbqyb69aiup7ew8vcctmi3hl`) terminaram com `Success` no Coolify. `licite-site` permanece saudável, sem alteração nesta etapa.
+- A imagem funcional implantada em produção corresponde ao commit `261752e`, com CI verde (`39197040629`) antes do deploy; os redeploys finais do `licite-core-api` (`ewfnlffxmxx4gpu70zphpkqr`) e `licite-web` (`3ggg9d7xaazwpgv9hduk6oqo`) terminaram com `Success` no Coolify. O commit inclui a área protegida `/conta`, segurança de sessão, painéis por acesso e o chatbot real da Ana com adapter Gemini.
+- A migration `0014_user_niche_preferences.sql` foi aplicada no deployment `3u9ssql4nonjobvh4me8gdst`; `licite-site` permanece saudável, sem alteração nesta etapa.
 - `https://apilicitecomigo.buscarr.com.br/health` e `/ready` respondem com banco e Redis prontos.
 - `https://applicitecomigo.buscarr.com.br/health` responde com o web saudável.
 - Canonical, Open Graph, robots e sitemap do site usam `https://licitecomigo.buscarr.com.br`.
 - SMTP continua adiado e o cadastro aberto permanece bloqueado; contas cliente/mentor dependem dos e-mails e concessões que ainda serão informados.
 - RabbitMQ, ingest HTTP, scheduler e worker permanecem privados e `Running`; uma execução controlada do scheduler concluiu o checkpoint PNCP sem erro, com 25 editais já persistidos com `fonte='pncp'`.
-- O código do provider Gemini de LLM/embeddings e o chatbot da Ana estão implementados; o adapter foi testado no ambiente de validação com o protocolo compatível, mas a produção aguardará a `GEMINI_API_KEY` autorizada e a configuração segura no Coolify. Não usar providers falsos ou determinísticos.
+- O código do provider Gemini de LLM/embeddings e o chatbot da Ana estão implementados e testados. O recurso `licite-ai` foi criado com variáveis base de runtime no Coolify, permanece sem domínio público e não foi iniciado porque a `GEMINI_API_KEY` será preenchida manualmente pelo proprietário; não usar providers falsos ou determinísticos.
 
 ## Evolução aprovada — nichos, filtros e painéis
 
@@ -69,4 +69,4 @@ O blueprint versionado em `docs/research/expansao-fontes-paineis-2026-10.md` reg
 
 `/conta` concentra dados editáveis do perfil, escopo de nichos, segurança, logout e links para os painéis autorizados. O e-mail permanece somente leitura até existir fluxo de troca com nova verificação; troca de tenant, empresa ativa e convites administrativos também exigem fluxos próprios.
 
-A Ana agora mantém conversa por usuário/tenant, usa o Gemini Pro pela compatibilidade oficial da Google e responde pelo endpoint protegido existente. O prompt impõe fonte, somente-leitura e limites jurídicos; a implantação no Coolify fica condicionada à `GEMINI_API_KEY` real, que não deve ser inventada nem substituída por respostas fake.
+A Ana agora mantém conversa por usuário/tenant, usa o Gemini Pro pela compatibilidade oficial da Google e responde pelo endpoint protegido existente. O prompt impõe fonte, somente-leitura e limites jurídicos; o serviço Coolify está preparado de forma privada, mas o deploy final fica condicionado à `GEMINI_API_KEY` real, que não deve ser inventada nem substituída por respostas fake.
