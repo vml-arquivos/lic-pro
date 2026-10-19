@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import re
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, cast
 
 from .models import AnaChatResponse, Evidence
 from .reader import AnalysisStore
@@ -161,15 +162,16 @@ class AnaService:
         complete_chat = getattr(self.llm_provider, "complete_chat", None)
         if not callable(complete_chat):
             return tool_text
+        complete = cast(Callable[..., str], complete_chat)
         recent = getattr(self.history, "recent", None)
         history = recent(tenant_id, user_id, conversa_id, 12) if callable(recent) else []
         messages = [
-            {"role": "user" if item.role == "usuario" else "assistant", "content": item.text}
-            for item in history
+            {"role": "user" if item.role == "usuario" else "assistant", "content": item.text} for item in history
         ]
-        evidence_text = "\n".join(
-            f"- página {item.pagina or 'não informada'}: {item.trecho[:240]}" for item in evidence
-        ) or "Nenhuma evidência documental foi recuperada."
+        evidence_text = (
+            "\n".join(f"- página {item.pagina or 'não informada'}: {item.trecho[:240]}" for item in evidence)
+            or "Nenhuma evidência documental foi recuperada."
+        )
         system = " ".join(
             [
                 "Você é Ana, assistente do Licite Comigo, e responde em português do Brasil.",
@@ -184,7 +186,7 @@ class AnaService:
                 f"Ferramenta autorizada: {tool_name}. Resultado: {tool_text}. Evidências: {evidence_text}",
             ]
         )
-        return complete_chat(system=system, messages=messages or [{"role": "user", "content": message}])
+        return complete(system=system, messages=messages or [{"role": "user", "content": message}])
 
     @staticmethod
     def _intent(message: str) -> tuple[str, str]:

@@ -72,9 +72,7 @@ class OpenAICompatibleProvider:
         self.timeout_seconds = timeout_seconds
 
     def complete_json(self, *, system: str, prompt: str, chunks: Sequence[DocumentChunk]) -> Mapping[str, Any]:
-        context = "\n\n".join(
-            f"[página {chunk.pagina or 'não informada'}] {chunk.conteudo[:5000]}" for chunk in chunks
-        )
+        context = "\n\n".join(f"[página {chunk.pagina or 'não informada'}] {chunk.conteudo[:5000]}" for chunk in chunks)
         response = self._chat(
             [
                 {
@@ -216,9 +214,7 @@ def build_llm_provider(provider_name: str = "fake", *, model: str | None = None)
             "LLM",
             key_names=("GEMINI_API_KEY", "LLM_API_KEY") if is_gemini else None,
             default_base_url=(
-                "https://generativelanguage.googleapis.com/v1beta/openai/"
-                if is_gemini
-                else "https://api.openai.com/v1"
+                "https://generativelanguage.googleapis.com/v1beta/openai/" if is_gemini else "https://api.openai.com/v1"
             ),
         )
         return OpenAICompatibleProvider(
@@ -231,9 +227,7 @@ def build_llm_provider(provider_name: str = "fake", *, model: str | None = None)
     raise ValueError(f"provider de LLM não configurado: {provider_name}")
 
 
-def build_embedding_provider(
-    provider_name: str = "deterministic", *, model: str | None = None
-) -> EmbeddingProvider:
+def build_embedding_provider(provider_name: str = "deterministic", *, model: str | None = None) -> EmbeddingProvider:
     environment = os.getenv("NODE_ENV", "development")
     if provider_name in {"fake", "deterministic"}:
         if environment == "production":
@@ -245,15 +239,13 @@ def build_embedding_provider(
             "EMBEDDING",
             key_names=("GEMINI_API_KEY", "EMBEDDING_API_KEY") if is_gemini else None,
             default_base_url=(
-                "https://generativelanguage.googleapis.com/v1beta/openai/"
-                if is_gemini
-                else "https://api.openai.com/v1"
+                "https://generativelanguage.googleapis.com/v1beta/openai/" if is_gemini else "https://api.openai.com/v1"
             ),
         )
         return OpenAICompatibleEmbeddingProvider(
-            model=model or os.getenv("EMBEDDING_MODEL") or (
-                "gemini-embedding-001" if is_gemini else "text-embedding-3-small"
-            ),
+            model=model
+            or os.getenv("EMBEDDING_MODEL")
+            or ("gemini-embedding-001" if is_gemini else "text-embedding-3-small"),
             api_key=api_key,
             base_url=base_url,
             timeout_seconds=timeout,
