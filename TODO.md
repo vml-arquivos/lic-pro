@@ -61,7 +61,8 @@
 - [x] Transformar a Ana em conversa real com histórico por usuário/tenant, prompt versionado no código, limites somente-leitura, resposta SSE e estados honestos de erro no widget.
 - [x] Testar Ruff, mypy, pytest e uma conversa real com um modelo compatível no ambiente de validação; a resposta foi recebida e o histórico manteve usuário + assistente.
 - [x] Criar e configurar a base do recurso `licite-ai` no Coolify com variáveis de runtime Gemini, banco, Redis e JWT transferidas somente dentro do painel; remover o domínio automático e manter o serviço com zero domínios públicos.
-- [ ] Preencher manualmente a `GEMINI_API_KEY`, redeployar `licite-ai` privado e validar `/health`, `/ready` e uma conversa protegida; não iniciar o serviço sem essa credencial real.
+- [x] Preencher manualmente a credencial Gemini, atualizar `LLM_MODEL=gemini-3.1-pro-preview` e redeployar o `licite-ai` privado no deployment `fe6kjsab5czlhkwpugmq2atw`; o serviço está `Running`, `/health` e `/ready` retornam `ok/ready` e o container carrega o modelo correto.
+- [ ] Habilitar faturamento no projeto Google da chave para liberar geração: o endpoint Pro respondeu `402 Payment Required`. Sem isso, manter a Ana em erro honesto, sem fallback fake/determinístico.
 
 ## 9. Conta, perfil e segurança
 

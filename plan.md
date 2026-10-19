@@ -53,7 +53,7 @@ O site institucional será reescrito com comunicação objetiva, visual claro e 
 - Canonical, Open Graph, robots e sitemap do site usam `https://licitecomigo.buscarr.com.br`.
 - SMTP continua adiado e o cadastro aberto permanece bloqueado; contas cliente/mentor dependem dos e-mails e concessões que ainda serão informados.
 - RabbitMQ, ingest HTTP, scheduler e worker permanecem privados e `Running`; uma execução controlada do scheduler concluiu o checkpoint PNCP sem erro, com 25 editais já persistidos com `fonte='pncp'`.
-- O código do provider Gemini de LLM/embeddings e o chatbot da Ana estão implementados e testados. O recurso `licite-ai` foi criado com variáveis base de runtime no Coolify, permanece sem domínio público e não foi iniciado porque a `GEMINI_API_KEY` será preenchida manualmente pelo proprietário; não usar providers falsos ou determinísticos.
+- O código do provider Gemini de LLM/embeddings e o chatbot da Ana estão implementados e testados. O recurso `licite-ai` foi criado com variáveis de runtime no Coolify, permanece sem domínio público, foi redeployado no deployment `fe6kjsab5czlhkwpugmq2atw` e está `Running` com `/health` e `/ready` saudáveis. A geração Pro ainda responde `402 Payment Required` até o faturamento do projeto Google ser habilitado; não usar providers falsos ou determinísticos.
 
 ## Evolução aprovada — nichos, filtros e painéis
 
@@ -69,4 +69,4 @@ O blueprint versionado em `docs/research/expansao-fontes-paineis-2026-10.md` reg
 
 `/conta` concentra dados editáveis do perfil, escopo de nichos, segurança, logout e links para os painéis autorizados. O e-mail permanece somente leitura até existir fluxo de troca com nova verificação; troca de tenant, empresa ativa e convites administrativos também exigem fluxos próprios.
 
-A Ana agora mantém conversa por usuário/tenant, usa o Gemini Pro pela compatibilidade oficial da Google e responde pelo endpoint protegido existente. O prompt impõe fonte, somente-leitura e limites jurídicos; o serviço Coolify está preparado de forma privada, mas o deploy final fica condicionado à `GEMINI_API_KEY` real, que não deve ser inventada nem substituída por respostas fake.
+A Ana agora mantém conversa por usuário/tenant, usa o Gemini Pro pela compatibilidade oficial da Google e responde pelo endpoint protegido existente. O prompt impõe fonte, somente-leitura e limites jurídicos; o serviço Coolify está privado e saudável, com `GEMINI_API_KEY` configurada sem exposição. A geração fica condicionada ao faturamento do projeto Google, que não pode ser habilitado pelo Coolify; até lá, o erro real é preservado e não há respostas fake.
