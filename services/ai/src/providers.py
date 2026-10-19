@@ -218,7 +218,7 @@ def build_llm_provider(provider_name: str = "fake", *, model: str | None = None)
             ),
         )
         return OpenAICompatibleProvider(
-            model=model or os.getenv("LLM_MODEL") or ("gemini-2.5-pro" if is_gemini else "gpt-5-mini"),
+            model=model or os.getenv("LLM_MODEL") or ("gemini-3.1-pro-preview" if is_gemini else "gpt-5-mini"),
             api_key=api_key,
             base_url=base_url,
             provider_name=provider_name,

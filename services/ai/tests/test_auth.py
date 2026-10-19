@@ -64,7 +64,7 @@ def test_gemini_provider_uses_google_openai_compatibility(monkeypatch: pytest.Mo
     embedding = build_embedding_provider("gemini")
 
     assert llm.name == "gemini"
-    assert llm.model == "gemini-2.5-pro"
+    assert llm.model == "gemini-3.1-pro-preview"
     assert llm.base_url.startswith("https://generativelanguage.googleapis.com/v1beta/openai")
     assert embedding.model == "gemini-embedding-001"
     assert embedding.dimension == 1024

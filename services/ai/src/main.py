@@ -59,7 +59,7 @@ chunks = PostgresChunkStore(database_url) if database_url else InMemoryChunkStor
 analyses = PostgresAnalysisStore(database_url) if database_url else InMemoryAnalysisStore()
 llm_provider = build_llm_provider(
     os.getenv("LLM_PROVIDER", "fake"),
-    model=os.getenv("LLM_MODEL", "gpt-5-mini"),
+    model=os.getenv("LLM_MODEL", "gemini-3.1-pro-preview"),
 )
 reader = ReaderAgent(llm_provider, chunks, analyses)
 embedding_provider = build_embedding_provider(
