@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { Badge, Empty, PageHeader, Panel, Resource, useResource } from '../components/ui';
 
 type Track = {
   id: string;
@@ -12,63 +12,65 @@ type Track = {
   modulos: number;
   aulas: number;
 };
+type Progress = { aulas: Array<{ trilha_slug: string; concluida: boolean }> };
 
 export default function AcademyPage() {
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [message, setMessage] = useState('Carregando trilhas publicadas…');
-
-  useEffect(() => {
-    void fetch('/api/core/academy/tracks', { cache: 'no-store' })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('academy_unavailable');
-        const payload = (await response.json()) as Track[];
-        setTracks(payload);
-        setMessage('');
-      })
-      .catch(() => setMessage('Não foi possível carregar as trilhas agora.'));
-  }, []);
-
+  const [tracks] = useResource<Track[]>('/academy/tracks');
+  const [progress] = useResource<Progress>('/aluno/progresso');
+  const done = (slug: string) =>
+    progress.state === 'ready'
+      ? progress.data.aulas.filter((lesson) => lesson.trilha_slug === slug && lesson.concluida)
+          .length
+      : null;
   return (
-    <main className="academy-page">
-      <Link className="back-link" href="/">
-        ← Início
-      </Link>
-      <div className="page-heading">
-        <p className="eyebrow">Academia</p>
-        <h1>Conteúdo publicado para estudar licitações.</h1>
-        <p>
-          As trilhas abaixo vêm do conteúdo publicado no ambiente. Quando não houver conteúdo, a
-          página informa o estado real em vez de exibir exemplos.
-        </p>
-      </div>
-      {message ? <p className="notice">{message}</p> : null}
-      {!message && !tracks.length ? (
-        <section className="dashboard-empty">
-          <h2>Nenhuma trilha publicada</h2>
-          <p>O conteúdo da Academia ainda não está disponível para esta conta.</p>
-        </section>
-      ) : null}
-      <section className="track-grid" aria-label="Trilhas publicadas">
-        {tracks.map((track) => (
-          <article className="track-card" key={track.id}>
-            <p className="eyebrow">{track.status}</p>
-            <h2>{track.titulo}</h2>
-            <p>{track.descricao}</p>
-            <div className="track-footer">
-              <span>
-                {track.modulos} módulo(s) · {track.aulas} aula(s)
-              </span>
-              <Link className="button-secondary" href={`/academia/trilhas/${track.slug}`}>
-                Abrir trilha
-              </Link>
+    <div className="ui-page">
+      <PageHeader
+        eyebrow="Academia"
+        title="Estude licitações no seu ritmo"
+        description="Trilhas com aulas, questionários e progresso salvo. O conteúdo vem direto da plataforma; o que ainda está em revisão aparece marcado."
+      />
+      <Resource value={tracks}>
+        {(list) =>
+          list.length === 0 ? (
+            <Panel title="Nenhuma trilha publicada">
+              <Empty>O conteúdo da Academia ainda não está disponível para esta conta.</Empty>
+            </Panel>
+          ) : (
+            <div className="ui-grid">
+              {list.map((track) => {
+                const concluidas = done(track.slug);
+                return (
+                  <Panel key={track.id} title={track.titulo} description={track.descricao}>
+                    <div className="ui-table-actions">
+                      <Badge tone={track.status === 'publicado' ? 'ok' : 'warn'}>
+                        {track.status === 'publicado' ? 'Publicada' : 'Em revisão'}
+                      </Badge>
+                      <small>
+                        {track.modulos} módulo(s) · {track.aulas} aula(s)
+                      </small>
+                    </div>
+                    {concluidas !== null && track.aulas ? (
+                      <>
+                        <div className="ui-progress">
+                          <span
+                            style={{ width: `${Math.round((concluidas / track.aulas) * 100)}%` }}
+                          />
+                        </div>
+                        <small>
+                          {concluidas} de {track.aulas} aulas concluídas
+                        </small>
+                      </>
+                    ) : null}
+                    <Link className="ui-btn" href={`/academia/trilhas/${track.slug}`}>
+                      Abrir trilha
+                    </Link>
+                  </Panel>
+                );
+              })}
             </div>
-          </article>
-        ))}
-      </section>
-      <section className="academy-links">
-        <Link href="/academia/mentor">Painel do mentor</Link>
-        <Link href="/onboarding">Revisar meu onboarding</Link>
-      </section>
-    </main>
+          )
+        }
+      </Resource>
+    </div>
   );
 }

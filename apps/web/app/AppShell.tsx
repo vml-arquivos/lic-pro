@@ -1,35 +1,44 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState } from 'react';
+import {
+  AREAS,
+  AREA_LABELS,
+  AREA_MENUS,
+  canOpenPage,
+  flatMenu,
+  type Area,
+  type MenuGroup,
+} from '@licitecomigo/shared';
+import type { Session } from '../lib/session';
+import { Icon } from './components/Icon';
+import { NotificationBell } from './components/NotificationBell';
 
-type Me = {
-  nome?: string;
-  email?: string;
-  papel?: string;
-  publico?: 'empresa' | 'mentoria' | string | null;
-  perfil_jornada?: string | null;
-  nivel_diagnostico?: string | null;
-  nicho_preferencias?: string[] | null;
-};
+type AppShellProps = Readonly<{ session: Session | null; children: React.ReactNode }>;
 
-type MenuItem = { label: string; href: string; icon: string };
-type AppShellProps = Readonly<{ children: React.ReactNode }>;
-
-const publicMenu: MenuItem[] = [
-  { label: 'Início', href: '/painel', icon: '⌂' },
-  { label: 'Explorar licitações', href: '/radar', icon: '⌕' },
-  { label: 'Pregões publicados', href: '/pregoes', icon: '◫' },
-  { label: 'Oportunidades', href: '/oportunidades', icon: '▣' },
-  { label: 'Empresas', href: '/empresas', icon: '▥' },
-  { label: 'Academia', href: '/academia', icon: '◎' },
-  { label: 'Ana', href: '/ana', icon: '✦' },
+const ANONYMOUS_MENU: readonly MenuGroup[] = [
+  {
+    label: 'Visitante',
+    items: [
+      { label: 'Explorar licitações', href: '/radar', icon: 'search' },
+      { label: 'Academia', href: '/academia', icon: 'cap' },
+      { label: 'Entrar', href: '/login', icon: 'lock' },
+    ],
+  },
 ];
 
-function normalized(value?: string | null) {
-  return (value ?? '').trim().toLowerCase();
-}
+/** Páginas de entrada: sem sessão, aparecem sozinhas, sem o menu do aplicativo. */
+const AUTH_PATHS = [
+  '/login',
+  '/convite',
+  '/signup',
+  '/password-recovery',
+  '/password-reset',
+  '/verify-email',
+  '/cancelar-alertas',
+];
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -39,177 +48,190 @@ function initials(name: string) {
 }
 
 function isCurrent(pathname: string, href: string) {
-  return href === '/painel'
+  return href === '/painel' || href === '/admin'
     ? pathname === href
     : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-const profileOptions = [
-  { value: 'iniciante', label: 'Iniciante' },
-  { value: 'mentorado', label: 'Mentorado' },
-  { value: 'profissional', label: 'Empresário avançado' },
-] as const;
-
-function profileLabel(value?: string | null) {
-  return profileOptions.find((option) => option.value === value)?.label ?? 'Perfil de jornada';
+function homeFor(area: Area) {
+  return area === 'administracao' ? '/admin' : '/painel';
 }
 
-export function AppShell({ children }: AppShellProps) {
-  const pathname = usePathname();
-  const [me, setMe] = useState<Me | null>(null);
-  const [sessionChecked, setSessionChecked] = useState(false);
-  const [switchingProfile, setSwitchingProfile] = useState(false);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void fetch('/api/core/me', { cache: 'no-store', signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) return null;
-        return (await response.json()) as Me;
-      })
-      .then((account) => {
-        if (!controller.signal.aborted) {
-          setMe(account);
-          setSessionChecked(true);
-        }
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setSessionChecked(true);
-      });
-    return () => controller.abort();
-  }, []);
-
-  const role = normalized(me?.papel);
-  const profile = normalized(me?.perfil_jornada);
-  const canSwitchProfile = Boolean(me);
-  const currentAudience = profileLabel(profile);
-
-  const menu = useMemo(() => {
-    const items = [...publicMenu];
-    if (sessionChecked && me) {
-      items.push(
-        { label: 'Minha conta', href: '/conta', icon: '◎' },
-        { label: 'Alertas', href: '/alertas', icon: '◌' },
-        { label: 'Buscas salvas', href: '/buscas-salvas', icon: '⌑' },
-      );
-      if (role === 'mentor' || role === 'admin') {
-        items.push({ label: 'Painel do mentor', href: '/mentor', icon: '◉' });
-      }
-      if (role === 'aluno' || profile === 'mentorado') {
-        items.push({ label: 'Área do mentorado', href: '/mentorado', icon: '◉' });
-      }
-      if (profile === 'profissional' || role === 'operador') {
-        items.push({ label: 'Profissional', href: '/profissional', icon: '◈' });
-      }
-      if (role === 'admin') {
-        items.push({ label: 'Leads / admin', href: '/leads', icon: '✉' });
-        items.push({ label: 'Admin', href: '/admin', icon: '⚙' });
-      }
-    }
-    return items;
-  }, [me, profile, role, sessionChecked]);
-
-  const currentLabel = useMemo(
-    () => menu.find((item) => isCurrent(pathname, item.href))?.label ?? 'Licite Comigo',
-    [menu, pathname],
+export function AccessDenied() {
+  return (
+    <main className="ui-denied" role="alert">
+      <p className="eyebrow">Acesso restrito</p>
+      <h1>Esta página não faz parte da sua área.</h1>
+      <p>Use o menu ao lado para voltar ao que está liberado para a sua conta.</p>
+      <Link className="ui-btn" href="/painel">
+        Ir para o meu painel
+      </Link>
+    </main>
   );
+}
 
-  async function switchProfile(nextProfile: string) {
-    if (
-      !canSwitchProfile ||
-      switchingProfile ||
-      !profileOptions.some((option) => option.value === nextProfile)
-    )
-      return;
-    setSwitchingProfile(true);
+export function AppShell({ session, children }: AppShellProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+
+  const area = session?.area ?? null;
+  const groups = area ? AREA_MENUS[area] : ANONYMOUS_MENU;
+  const current = area ? flatMenu(area).find((item) => isCurrent(pathname, item.href)) : undefined;
+  const blocked = session ? !canOpenPage(session.areas_permitidas, pathname) : false;
+  const viewingAs = Boolean(session?.plataforma && area && area !== 'administracao');
+  const name = session?.nome ?? session?.email ?? 'Visitante';
+
+  async function viewAs(next: Area) {
+    if (busy || next === area) return;
+    setBusy(true);
     try {
-      const response = await fetch('/api/core/me/diagnostico', {
-        method: 'PATCH',
+      const response = await fetch('/api/view-as', {
+        method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ perfil_jornada: nextProfile }),
+        body: JSON.stringify({ area: next }),
       });
-      if (!response.ok) return;
-      const updated = (await response.json()) as Partial<Me>;
-      setMe((current) =>
-        current ? { ...current, ...updated, perfil_jornada: nextProfile } : current,
-      );
+      if (response.ok) {
+        router.push(homeFor(next));
+        router.refresh();
+      }
     } finally {
-      setSwitchingProfile(false);
+      setBusy(false);
     }
   }
 
-  const name = me?.nome ?? me?.email ?? 'Conta';
-  const context =
-    me?.perfil_jornada ??
-    me?.papel ??
-    (sessionChecked ? 'Conta não conectada' : 'Validando sessão…');
+  async function signOut() {
+    setBusy(true);
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } finally {
+      window.location.assign('/login');
+    }
+  }
+
+  if (!session && pathname === '/') {
+    return <div className="auth-shell">{children}</div>;
+  }
+
+  if (!session && AUTH_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
+    return (
+      <div className="auth-shell">
+        <header className="auth-shell-bar">
+          <Link href="/login" className="sidebar-brand" aria-label="Licite Comigo">
+            <span className="sidebar-wordmark">
+              Licite<span>Comigo</span>
+            </span>
+          </Link>
+        </header>
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
-        <Link href="/painel" className="sidebar-brand" aria-label="Licite Comigo — Início">
+        <Link
+          href={area ? homeFor(area) : '/login'}
+          className="sidebar-brand"
+          aria-label="Licite Comigo — Início"
+        >
           <span className="sidebar-wordmark">
             Licite<span>Comigo</span>
           </span>
         </Link>
-        <p className="sidebar-label">Meu espaço</p>
+        {session && area ? (
+          <div className="sidebar-area">
+            <strong>{AREA_LABELS[area]}</strong>
+            <small>
+              {viewingAs
+                ? 'Visualização da equipe'
+                : area === 'empresa' && session.tenant_nome
+                  ? session.tenant_nome
+                  : name}
+            </small>
+          </div>
+        ) : null}
         <nav aria-label="Menu do aplicativo">
-          {menu.map((item) => (
-            <Link
-              href={item.href}
-              key={item.href}
-              className={`sidebar-link ${isCurrent(pathname, item.href) ? 'active' : ''}`}
-            >
-              <span aria-hidden="true">{item.icon}</span>
-              {item.label}
-            </Link>
+          {groups.map((group) => (
+            <div key={group.label}>
+              <p className="sidebar-label">{group.label}</p>
+              {group.items.map((item) => (
+                <Link
+                  href={item.href}
+                  key={item.href}
+                  className={`sidebar-link ${isCurrent(pathname, item.href) ? 'active' : ''}`}
+                  title={item.label}
+                >
+                  <span className="sidebar-icon" aria-hidden="true">
+                    <Icon name={item.icon} size={18} />
+                  </span>
+                  <span className="sidebar-text">{item.label}</span>
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
-        {canSwitchProfile ? (
-          <>
-            <p className="sidebar-label sidebar-experience-label">Mudar público</p>
+        {session?.plataforma ? (
+          <div className="view-as">
+            <p className="sidebar-label">Ver como</p>
             <label className="audience-select-label">
-              <span className="sr-only">Público da jornada</span>
+              <span className="sr-only">Área que você quer visualizar</span>
               <select
                 className="audience-select"
-                value={profile || 'iniciante'}
-                onChange={(event) => void switchProfile(event.target.value)}
-                disabled={switchingProfile}
+                value={area ?? 'administracao'}
+                disabled={busy}
+                onChange={(event) => void viewAs(event.target.value as Area)}
               >
-                {profileOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
+                {AREAS.map((option) => (
+                  <option key={option} value={option}>
+                    {AREA_LABELS[option]}
                   </option>
                 ))}
               </select>
             </label>
-          </>
-        ) : null}
-        {role === 'admin' ? (
-          <div className="sidebar-admin-note">
-            Permissões administrativas validadas pelo backend.
+            {viewingAs ? (
+              <p className="view-as-note">
+                Só muda a tela. Suas permissões continuam as da equipe.
+              </p>
+            ) : null}
           </div>
         ) : null}
+        {session ? (
+          <button type="button" className="sidebar-signout" onClick={() => void signOut()}>
+            Sair
+          </button>
+        ) : null}
         <div className="sidebar-bottom">
-          <span className="status-dot" /> Serviços operacionais protegidos
+          <span className="status-dot" /> Acesso protegido
         </div>
       </aside>
       <div className="app-shell-body">
         <header className="app-topbar">
           <div className="topbar-title">
-            <strong>{currentLabel}</strong>
-            <small>{context}</small>
+            <strong>{current?.label ?? 'Licite Comigo'}</strong>
+            <small>{session ? session.email : 'Você ainda não entrou'}</small>
           </div>
           <div className="topbar-actions">
-            {canSwitchProfile ? <span className="audience-pill">{currentAudience}</span> : null}
-            {me ? (
-              <Link className="notification-button" href="/alertas" aria-label="Alertas">
-                ◌
-              </Link>
+            {area ? (
+              <span className={`area-pill ${viewingAs ? 'area-pill-view' : ''}`}>
+                {viewingAs ? `Administração · vendo como ${AREA_LABELS[area]}` : AREA_LABELS[area]}
+              </span>
             ) : null}
+            {viewingAs ? (
+              <button
+                type="button"
+                className="ui-btn ui-btn-ghost ui-btn-small"
+                onClick={() => void viewAs('administracao')}
+                disabled={busy}
+              >
+                Voltar à Administração
+              </button>
+            ) : null}
+            {session ? <NotificationBell /> : null}
             <Link
               className="user-avatar"
-              href={me ? '/conta' : '/login'}
+              href={session ? '/conta' : '/login'}
               title={name}
               aria-label={`Conta de ${name}`}
             >
@@ -217,7 +239,7 @@ export function AppShell({ children }: AppShellProps) {
             </Link>
           </div>
         </header>
-        <div className="app-shell-content">{children}</div>
+        <div className="app-shell-content">{blocked ? <AccessDenied /> : children}</div>
       </div>
     </div>
   );

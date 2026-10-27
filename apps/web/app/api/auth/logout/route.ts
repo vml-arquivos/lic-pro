@@ -16,5 +16,18 @@ export async function POST(): Promise<Response> {
       .filter(Boolean)
       .join('; '),
   );
+  response.headers.append(
+    'set-cookie',
+    [
+      'lc_view_as=',
+      'Path=/',
+      'HttpOnly',
+      'SameSite=Lax',
+      process.env.NODE_ENV === 'production' ? 'Secure' : '',
+      'Max-Age=0',
+    ]
+      .filter(Boolean)
+      .join('; '),
+  );
   return response;
 }

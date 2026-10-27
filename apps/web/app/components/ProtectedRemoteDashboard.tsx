@@ -12,15 +12,7 @@ type Me = {
   nivel_diagnostico?: string | null;
 };
 
-type DashboardKind =
-  | 'painel'
-  | 'mentor'
-  | 'mentorado'
-  | 'profissional'
-  | 'admin'
-  | 'alertas'
-  | 'buscas-salvas'
-  | 'oportunidades';
+type DashboardKind = 'alertas' | 'buscas-salvas' | 'oportunidades';
 
 type ResourceConfig = {
   label: string;
@@ -44,47 +36,6 @@ const dashboardConfig: Record<
     requiredProfile?: string;
   }
 > = {
-  painel: {
-    eyebrow: 'Painel',
-    title: 'Painel da conta',
-    description: 'Resumo operacional retornado pela sua conta e pelo tenant atual.',
-    resources: [{ label: 'Resumo', endpoint: '/api/core/dashboard/summary' }],
-  },
-  mentor: {
-    eyebrow: 'Mentoria',
-    title: 'Painel do mentor',
-    description: 'Acompanhamento de mentorados e empresas com concessão explícita.',
-    allowedRoles: ['admin', 'mentor'],
-    resources: [
-      { label: 'Mentorados', endpoint: '/api/core/mentor/dashboard' },
-      { label: 'Empresas concedidas', endpoint: '/api/core/mentor/companies' },
-    ],
-  },
-  mentorado: {
-    eyebrow: 'Mentorado',
-    title: 'Meu acompanhamento',
-    description: 'Dados da jornada e do acompanhamento vinculados à sua conta.',
-    requiredProfile: 'mentorado',
-    resources: [{ label: 'Dashboard do mentorado', endpoint: '/api/core/mentorado/dashboard' }],
-  },
-  profissional: {
-    eyebrow: 'Profissional',
-    title: 'Painel profissional',
-    description: 'Indicadores profissionais retornados pelo backend para o seu perfil.',
-    requiredProfile: 'profissional',
-    resources: [{ label: 'Dashboard profissional', endpoint: '/api/core/professional/dashboard' }],
-  },
-  admin: {
-    eyebrow: 'Administração',
-    title: 'Operação e governança',
-    description: 'Usuários, auditoria e status de ingestão sem dados de demonstração.',
-    allowedRoles: ['admin'],
-    resources: [
-      { label: 'Usuários', endpoint: '/api/core/users' },
-      { label: 'Auditoria', endpoint: '/api/core/admin/users/audit' },
-      { label: 'Ingestão', endpoint: '/api/core/operations/ingest' },
-    ],
-  },
   alertas: {
     eyebrow: 'Alertas',
     title: 'Alertas da conta',
@@ -168,10 +119,8 @@ function ResourceCard({ resource }: { resource: ResourceState }) {
     <section className="remote-resource" aria-labelledby={`resource-${resource.label}`}>
       <div className="remote-resource-heading">
         <div>
-          <p className="eyebrow">Fonte protegida</p>
           <h2 id={`resource-${resource.label}`}>{resource.label}</h2>
         </div>
-        <code>{resource.endpoint}</code>
       </div>
       {resource.status === 'loading' ? <p className="remote-state">Carregando…</p> : null}
       {resource.status === 'error' ? (

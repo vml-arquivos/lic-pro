@@ -1,10 +1,23 @@
-import { ProtectedRemoteDashboard } from '../components/ProtectedRemoteDashboard';
+import { requireArea } from '../../lib/session';
+import { PageHeader } from '../components/ui';
+import { MentorAlunos } from './MentorAlunos';
 
+export const dynamic = 'force-dynamic';
 export const metadata = {
-  title: 'Painel do mentor | Licite Comigo',
-  description: 'Acompanhamento protegido de mentorados e concessões.',
+  title: 'Meus alunos | Licite Comigo',
+  description: 'Acompanhamento dos alunos do curso.',
 };
 
-export default function MentorPage() {
-  return <ProtectedRemoteDashboard kind="mentor" />;
+export default async function MentorPage() {
+  await requireArea('administracao', 'mentor');
+  return (
+    <div className="ui-page">
+      <PageHeader
+        eyebrow="Mentoria"
+        title="Meus alunos"
+        description="Só aparecem os alunos que você acompanha. Abra um aluno para ver o plano, as práticas e as anotações."
+      />
+      <MentorAlunos />
+    </div>
+  );
 }

@@ -13,7 +13,8 @@ INSERT INTO editais (
   sistema_origem, codigo_modalidade, codigo_modo_disputa, codigo_instrumento,
   instrumento, modo_disputa, situacao, esfera, poder, municipio_ibge, municipio_nome,
   srp, data_atualizacao, data_abertura_proposta, data_encerramento_proposta,
-  data_abertura_propostas, data_encerramento_propostas, valor_homologado, estado_completude
+  data_abertura_propostas, data_encerramento_propostas, valor_homologado, estado_completude,
+  orgao_cnpj, numero_compra, processo, amparo_legal, informacao_complementar
 ) VALUES (
   %(tenant_id)s, %(fonte)s, %(id_externo)s, %(titulo)s, %(orgao)s, %(uf)s, %(uasg)s,
   %(modalidade)s, %(valor_estimado)s, %(data_publicacao)s, %(url_origem)s,
@@ -22,7 +23,8 @@ INSERT INTO editais (
   %(situacao)s, %(esfera)s, %(poder)s, %(municipio_ibge)s, %(municipio_nome)s, %(srp)s,
   %(data_atualizacao)s, %(data_abertura_proposta)s, %(data_encerramento_proposta)s,
   %(data_abertura_propostas)s, %(data_encerramento_propostas)s, %(valor_homologado)s,
-  %(estado_completude)s
+  %(estado_completude)s, %(orgao_cnpj)s, %(numero_compra)s, %(processo)s, %(amparo_legal)s,
+  %(informacao_complementar)s
 )
 ON CONFLICT (tenant_id, fonte, id_externo) DO UPDATE SET
   titulo = EXCLUDED.titulo,
@@ -54,6 +56,11 @@ ON CONFLICT (tenant_id, fonte, id_externo) DO UPDATE SET
   data_encerramento_propostas = EXCLUDED.data_encerramento_propostas,
   valor_homologado = EXCLUDED.valor_homologado,
   estado_completude = EXCLUDED.estado_completude,
+  orgao_cnpj = EXCLUDED.orgao_cnpj,
+  numero_compra = EXCLUDED.numero_compra,
+  processo = EXCLUDED.processo,
+  amparo_legal = EXCLUDED.amparo_legal,
+  informacao_complementar = EXCLUDED.informacao_complementar,
   updated_at = now()
 RETURNING (xmax = 0) AS inserted;
 """
@@ -110,4 +117,9 @@ def _parameters(tender: NormalizedTender) -> dict[str, Any]:
         "data_encerramento_propostas": tender.data_encerramento_propostas,
         "valor_homologado": tender.valor_homologado,
         "estado_completude": tender.estado_completude,
+        "orgao_cnpj": tender.orgao_cnpj,
+        "numero_compra": tender.numero_compra,
+        "processo": tender.processo,
+        "amparo_legal": tender.amparo_legal,
+        "informacao_complementar": tender.informacao_complementar,
     }

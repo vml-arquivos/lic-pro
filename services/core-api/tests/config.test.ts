@@ -41,4 +41,42 @@ describe('core-api configuration', () => {
     expect(config.emailProvider).toBe('smtp');
     expect(config.signupEnabled).toBe(true);
   });
+
+  it('aceita valores colados com espaços e em maiúsculas', () => {
+    const config = loadConfig({
+      ...productionEnv,
+      EMAIL_PROVIDER: ' Disabled ',
+      SIGNUP_ENABLED: ' false ',
+    });
+    expect(config.emailProvider).toBe('disabled');
+    expect(config.signupEnabled).toBe(false);
+  });
+
+  it('coleta do PNCP: padrões seguros e limites', () => {
+    const defaults = loadConfig({ ...productionEnv, EMAIL_PROVIDER: 'disabled' });
+    expect(defaults).toMatchObject({
+      pncpSyncEnabled: true,
+      pncpSyncIntervalMinutes: 30,
+      pncpSyncDays: 2,
+      pncpSyncModalidades: [6, 8, 4],
+      pncpSyncMaxPages: 40,
+      pncpBaseUrl: 'https://pncp.gov.br/api/consulta',
+    });
+    const custom = loadConfig({
+      ...productionEnv,
+      EMAIL_PROVIDER: 'disabled',
+      PNCP_SYNC_ENABLED: 'false',
+      PNCP_SYNC_INTERVAL_MINUTES: '1',
+      PNCP_SYNC_DAYS: '99',
+      PNCP_SYNC_MODALIDADES: '6, 6, abc, 99, 9',
+      PNCP_BASE_URL: 'https://pncp.example.test/api/consulta/',
+    });
+    expect(custom).toMatchObject({
+      pncpSyncEnabled: false,
+      pncpSyncIntervalMinutes: 5,
+      pncpSyncDays: 30,
+      pncpSyncModalidades: [6, 9],
+      pncpBaseUrl: 'https://pncp.example.test/api/consulta',
+    });
+  });
 });

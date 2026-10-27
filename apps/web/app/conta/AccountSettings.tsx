@@ -3,14 +3,14 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { NICHE_CATALOG } from '@licitecomigo/shared';
+import { AREA_LABELS, NICHE_CATALOG, flatMenu, type Area } from '@licitecomigo/shared';
 
 type Account = {
   id: string;
   email: string;
   nome: string;
   papel: string;
-  publico: 'empresa' | 'mentoria';
+  area?: Area;
   nivel_diagnostico: 'sem_diagnostico' | 'iniciante' | 'em_evolucao' | 'pronto_para_operar';
   perfil_jornada: 'iniciante' | 'mentorado' | 'profissional';
   onboarding_concluido: boolean;
@@ -22,21 +22,43 @@ type Account = {
 
 type ProfileForm = {
   nome: string;
-  publico: Account['publico'];
   nivel_diagnostico: Account['nivel_diagnostico'];
   perfil_jornada: Account['perfil_jornada'];
 };
 
 const journeyOptions = [
-  { value: 'iniciante', label: 'Iniciante' },
-  { value: 'mentorado', label: 'Mentorado' },
-  { value: 'profissional', label: 'Empresário avançado' },
+  { value: 'iniciante', label: 'Iniciante — explicações simples' },
+  { value: 'mentorado', label: 'Mentorado — estudo com acompanhamento' },
+  { value: 'profissional', label: 'Avançado — visão direta e densa' },
 ] as const;
 
-const audienceOptions = [
-  { value: 'empresa', label: 'Empresa' },
-  { value: 'mentoria', label: 'Mentoria' },
-] as const;
+/** Mesma regra do servidor: cada área só pode escolher modos coerentes com ela. */
+const journeyByArea: Record<Area, readonly string[]> = {
+  administracao: ['iniciante', 'mentorado', 'profissional'],
+  empresa: ['iniciante', 'profissional'],
+  aluno: ['iniciante', 'mentorado'],
+  mentor: ['iniciante', 'mentorado', 'profissional'],
+};
+
+const panelDescriptions: Record<string, string> = {
+  '/admin': 'Indicadores da operação, clientes, curso e coleta.',
+  '/leads': 'Contatos captados pelo site.',
+  '/admin/empresas': 'Convidar e acompanhar empresas clientes.',
+  '/admin/alunos': 'Matrículas, turmas e convites do curso.',
+  '/admin/mentores': 'Mentores e seus alunos.',
+  '/admin/fontes': 'Situação da coleta de editais.',
+  '/admin/auditoria': 'Registro das ações administrativas.',
+  '/painel': 'Resumo da sua área.',
+  '/radar': 'Busque e filtre licitações.',
+  '/buscas-salvas': 'Consultas salvas e regras de alerta.',
+  '/alertas': 'Avisos dentro do seu escopo.',
+  '/oportunidades': 'Editais que você colocou no pipeline.',
+  '/pregoes': 'Publicações capturadas com fonte oficial.',
+  '/empresas': 'CNPJs e dados da empresa.',
+  '/academia': 'Trilhas e aulas.',
+  '/mentor': 'Alunos acompanhados e progresso.',
+  '/ana': 'Tire dúvidas com a Ana.',
+};
 
 const diagnosisOptions = [
   { value: 'sem_diagnostico', label: 'Ainda não informado' },
@@ -48,10 +70,11 @@ const diagnosisOptions = [
 function roleLabel(role: string) {
   return (
     {
-      admin: 'Administrador',
-      operador: 'Operação',
+      plataforma: 'Equipe Licite Comigo',
+      admin: 'Empresa',
+      operador: 'Empresa',
       mentor: 'Mentor',
-      aluno: 'Mentorado',
+      aluno: 'Aluno',
     }[role] ?? role
   );
 }
@@ -106,7 +129,6 @@ export function AccountSettings() {
         setAccount(current);
         setProfileForm({
           nome: current.nome,
-          publico: current.publico,
           nivel_diagnostico: current.nivel_diagnostico,
           perfil_jornada: current.perfil_jornada,
         });
@@ -121,74 +143,14 @@ export function AccountSettings() {
   }, []);
 
   const panels = useMemo(() => {
-    if (!account) return [];
-    const role = account.papel.toLowerCase();
-    const result = [
-      {
-        label: 'Painel geral',
-        description: 'Resumo da sua conta, empresas e operação.',
-        href: '/painel',
-      },
-      {
-        label: 'Alertas',
-        description: 'Notificações geradas dentro do seu escopo.',
-        href: '/alertas',
-      },
-      {
-        label: 'Buscas salvas',
-        description: 'Consultas e regras de alerta da sua conta.',
-        href: '/buscas-salvas',
-      },
-      {
-        label: 'Pregões publicados',
-        description: 'Publicações capturadas com fonte oficial.',
-        href: '/pregoes',
-      },
-      {
-        label: 'Oportunidades',
-        description: 'Editais salvos no pipeline da conta.',
-        href: '/oportunidades',
-      },
-      {
-        label: 'Empresas',
-        description: 'CNPJs e empresas acessíveis pela sua conta.',
-        href: '/empresas',
-      },
-    ];
-    if (role === 'mentor' || role === 'admin') {
-      result.push({
-        label: 'Painel do mentor',
-        description: 'Mentorados e empresas com concessão explícita.',
-        href: '/mentor',
-      });
-    }
-    if (role === 'aluno' || account.perfil_jornada === 'mentorado') {
-      result.push({
-        label: 'Área do mentorado',
-        description: 'Progresso da jornada e acompanhamento.',
-        href: '/mentorado',
-      });
-    }
-    if (account.perfil_jornada === 'profissional' || role === 'operador') {
-      result.push({
-        label: 'Painel profissional',
-        description: 'Oportunidades, prazos e tarefas do perfil profissional.',
-        href: '/profissional',
-      });
-    }
-    if (role === 'admin') {
-      result.push({
-        label: 'Administração',
-        description: 'Usuários, auditoria e operação protegida.',
-        href: '/admin',
-      });
-      result.push({
-        label: 'Leads',
-        description: 'Leads capturados com consentimento e status de atendimento.',
-        href: '/leads',
-      });
-    }
-    return result;
+    if (!account?.area) return [];
+    return flatMenu(account.area)
+      .filter((item) => item.href !== '/conta')
+      .map((item) => ({
+        label: item.label,
+        description: panelDescriptions[item.href] ?? '',
+        href: item.href,
+      }));
   }, [account]);
 
   function updateNiche(index: number, value: string) {
@@ -319,7 +281,8 @@ export function AccountSettings() {
 
       <section className="account-status-bar" aria-label="Status da conta">
         <span>
-          <strong>{roleLabel(account.papel)}</strong> · {account.email}
+          <strong>{account.area ? AREA_LABELS[account.area] : roleLabel(account.papel)}</strong> ·{' '}
+          {account.email}
         </span>
         <span
           className={account.email_verificado_em ? 'account-status-ok' : 'account-status-warning'}
@@ -353,25 +316,7 @@ export function AccountSettings() {
             </label>
             <div className="account-form-grid">
               <label>
-                Público da conta
-                <select
-                  value={profileForm.publico}
-                  onChange={(event) =>
-                    setProfileForm({
-                      ...profileForm,
-                      publico: event.target.value as ProfileForm['publico'],
-                    })
-                  }
-                >
-                  {audienceOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Perfil de jornada
+                Modo de uso
                 <select
                   value={profileForm.perfil_jornada}
                   onChange={(event) =>
@@ -381,11 +326,15 @@ export function AccountSettings() {
                     })
                   }
                 >
-                  {journeyOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
+                  {journeyOptions
+                    .filter((option) =>
+                      journeyByArea[account.area ?? 'empresa'].includes(option.value),
+                    )
+                    .map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
                 </select>
               </label>
               <label>

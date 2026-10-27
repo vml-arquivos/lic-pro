@@ -1,10 +1,12 @@
-import { requireDemoMode } from '../workspace/demo';
-export const dynamic = 'force-dynamic';
-import { ModulePage } from '../workspace/ModulePage';
+import { DocumentosApp } from './DocumentosApp';
 
-export const metadata = { title: 'Documentos | Licite Comigo' };
+export const dynamic = 'force-dynamic';
+
+export const metadata = {
+  title: 'Documentos da empresa | Licite Comigo',
+  description: 'Validade dos documentos de habilitação da sua empresa.',
+};
 
 export default function DocumentosPage() {
-  requireDemoMode();
-  return <ModulePage module="documentos" />;
+  return <DocumentosApp />;
 }

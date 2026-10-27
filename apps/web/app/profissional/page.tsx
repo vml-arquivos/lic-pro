@@ -1,10 +1,6 @@
-import { ProtectedRemoteDashboard } from '../components/ProtectedRemoteDashboard';
+import { redirect } from 'next/navigation';
 
-export const metadata = {
-  title: 'Profissional | Licite Comigo',
-  description: 'Dashboard profissional protegido do Licite Comigo.',
-};
-
-export default function ProfissionalPage() {
-  return <ProtectedRemoteDashboard kind="profissional" />;
+// Página antiga. Cada área agora tem o seu painel em /painel.
+export default function LegacyPage() {
+  redirect('/painel');
 }

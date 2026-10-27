@@ -126,6 +126,11 @@ class NormalizedTender:
     data_encerramento_proposta: datetime | None = None
     valor_homologado: Decimal | None = None
     estado_completude: str | None = None
+    orgao_cnpj: str | None = None
+    numero_compra: str | None = None
+    processo: str | None = None
+    amparo_legal: str | None = None
+    informacao_complementar: str | None = None
 
     @property
     def identity(self) -> tuple[str, str, str, str]:

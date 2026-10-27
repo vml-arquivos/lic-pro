@@ -5,34 +5,48 @@ import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest }
 import type { Pool } from 'pg';
 import { z } from 'zod';
 import {
+  GRANDE_VULTO_PADRAO,
   NICHE_CATALOG,
+  REGIAO_LABELS,
+  REGIOES,
+  UFS_POR_REGIAO,
   health,
   isNicheCode,
-  nicheDefinitions,
-  normalizeNicheCodes,
 } from '@licitecomigo/shared';
 import { createOpaqueToken, hashIp, hashOpaqueToken, PublicRateLimiter } from './auth-public.js';
 import {
+  activeArea,
+  allowedAreas,
+  areaSchema,
   assertTenant,
   authClaimsSchema,
+  databaseRole,
   hasRole,
   journeyProfileSchema,
   type UserRole,
 } from './auth.js';
+import {
+  audit,
+  auditPublic,
+  authContext,
+  requireRoles,
+  sendDatabaseUnavailable,
+  withPlatform,
+} from './request-context.js';
+import { registerCollectionRoutes } from './coleta-routes.js';
+import { registerPlatformRoutes } from './platform.js';
 import { loadConfig, type RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
 import { assertStrongPassword, hashPassword, verifyPassword } from './password.js';
 import { sendEmail } from './email.js';
 import { checkReadiness } from './readiness.js';
-import { buildEditalSearchQuery, editalSearchSchema } from './search.js';
-import { assertMentorCapability } from './capabilities.js';
-import {
-  alertQuerySchema,
-  alertReadSchema,
-  sanitizeMessage,
-  savedSearchPatchSchema,
-  savedSearchSchema,
-} from './alerts.js';
+import { applyNicheScope, readUserNiches } from './niche-scope.js';
+import { registerAlertRoutes } from './alerts-routes.js';
+import { registerCompanyRoutes } from './empresa.js';
+import { registerLearningRoutes } from './learning.js';
+import { registerRadarRoutes } from './radar.js';
+import { ESTADO_USUARIO, ORDEM, PERIODO_TIPO, SITUACAO_PRAZO, SITUACAO_TIPO } from './search.js';
+import { alertReadSchema, savedSearchPatchSchema, savedSearchSchema } from './alerts.js';
 
 export type BuildAppOptions = {
   pool?: Pool;
@@ -45,7 +59,6 @@ const tenantPathSchema = z.object({ tenantId: z.string().uuid() });
 const userPathSchema = z.object({ userId: z.string().uuid() });
 const companyPathSchema = z.object({ companyId: z.string().uuid() });
 const concessionPathSchema = z.object({ concessionId: z.string().uuid() });
-const opportunityPathSchema = z.object({ opportunityId: z.string().uuid() });
 const chunkPathSchema = z.object({ chunkId: z.string().uuid() });
 const tenantBodySchema = z.object({
   nome: z.string().trim().min(1).max(160),
@@ -171,41 +184,6 @@ const concessionSchema = z.object({
   escopo: z.record(z.unknown()).default({}),
   fim_em: z.string().datetime().optional(),
 });
-const opportunitySchema = z.object({
-  empresa_id: z.string().uuid(),
-  edital_id: z.string().uuid(),
-  status: z
-    .enum([
-      'salva',
-      'triagem',
-      'em_analise',
-      'em_habilitacao',
-      'proposta',
-      'arquivada',
-      'ganha',
-      'perdida',
-    ])
-    .default('salva'),
-  observacoes: z.string().max(5000).optional(),
-});
-const opportunityUpdateSchema = opportunitySchema
-  .partial()
-  .omit({ empresa_id: true, edital_id: true });
-const opportunityQuerySchema = z.object({
-  empresa_id: z.string().uuid().optional(),
-  status: z
-    .enum([
-      'salva',
-      'triagem',
-      'em_analise',
-      'em_habilitacao',
-      'proposta',
-      'arquivada',
-      'ganha',
-      'perdida',
-    ])
-    .optional(),
-});
 const correctionSchema = z.object({
   titulo: z.string().trim().min(1).max(500).optional(),
   orgao: z.string().trim().max(300).nullable().optional(),
@@ -221,136 +199,39 @@ const chunkCorrectionSchema = z.object({
   observacao_correcao: z.string().trim().max(2000).optional(),
 });
 const publicRateLimiter = new PublicRateLimiter(12);
+// O app web chama o core-api de dentro da rede: todo login chega com o mesmo IP. O limite por
+// IP é largo (proteção geral); o apertado é por IP + e-mail (proteção contra adivinhar senha).
+const loginIpLimiter = new PublicRateLimiter(120);
 
-function rawNicheCodes(value: unknown): string[] {
-  if (value === undefined || value === null) return [];
-  return (Array.isArray(value) ? value : [value]).map(String);
-}
+const JOURNEY_BY_ROLE: Record<UserRole, readonly string[]> = {
+  plataforma: ['iniciante', 'mentorado', 'profissional'],
+  admin: ['iniciante', 'profissional'],
+  operador: ['iniciante', 'profissional'],
+  aluno: ['iniciante', 'mentorado'],
+  mentor: ['iniciante', 'mentorado', 'profissional'],
+};
 
-function validatedNicheCodes(value: unknown): string[] {
-  const raw = rawNicheCodes(value);
-  const normalized = normalizeNicheCodes(raw);
-  if (raw.length !== normalized.length || new Set(raw).size !== raw.length) {
-    throw new Error('invalid_niche');
-  }
-  return normalized;
-}
-
-function nicheTerms(codes: readonly string[]): string[] {
-  return [...new Set(nicheDefinitions(codes).flatMap((niche) => niche.terms))];
-}
-
-async function readUserNiches(
-  client: Parameters<Parameters<typeof withTenant>[2]>[0],
-  tenantId: string,
-  userId: string,
-): Promise<string[]> {
-  const result = await client.query<{ nicho_preferencias: unknown }>(
-    'SELECT nicho_preferencias FROM usuarios WHERE tenant_id = $1 AND id = $2',
-    [tenantId, userId],
-  );
-  const value = result.rows[0]?.nicho_preferencias;
-  return Array.isArray(value) ? normalizeNicheCodes(value.map(String)) : [];
-}
-
-function applyNicheScope(
-  filters: Record<string, unknown>,
-  preferences: readonly string[],
-  role: string,
-): Record<string, unknown> {
-  const explicit = filters.nicho === undefined ? [] : validatedNicheCodes(filters.nicho);
-  const restricted = !['admin', 'operador'].includes(role);
-  if (restricted && preferences.length === 0) throw new Error('niche_preferences_required');
-  if (restricted && explicit.some((code) => !preferences.includes(code))) {
-    throw new Error('niche_not_allowed');
-  }
-  const selected = explicit.length > 0 ? explicit : [...preferences];
-  return selected.length
-    ? { ...filters, nicho: selected, nicho_termos: nicheTerms(selected) }
-    : filters;
-}
-
-function sendDatabaseUnavailable(reply: FastifyReply): void {
-  reply
-    .code(503)
-    .send({ error: 'database_unavailable', message: 'Banco não configurado neste ambiente.' });
-}
-
-function authContext(request: FastifyRequest) {
-  const context = { tenantId: request.user.tenantId, userId: request.user.sub };
-  const withRole = { ...context, role: request.user.role };
-  return request.user.empresaId ? { ...withRole, empresaId: request.user.empresaId } : withRole;
-}
-
-function requireRoles(
+/**
+ * O tipo de conta (`publico`) e a área não são escolhidos pelo usuário. Só a equipe da
+ * plataforma altera `publico`. `perfil_jornada` é só preferência de conforto e precisa ser
+ * coerente com a área da conta (empresa não vira "mentorado" por conta própria).
+ */
+function rejectForbiddenProfileChange(
   reply: FastifyReply,
   request: FastifyRequest,
-  roles: readonly UserRole[],
+  body: { publico?: string | undefined; perfil_jornada?: string | undefined },
 ): boolean {
-  if (!hasRole(request.user, roles)) {
-    reply.code(403).send({ error: 'forbidden' });
-    return false;
+  const role = request.user.role;
+  const forbidden =
+    (body.publico !== undefined && role !== 'plataforma') ||
+    (body.perfil_jornada !== undefined && !JOURNEY_BY_ROLE[role].includes(body.perfil_jornada));
+  if (forbidden) {
+    reply.code(403).send({
+      error: 'profile_change_forbidden',
+      message: 'O tipo de conta é definido pela equipe do Licite Comigo.',
+    });
   }
-  return true;
-}
-
-function sanitizeAuditMetadata(value: unknown, depth = 0): unknown {
-  if (depth > 3) return '[truncated]';
-  if (typeof value === 'string') return sanitizeMessage(value, 500);
-  if (typeof value === 'number' || typeof value === 'boolean' || value === null) return value;
-  if (Array.isArray(value))
-    return value.slice(0, 50).map((item) => sanitizeAuditMetadata(item, depth + 1));
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value)
-        .slice(0, 50)
-        .map(([key, item]) => [sanitizeMessage(key, 100), sanitizeAuditMetadata(item, depth + 1)]),
-    );
-  }
-  return undefined;
-}
-
-async function audit(
-  client: Parameters<Parameters<typeof withTenant>[2]>[0],
-  request: FastifyRequest,
-  action: string,
-  resource: string,
-  resourceId: string | null,
-  metadata: Record<string, unknown> = {},
-): Promise<void> {
-  await client.query(
-    `INSERT INTO auditoria
-       (tenant_id, usuario_id, empresa_id, acao, recurso, recurso_id, metadata, request_id, origem, versao_dados)
-     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, 'app', 'mvp1')`,
-    [
-      request.user.tenantId,
-      request.user.sub,
-      request.user.empresaId ?? null,
-      action,
-      resource,
-      resourceId,
-      JSON.stringify(sanitizeAuditMetadata(metadata)),
-      request.id,
-    ],
-  );
-}
-
-async function auditPublic(
-  client: Parameters<Parameters<typeof withTenant>[2]>[0],
-  request: FastifyRequest,
-  tenantId: string,
-  userId: string,
-  action: string,
-  resource: string,
-  resourceId: string | null,
-  metadata: Record<string, unknown> = {},
-): Promise<void> {
-  await client.query(
-    `INSERT INTO auditoria
-       (tenant_id, usuario_id, acao, recurso, recurso_id, metadata, request_id, origem, versao_dados)
-     VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, 'public', 'phase3.3')`,
-    [tenantId, userId, action, resource, resourceId, JSON.stringify(metadata), request.id],
-  );
+  return forbidden;
 }
 
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
@@ -372,6 +253,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof z.ZodError) {
       reply.code(400).send({ error: 'validation_error', details: error.flatten() });
+      return;
+    }
+    if (error instanceof Error && error.message === 'platform_forbidden') {
+      reply.code(403).send({ error: 'forbidden' });
       return;
     }
     if (error instanceof Error && error.message === 'tenant_forbidden') {
@@ -416,7 +301,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       '/auth/verify-email',
       '/auth/password-recovery',
       '/auth/password-reset',
+      '/auth/invitations/preview',
+      '/auth/invitations/accept',
       '/public/leads',
+      '/public/alerts/unsubscribe',
     ]);
     if (publicPaths.has(request.url.split('?')[0] ?? '')) {
       return;
@@ -437,7 +325,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   app.post('/auth/login', async (request, reply) => {
     const body = loginSchema.parse(request.body);
-    publicRateLimiter.check(`login:${request.ip}`);
+    loginIpLimiter.check(`login-ip:${request.ip}`);
+    publicRateLimiter.check(`login:${request.ip}:${body.email.toLowerCase()}`);
     if (!pool) return sendDatabaseUnavailable(reply);
 
     const client = await pool.connect();
@@ -834,20 +723,21 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      const duplicate = await client.query(
-        `SELECT id FROM leads WHERE lower(email) = lower($1) AND created_at > now() - interval '24 hours' LIMIT 1`,
+      // O aplicativo não tem SELECT direto em `leads`; a checagem passa por uma função do banco.
+      const duplicate = await client.query<{ recebido: boolean }>(
+        'SELECT lead_recebido_recentemente($1) AS recebido',
         [body.email],
       );
-      if (duplicate.rows[0]) {
+      if (duplicate.rows[0]?.recebido) {
         await client.query('COMMIT');
         return reply.code(202).send({ message: 'recebido' });
       }
-      const inserted = await client.query<{ id: string }>(
+      const leadId = randomUUID();
+      await client.query(
         `INSERT INTO leads
-          (nome, email, whatsapp, perfil, consentimento_lgpd, consentimento_versao, consentimento_em,
+          (id, nome, email, whatsapp, perfil, consentimento_lgpd, consentimento_versao, consentimento_em,
            origem, utm_source, utm_medium, utm_campaign, ip_hash)
-         VALUES ($1, lower($2), $3, $4, true, $5, now(), $6, $7, $8, $9, $10)
-         RETURNING id`,
+         VALUES ($11, $1, lower($2), $3, $4, true, $5, now(), $6, $7, $8, $9, $10)`,
         [
           body.nome,
           body.email,
@@ -859,12 +749,13 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           body.utm_medium ?? null,
           body.utm_campaign ?? null,
           ipHash,
+          leadId,
         ],
       );
       await client.query(
         `INSERT INTO leads_auditoria (lead_id, acao, ip_hash, metadata)
          VALUES ($1, 'lead.created', $2, $3::jsonb)`,
-        [inserted.rows[0]?.id, ipHash, JSON.stringify({ origem: body.origem ?? null })],
+        [leadId, ipHash, JSON.stringify({ origem: body.origem ?? null })],
       );
       await client.query('COMMIT');
       return reply.code(202).send({ message: 'recebido' });
@@ -877,14 +768,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.get('/admin/leads', async (request, reply) => {
-    if (!requireRoles(reply, request, ['admin'])) return;
+    if (!requireRoles(reply, request, ['plataforma'])) return;
     if (!pool) return sendDatabaseUnavailable(reply);
-    const result = await withTenant(pool, authContext(request), async (client) =>
-      client.query(
-        `SELECT id, nome, email, whatsapp, perfil, consentimento_versao, consentimento_em,
-                origem, utm_source, utm_medium, utm_campaign, status, created_at
-           FROM leads ORDER BY created_at DESC LIMIT 200`,
-      ),
+    const result = await withPlatform(pool, request, 'platform.leads.listed', (client) =>
+      client.query('SELECT * FROM plataforma_listar_leads(200)'),
     );
     return reply.send({ data: result.rows });
   });
@@ -897,8 +784,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
                 u.perfil_jornada, u.onboarding_concluido, u.nicho_preferencias,
                 u.email_verificado_em, u.termos_versao, u.termos_aceitos_em,
                 u.politica_versao, u.politica_aceita_em, u.created_at, u.updated_at,
+                u.visualizar_como, tn.nome AS tenant_nome,
                 eu.empresa_id, eu.papel AS empresa_papel
            FROM usuarios u
+           JOIN tenants tn ON tn.id = u.tenant_id
            LEFT JOIN empresa_usuarios eu
              ON eu.usuario_id = u.id AND eu.tenant_id = u.tenant_id AND eu.ativo = true
           WHERE u.tenant_id = $1 AND u.id = $2
@@ -907,12 +796,39 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         [request.user.tenantId, request.user.sub],
       ),
     );
-    if (!result.rows[0]) return reply.code(404).send({ error: 'user_not_found' });
-    return reply.send(result.rows[0]);
+    const account = result.rows[0];
+    if (!account) return reply.code(404).send({ error: 'user_not_found' });
+    // A área vem do papel do token, nunca de preferências do usuário.
+    const role = request.user.role;
+    return reply.send({
+      ...account,
+      papel: role,
+      area: activeArea(role, account.visualizar_como as string | null),
+      areas_permitidas: allowedAreas(role),
+      plataforma: role === 'plataforma',
+    });
+  });
+
+  // "Ver como": só a equipe da plataforma. Muda a interface, nunca a autoridade da requisição.
+  app.patch('/me/view-as', async (request, reply) => {
+    if (!requireRoles(reply, request, ['plataforma'])) return;
+    const body = z.object({ area: areaSchema }).parse(request.body);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    await withTenant(pool, authContext(request), async (client) => {
+      await client.query(
+        'UPDATE usuarios SET visualizar_como = $3, updated_at = now() WHERE tenant_id = $1 AND id = $2',
+        [request.user.tenantId, request.user.sub, body.area],
+      );
+      await audit(client, request, 'platform.view_as.changed', 'usuario', request.user.sub, {
+        area: body.area,
+      });
+    });
+    return reply.send({ area: body.area });
   });
 
   app.patch('/me', async (request, reply) => {
     const body = accountProfileSchema.parse(request.body);
+    if (rejectForbiddenProfileChange(reply, request, body)) return;
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
       const updated = await client.query(
@@ -950,6 +866,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   app.patch('/me/diagnostico', async (request, reply) => {
     const body = diagnosisSchema.parse(request.body);
+    if (rejectForbiddenProfileChange(reply, request, body)) return;
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
       const updated = await client.query(
@@ -996,7 +913,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.post('/companies', async (request, reply) => {
-    if (!requireRoles(reply, request, ['admin', 'operador'])) return;
+    if (!requireRoles(reply, request, ['plataforma', 'admin', 'operador'])) return;
     const body = companySchema.parse(request.body);
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
@@ -1028,7 +945,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.patch('/companies/:companyId', async (request, reply) => {
-    if (!requireRoles(reply, request, ['admin', 'operador'])) return;
+    if (!requireRoles(reply, request, ['plataforma', 'admin', 'operador'])) return;
     const { companyId } = companyPathSchema.parse(request.params);
     const body = companyUpdateSchema.parse(request.body);
     if (!pool) return sendDatabaseUnavailable(reply);
@@ -1061,7 +978,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.post('/mentor/concessions', async (request, reply) => {
-    if (!requireRoles(reply, request, ['admin'])) return;
+    if (!requireRoles(reply, request, ['plataforma'])) return;
     const body = concessionSchema.parse(request.body);
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
@@ -1088,7 +1005,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.get('/mentor/companies', async (request, reply) => {
-    if (!requireRoles(reply, request, ['admin', 'mentor'])) return;
+    if (!requireRoles(reply, request, ['plataforma', 'mentor'])) return;
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) =>
       client.query(
@@ -1098,14 +1015,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           WHERE cm.tenant_id = $1 AND cm.revogada_em IS NULL
             AND (cm.mentor_id = $2 OR $3 = 'admin')
           ORDER BY e.razao_social`,
-        [request.user.tenantId, request.user.sub, request.user.role],
+        [request.user.tenantId, request.user.sub, databaseRole(request.user.role)],
       ),
     );
     return reply.send({ data: result.rows });
   });
 
   app.delete('/mentor/concessions/:concessionId', async (request, reply) => {
-    if (!requireRoles(reply, request, ['admin'])) return;
+    if (!requireRoles(reply, request, ['plataforma'])) return;
     const { concessionId } = concessionPathSchema.parse(request.params);
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
@@ -1124,7 +1041,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.post('/tenants', async (request, reply) => {
-    if (!requireRoles(reply, request, ['admin'])) return;
+    if (!requireRoles(reply, request, ['plataforma', 'admin'])) return;
     const body = tenantBodySchema.parse(request.body);
     const tenantId = request.user.tenantId;
     if (!pool) return sendDatabaseUnavailable(reply);
@@ -1157,7 +1074,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.patch('/tenants/:tenantId', async (request, reply) => {
-    if (!requireRoles(reply, request, ['admin'])) return;
+    if (!requireRoles(reply, request, ['plataforma', 'admin'])) return;
     const { tenantId } = tenantPathSchema.parse(request.params);
     assertTenant(request.user, tenantId);
     const body = tenantBodySchema.partial().parse(request.body);
@@ -1177,7 +1094,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.get('/users', async (request, reply) => {
-    if (!requireRoles(reply, request, ['admin', 'mentor'])) return;
+    if (!requireRoles(reply, request, ['plataforma', 'mentor'])) return;
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) =>
       client.query(
@@ -1191,7 +1108,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.post('/users', async (request, reply) => {
-    if (!requireRoles(reply, request, ['admin'])) return;
+    if (!requireRoles(reply, request, ['plataforma'])) return;
     const body = createUserSchema.parse(request.body);
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
@@ -1217,7 +1134,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   app.patch('/users/:userId', async (request, reply) => {
     const { userId } = userPathSchema.parse(request.params);
-    if (userId !== request.user.sub && !hasRole(request.user, ['admin'])) {
+    if (userId !== request.user.sub && !hasRole(request.user, ['plataforma'])) {
       return reply.code(403).send({ error: 'forbidden' });
     }
     const body = updateUserSchema.parse(request.body);
@@ -1250,7 +1167,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.get('/admin/users/audit', async (request, reply) => {
-    if (!requireRoles(reply, request, ['admin'])) return;
+    if (!requireRoles(reply, request, ['plataforma'])) return;
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) =>
       client.query(
@@ -1268,7 +1185,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.get('/operations/ingest', async (request, reply) => {
-    if (!requireRoles(reply, request, ['admin', 'operador'])) return;
+    if (!requireRoles(reply, request, ['plataforma'])) return;
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
       const [checkpoints, deadLetters] = await Promise.all([
@@ -1305,6 +1222,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   app.post('/me/onboarding', async (request, reply) => {
     const body = onboardingSchema.parse(request.body);
+    if (rejectForbiddenProfileChange(reply, request, body)) return;
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
       const updated = await client.query(
@@ -1368,6 +1286,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         'modo_disputa',
         'situacao',
         'instrumento',
+        'amparo_legal',
         'catmat_catser',
       ];
       const values = await Promise.all(
@@ -1375,7 +1294,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           const result = await client.query<{ value: string }>(
             `SELECT DISTINCT ${field} AS value
                FROM editais
-              WHERE tenant_id = $1 AND ${field} IS NOT NULL AND trim(${field}) <> ''
+              WHERE tenant_id IN (SELECT $1::uuid UNION SELECT id FROM plataforma_tenants)
+                AND ${field} IS NOT NULL AND trim(${field}) <> ''
               ORDER BY ${field}
               LIMIT 200`,
             [request.user.tenantId],
@@ -1393,11 +1313,23 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         source,
       })),
       ufs,
+      regioes: REGIOES.map((codigo) => ({
+        codigo,
+        nome: REGIAO_LABELS[codigo],
+        ufs: UFS_POR_REGIAO[codigo],
+      })),
+      grande_vulto_min: GRANDE_VULTO_PADRAO,
+      situacao_prazo: SITUACAO_PRAZO,
+      situacao_tipo: SITUACAO_TIPO,
+      periodo_tipo: PERIODO_TIPO,
+      estados: ESTADO_USUARIO,
+      ordens: ORDEM,
       ...result,
     });
   });
 
   app.get('/saved-searches', async (request, reply) => {
+    if (!requireRoles(reply, request, ['plataforma', 'admin', 'operador'])) return reply;
     if (!pool) return sendDatabaseUnavailable(reply);
     const filters = savedSearchQuerySchema.parse(request.query);
     const result = await withTenant(pool, authContext(request), async (client) =>
@@ -1408,35 +1340,23 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
             AND (usuario_id = $2 OR $3::text IN ('admin', 'operador'))
             AND ($4::boolean IS NULL OR ativa = $4)
           ORDER BY updated_at DESC`,
-        [request.user.tenantId, request.user.sub, request.user.role, filters.ativa ?? null],
+        [
+          request.user.tenantId,
+          request.user.sub,
+          databaseRole(request.user.role),
+          filters.ativa ?? null,
+        ],
       ),
     );
     return reply.send({ data: result.rows });
   });
 
   app.post('/saved-searches', async (request, reply) => {
+    if (!requireRoles(reply, request, ['plataforma', 'admin', 'operador'])) return reply;
     const body = savedSearchSchema.parse(request.body);
     const empresaId = body.empresa_id ?? request.user.empresaId;
-    if (!empresaId && !['admin', 'operador'].includes(request.user.role)) {
-      return reply.code(400).send({ error: 'company_scope_required' });
-    }
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
-      if (request.user.role === 'mentor') {
-        if (!empresaId) throw new Error('tenant_forbidden');
-        await assertMentorCapability(
-          client,
-          request.user.tenantId,
-          request.user.sub,
-          empresaId,
-          'saved_searches',
-        );
-      } else if (
-        !['admin', 'operador'].includes(request.user.role) &&
-        request.user.empresaId !== empresaId
-      ) {
-        throw new Error('tenant_forbidden');
-      }
       const preferences = await readUserNiches(client, request.user.tenantId, request.user.sub);
       const scopedFilters = applyNicheScope(body.filtros, preferences, request.user.role);
       const inserted = await client.query(
@@ -1457,8 +1377,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       );
       const saved = inserted.rows[0];
       await client.query(
-        `INSERT INTO alertas_regras (tenant_id, busca_id, usuario_id, empresa_id, nome, regra, ativa)
-         SELECT $1, $2, $3, $4, $5, $6::jsonb, $7
+        `INSERT INTO alertas_regras (tenant_id, busca_id, usuario_id, empresa_id, nome, regra, ativa,
+                                     canais, frequencia, tipos)
+         SELECT $1, $2, $3, $4, $5, $6::jsonb, $7, '["in_app"]'::jsonb, 'diario', ARRAY['novos']
           WHERE NOT EXISTS (
             SELECT 1 FROM alertas_regras WHERE tenant_id = $1 AND busca_id = $2
           )`,
@@ -1481,6 +1402,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.patch('/saved-searches/:savedSearchId', async (request, reply) => {
+    if (!requireRoles(reply, request, ['plataforma', 'admin', 'operador'])) return reply;
     const { savedSearchId } = savedSearchPathSchema.parse(request.params);
     const body = savedSearchPatchSchema.parse(request.body);
     if (!pool) return sendDatabaseUnavailable(reply);
@@ -1506,7 +1428,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           scopedFilters ? JSON.stringify(scopedFilters) : null,
           body.ativa ?? null,
           request.user.sub,
-          request.user.role,
+          databaseRole(request.user.role),
         ],
       );
       if (!updated.rows[0]) return null;
@@ -1531,6 +1453,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.delete('/saved-searches/:savedSearchId', async (request, reply) => {
+    if (!requireRoles(reply, request, ['plataforma', 'admin', 'operador'])) return reply;
     const { savedSearchId } = savedSearchPathSchema.parse(request.params);
     if (!pool) return sendDatabaseUnavailable(reply);
     const removed = await withTenant(pool, authContext(request), async (client) => {
@@ -1539,7 +1462,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           WHERE id = $1 AND tenant_id = $2
             AND (usuario_id = $3 OR $4::text IN ('admin', 'operador'))
           RETURNING id`,
-        [savedSearchId, request.user.tenantId, request.user.sub, request.user.role],
+        [savedSearchId, request.user.tenantId, request.user.sub, databaseRole(request.user.role)],
       );
       if (result.rows[0]) {
         await audit(client, request, 'saved_search.deleted', 'busca_salva', savedSearchId);
@@ -1548,88 +1471,6 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     });
     if (!removed) return reply.code(404).send({ error: 'saved_search_not_found' });
     return reply.code(204).send();
-  });
-
-  app.get('/alerts', async (request, reply) => {
-    if (!pool) return sendDatabaseUnavailable(reply);
-    const filters = alertQuerySchema.parse(request.query);
-    const offset = (filters.page - 1) * filters.page_size;
-    const result = await withTenant(pool, authContext(request), async (client) => {
-      const preferences = await readUserNiches(client, request.user.tenantId, request.user.sub);
-      const restricted = !['admin', 'operador'].includes(request.user.role);
-      if (restricted && preferences.length === 0) throw new Error('niche_preferences_required');
-      const preferenceTerms = restricted ? nicheTerms(preferences) : [];
-      // A consulta pública não oferece webhook. Ao abrir a inbox, fazemos uma
-      // reconciliação leve sobre os registros já ingeridos no tenant e a chave
-      // de idempotência impede duplicidade entre acessos concorrentes.
-      await client.query(
-        `INSERT INTO alerta_entregas
-           (tenant_id, alerta_regra_id, usuario_id, edital_id, canal, status, idempotency_key, payload)
-         SELECT ar.tenant_id, ar.id, ar.usuario_id, e.id, 'in_app', 'pendente',
-                ar.id::text || ':' || e.id::text || ':' || e.hash_conteudo,
-                jsonb_build_object(
-                  'busca_id', ar.busca_id,
-                  'usuario_id', ar.usuario_id,
-                  'titulo', left(e.titulo, 160),
-                  'mensagem', left('Nova correspondência em ' || bs.nome, 500),
-                  'fonte', e.fonte,
-                  'url_origem', e.url_origem,
-                  'capturado_em', e.updated_at
-                )
-           FROM alertas_regras ar
-           JOIN buscas_salvas bs ON bs.id = ar.busca_id AND bs.tenant_id = ar.tenant_id
-           JOIN editais e ON e.tenant_id = ar.tenant_id
-          WHERE ar.tenant_id = $1
-            AND ar.usuario_id = $2
-            AND ar.ativa = true
-            AND bs.ativa = true
-            AND (ar.regra->>'q' IS NULL OR e.search_vector @@ plainto_tsquery('portuguese', ar.regra->>'q'))
-            AND (ar.regra->>'uf' IS NULL OR e.uf = ar.regra->>'uf')
-            AND (ar.regra->>'modalidade' IS NULL OR e.modalidade = ar.regra->>'modalidade')
-            AND (ar.regra->>'situacao' IS NULL OR e.situacao = ar.regra->>'situacao')
-            AND (
-              ar.regra->'nicho_termos' IS NULL
-              OR EXISTS (
-                SELECT 1
-                  FROM jsonb_array_elements_text(ar.regra->'nicho_termos') AS rule_term
-                 WHERE e.search_vector @@ plainto_tsquery('portuguese', rule_term)
-              )
-            )
-            AND (
-              $3::jsonb = '[]'::jsonb
-              OR EXISTS (
-                SELECT 1
-                  FROM jsonb_array_elements_text($3::jsonb) AS preference_term
-                 WHERE e.search_vector @@ plainto_tsquery('portuguese', preference_term)
-              )
-            )
-         ON CONFLICT (tenant_id, idempotency_key) DO NOTHING`,
-        [request.user.tenantId, request.user.sub, JSON.stringify(preferenceTerms)],
-      );
-      return client.query(
-        `SELECT ae.id, ae.alerta_regra_id, ae.edital_id, ae.canal, ae.status,
-                ae.idempotency_key, ae.payload, ae.entregue_em, ae.created_at,
-                ar.busca_id, bs.nome AS busca_nome,
-                e.titulo, e.orgao, e.fonte, e.url_origem, e.data_publicacao
-           FROM alerta_entregas ae
-           JOIN alertas_regras ar ON ar.id = ae.alerta_regra_id AND ar.tenant_id = ae.tenant_id
-           JOIN buscas_salvas bs ON bs.id = ar.busca_id AND bs.tenant_id = ae.tenant_id
-           JOIN editais e ON e.id = ae.edital_id AND e.tenant_id = ae.tenant_id
-          WHERE ae.tenant_id = $1
-            AND ae.usuario_id = $2
-            AND ($3::boolean = false OR ae.status <> 'lida')
-          ORDER BY ae.created_at DESC
-          LIMIT $4 OFFSET $5`,
-        [
-          request.user.tenantId,
-          request.user.sub,
-          filters.apenas_nao_lidas,
-          filters.page_size,
-          offset,
-        ],
-      );
-    });
-    return reply.send({ data: result.rows, page: filters.page, page_size: filters.page_size });
   });
 
   const markAlertRead = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -1641,12 +1482,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         `UPDATE alerta_entregas
             SET status = CASE WHEN $3 THEN 'lida' ELSE 'pendente' END
           WHERE id = $1 AND tenant_id = $2
-            AND EXISTS (
-              SELECT 1 FROM alertas_regras ar
-               WHERE ar.id = alerta_entregas.alerta_regra_id
-                 AND ar.tenant_id = alerta_entregas.tenant_id
-                 AND ar.usuario_id = $4
-            )
+            AND usuario_id = $4 AND canal = 'in_app' AND status IN ('pendente', 'lida')
           RETURNING id, alerta_regra_id, edital_id, canal, status, payload, entregue_em`,
         [alertId, request.user.tenantId, body.lida, request.user.sub],
       );
@@ -1667,8 +1503,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
                 count(*) FILTER (WHERE ae.status <> 'lida')::integer AS nao_lidas,
                 max(created_at) AS ultimo_alerta
            FROM alerta_entregas ae
-           JOIN alertas_regras ar ON ar.id = ae.alerta_regra_id AND ar.tenant_id = ae.tenant_id
-          WHERE ae.tenant_id = $1 AND ar.usuario_id = $2`,
+          WHERE ae.tenant_id = $1 AND ae.usuario_id = $2
+            AND ae.canal = 'in_app' AND ae.status IN ('pendente', 'lida')`,
         [request.user.tenantId, request.user.sub],
       ),
     );
@@ -1714,145 +1550,6 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return reply.send(result);
   });
 
-  app.get('/opportunities', async (request, reply) => {
-    if (!pool) return sendDatabaseUnavailable(reply);
-    const filters = opportunityQuerySchema.parse(request.query);
-    const result = await withTenant(pool, authContext(request), async (client) =>
-      client.query(
-        `SELECT o.id, o.empresa_id, o.edital_id, o.status, o.observacoes, o.origem,
-                o.created_at, o.updated_at, e.titulo, e.orgao, e.uf, e.modalidade,
-                e.valor_estimado, e.data_publicacao
-           FROM oportunidades_salvas o
-           JOIN editais e ON e.id = o.edital_id
-          WHERE o.tenant_id = $1
-            AND ($2::uuid IS NULL OR o.empresa_id = $2)
-            AND ($3::text IS NULL OR o.status = $3)
-          ORDER BY o.updated_at DESC`,
-        [request.user.tenantId, filters.empresa_id ?? null, filters.status ?? null],
-      ),
-    );
-    return reply.send({ data: result.rows });
-  });
-
-  app.post('/opportunities', async (request, reply) => {
-    const body = opportunitySchema.parse(request.body);
-    if (!pool) return sendDatabaseUnavailable(reply);
-    const result = await withTenant(pool, authContext(request), async (client) => {
-      const inserted = await client.query(
-        `INSERT INTO oportunidades_salvas
-           (tenant_id, empresa_id, usuario_id, edital_id, status, observacoes)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (tenant_id, empresa_id, edital_id) DO UPDATE SET
-           status = EXCLUDED.status, observacoes = EXCLUDED.observacoes, updated_at = now()
-         RETURNING id, tenant_id, empresa_id, usuario_id, edital_id, status, observacoes, origem, created_at, updated_at`,
-        [
-          request.user.tenantId,
-          body.empresa_id,
-          request.user.sub,
-          body.edital_id,
-          body.status,
-          body.observacoes ?? null,
-        ],
-      );
-      await audit(client, request, 'oportunidade.saved', 'oportunidade', inserted.rows[0].id, {
-        edital_id: body.edital_id,
-        empresa_id: body.empresa_id,
-      });
-      return inserted.rows[0];
-    });
-    return reply.code(201).send(result);
-  });
-
-  app.get('/opportunities/:opportunityId', async (request, reply) => {
-    const { opportunityId } = opportunityPathSchema.parse(request.params);
-    if (!pool) return sendDatabaseUnavailable(reply);
-    const result = await withTenant(pool, authContext(request), async (client) => {
-      const [opportunity, checklist, deadlines, tasks] = await Promise.all([
-        client.query(
-          `SELECT o.id, o.empresa_id, o.edital_id, o.status, o.observacoes, o.origem,
-                  o.created_at, o.updated_at, e.titulo, e.orgao, e.uf, e.modalidade,
-                  e.valor_estimado, e.data_publicacao, e.url_origem
-             FROM oportunidades_salvas o JOIN editais e ON e.id = o.edital_id
-            WHERE o.id = $1 AND o.tenant_id = $2`,
-          [opportunityId, request.user.tenantId],
-        ),
-        client.query(
-          `SELECT c.id, c.titulo, c.tipo,
-                  coalesce(json_agg(json_build_object(
-                    'id', ci.id, 'titulo', ci.titulo, 'obrigatorio', ci.obrigatorio,
-                    'concluido', ci.concluido, 'evidencia_url', ci.evidencia_url
-                  ) ORDER BY ci.id) FILTER (WHERE ci.id IS NOT NULL), '[]'::json) AS itens
-             FROM checklists c LEFT JOIN checklist_itens ci ON ci.checklist_id = c.id
-            WHERE c.oportunidade_id = $1 AND c.tenant_id = $2 GROUP BY c.id`,
-          [opportunityId, request.user.tenantId],
-        ),
-        client.query(
-          `SELECT id, titulo, tipo, vence_em, status, fonte
-             FROM prazos_agenda WHERE oportunidade_id = $1 AND tenant_id = $2 ORDER BY vence_em`,
-          [opportunityId, request.user.tenantId],
-        ),
-        client.query(
-          `SELECT id, titulo, descricao, prioridade, status, responsavel_id, vence_em
-             FROM tarefas WHERE oportunidade_id = $1 AND tenant_id = $2 ORDER BY vence_em NULLS LAST`,
-          [opportunityId, request.user.tenantId],
-        ),
-      ]);
-      return {
-        oportunidade: opportunity.rows[0],
-        checklists: checklist.rows,
-        prazos: deadlines.rows,
-        tarefas: tasks.rows,
-      };
-    });
-    if (!result.oportunidade) return reply.code(404).send({ error: 'opportunity_not_found' });
-    return reply.send(result);
-  });
-
-  app.patch('/opportunities/:opportunityId', async (request, reply) => {
-    const { opportunityId } = opportunityPathSchema.parse(request.params);
-    const body = opportunityUpdateSchema.parse(request.body);
-    if (!pool) return sendDatabaseUnavailable(reply);
-    const result = await withTenant(pool, authContext(request), async (client) => {
-      const updated = await client.query(
-        `UPDATE oportunidades_salvas
-            SET status = COALESCE($3, status), observacoes = COALESCE($4, observacoes), updated_at = now()
-          WHERE id = $1 AND tenant_id = $2
-          RETURNING id, empresa_id, edital_id, status, observacoes, origem, updated_at`,
-        [opportunityId, request.user.tenantId, body.status ?? null, body.observacoes ?? null],
-      );
-      if (updated.rows[0])
-        await audit(client, request, 'oportunidade.updated', 'oportunidade', opportunityId);
-      return updated.rows[0];
-    });
-    if (!result) return reply.code(404).send({ error: 'opportunity_not_found' });
-    return reply.send(result);
-  });
-
-  app.get('/editais', async (request, reply) => {
-    if (!pool) return sendDatabaseUnavailable(reply);
-    const filters = editalSearchSchema.parse(request.query);
-    const result = await withTenant(pool, authContext(request), async (client) => {
-      const scopedFilters = applyNicheScope(
-        filters as unknown as Record<string, unknown>,
-        await readUserNiches(client, request.user.tenantId, request.user.sub),
-        request.user.role,
-      );
-      const search = buildEditalSearchQuery(editalSearchSchema.parse(scopedFilters));
-      const [rows, count] = await Promise.all([
-        client.query(search.text, search.values),
-        client.query<{ total: number }>(search.countText, search.countValues),
-      ]);
-      return { rows: rows.rows, total: count.rows[0]?.total ?? 0 };
-    });
-    return reply.send({
-      data: result.rows,
-      page: filters.page,
-      page_size: filters.page_size,
-      total: result.total,
-      total_pages: Math.ceil(result.total / filters.page_size),
-    });
-  });
-
   app.get('/editais/:editalId', async (request, reply) => {
     if (!pool) return sendDatabaseUnavailable(reply);
     const { editalId } = editalPathSchema.parse(request.params);
@@ -1865,6 +1562,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
                   srp, catmat_catser, valor_estimado, valor_homologado, data_publicacao,
                   data_atualizacao, data_abertura_proposta, data_encerramento_proposta,
                   url_origem, conteudo_texto, hash_conteudo, estado_completude,
+                  orgao_cnpj, numero_compra, processo, amparo_legal, informacao_complementar,
                   created_at, updated_at
              FROM editais
             WHERE id = $1`,
@@ -1906,8 +1604,19 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           [editalId],
         ),
       ]);
+      const interacao = await client.query(
+        `SELECT favorito, descartado, visto_em, nota, updated_at
+           FROM edital_interacoes WHERE edital_id = $1 AND usuario_id = $2`,
+        [editalId, request.user.sub],
+      );
       return {
         edital: edital.rows[0],
+        interacao: interacao.rows[0] ?? {
+          favorito: false,
+          descartado: false,
+          visto_em: null,
+          nota: null,
+        },
         itens: itens.rows,
         versoes: versoes.rows,
         evidencias: chunks.rows,
@@ -2135,19 +1844,36 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     const { quizId } = quizPathSchema.parse(request.params);
     const body = quizAttemptSchema.parse(request.body);
     if (!pool) return sendDatabaseUnavailable(reply);
-    const result = await withTenant(pool, authContext(request), async (client) =>
-      client.query(
-        `INSERT INTO quiz_tentativas (tenant_id, usuario_id, quiz_id, respostas)
-         VALUES ($1, $2, $3, $4::jsonb)
+    const result = await withTenant(pool, authContext(request), async (client) => {
+      const questions = await client.query<{ id: string; resposta_correta: number | null }>(
+        'SELECT id, resposta_correta FROM quiz_questoes WHERE quiz_id = $1 ORDER BY ordem',
+        [quizId],
+      );
+      if (questions.rows.length === 0) return null;
+      const graded = questions.rows.filter((question) => question.resposta_correta !== null);
+      const resultado = graded.map((question) => ({
+        questao_id: question.id,
+        correta: body.respostas[question.id] === question.resposta_correta,
+        resposta_correta: question.resposta_correta,
+      }));
+      const nota = graded.length
+        ? Math.round((resultado.filter((item) => item.correta).length / graded.length) * 10000) /
+          100
+        : null;
+      const inserted = await client.query(
+        `INSERT INTO quiz_tentativas (tenant_id, usuario_id, quiz_id, respostas, nota)
+         VALUES ($1, $2, $3, $4::jsonb, $5)
          RETURNING id, quiz_id, respostas, nota, created_at`,
-        [request.user.tenantId, request.user.sub, quizId, JSON.stringify(body.respostas)],
-      ),
-    );
-    return reply.code(201).send(result.rows[0]);
+        [request.user.tenantId, request.user.sub, quizId, JSON.stringify(body.respostas), nota],
+      );
+      return { ...inserted.rows[0], resultado };
+    });
+    if (!result) return reply.code(404).send({ error: 'quiz_not_found' });
+    return reply.code(201).send(result);
   });
 
   app.get('/mentorado/dashboard', async (request, reply) => {
-    if (!requireRoles(reply, request, ['admin', 'aluno'])) return;
+    if (!requireRoles(reply, request, ['plataforma', 'aluno'])) return;
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
       const [profile, progress, alerts] = await Promise.all([
@@ -2184,12 +1910,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.get('/professional/dashboard', async (request, reply) => {
-    if (!requireRoles(reply, request, ['admin', 'aluno', 'operador'])) return;
+    if (!requireRoles(reply, request, ['plataforma', 'admin', 'operador'])) return;
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
       const profile = await client.query<{ id: string }>(
         `SELECT id FROM usuarios
-          WHERE tenant_id = $1 AND id = $2 AND perfil_jornada = 'profissional' AND ativo = true`,
+          WHERE tenant_id = $1 AND id = $2 AND ativo = true`,
         [request.user.tenantId, request.user.sub],
       );
       if (!profile.rows[0]) return null;
@@ -2223,7 +1949,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.get('/mentor/dashboard', async (request, reply) => {
-    if (!requireRoles(reply, request, ['admin', 'mentor'])) return;
+    if (!requireRoles(reply, request, ['plataforma', 'mentor'])) return;
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) =>
       client.query(
@@ -2242,6 +1968,13 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     );
     return reply.send({ mentorados: result.rows });
   });
+
+  registerPlatformRoutes(app, { pool, config });
+  registerRadarRoutes(app, { pool });
+  registerAlertRoutes(app, { pool, config });
+  registerLearningRoutes(app, { pool });
+  registerCompanyRoutes(app, { pool });
+  registerCollectionRoutes(app, { pool, config });
 
   return app;
 }

@@ -5,6 +5,23 @@ import { useRouter } from 'next/navigation';
 
 type TenantChoice = { id: string; nome: string };
 
+/** Mensagem por causa real: senha errada não pode se confundir com servidor fora do ar. */
+export function loginErrorText(status: number, code?: string): string {
+  if (code === 'email_not_verified') return 'Confirme seu e-mail antes de entrar.';
+  if (status === 401 || code === 'invalid_credentials') return 'E-mail ou senha incorretos.';
+  if (status === 429 || code === 'public_rate_limit') {
+    return 'Muitas tentativas seguidas. Aguarde um minuto e tente de novo.';
+  }
+  if (status === 400) return 'Confira o e-mail digitado.';
+  return 'Não foi possível falar com o servidor. Isso não é erro de senha: tente de novo em instantes ou avise a equipe técnica.';
+}
+
+/** Volta para a página que o usuário queria abrir, só se for um caminho interno. */
+function nextPath(): string {
+  const next = new URLSearchParams(window.location.search).get('next') ?? '';
+  return next.startsWith('/') && !next.startsWith('//') ? next : '/painel';
+}
+
 export function LoginForm({
   demoMode,
   signupEnabled,
@@ -37,16 +54,14 @@ export function LoginForm({
         setTenants(payload.tenants);
         return;
       }
-      if (!response.ok) throw new Error(payload.error ?? 'login_failed');
-      router.push('/');
+      if (!response.ok) {
+        setError(loginErrorText(response.status, payload.error));
+        return;
+      }
+      router.push(nextPath());
       router.refresh();
-    } catch (cause) {
-      const code = cause instanceof Error ? cause.message : 'login_failed';
-      setError(
-        code === 'email_not_verified'
-          ? 'Confirme seu e-mail antes de entrar.'
-          : 'Não foi possível entrar. Confirme e-mail e senha.',
-      );
+    } catch {
+      setError(loginErrorText(0, 'network'));
     } finally {
       setLoading(false);
     }

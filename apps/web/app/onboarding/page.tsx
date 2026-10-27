@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { requireArea } from '../../lib/session';
 import { OnboardingForm } from './OnboardingForm';
 
 export const metadata = {
@@ -6,11 +7,12 @@ export const metadata = {
   description: 'Defina seu perfil de aprendizagem para personalizar a Academia.',
 };
 
-export default function OnboardingPage() {
+export default async function OnboardingPage() {
+  const session = await requireArea('administracao', 'empresa', 'aluno', 'mentor');
   return (
     <main className="academy-page">
-      <Link className="back-link" href="/">
-        ← Licite Comigo
+      <Link className="back-link" href="/painel">
+        ← Voltar ao painel
       </Link>
       <div className="page-heading">
         <p className="eyebrow">Primeiro acesso</p>
@@ -20,7 +22,7 @@ export default function OnboardingPage() {
           de próximo passo recomendado.
         </p>
       </div>
-      <OnboardingForm />
+      <OnboardingForm area={session.area} initialProfile={session.perfil_jornada} />
     </main>
   );
 }

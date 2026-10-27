@@ -1,10 +1,6 @@
-import { ProtectedRemoteDashboard } from '../components/ProtectedRemoteDashboard';
+import { redirect } from 'next/navigation';
 
-export const metadata = {
-  title: 'Mentorado | Licite Comigo',
-  description: 'Acompanhamento da jornada do mentorado.',
-};
-
-export default function MentoradoPage() {
-  return <ProtectedRemoteDashboard kind="mentorado" />;
+// Página antiga. Cada área agora tem o seu painel em /painel.
+export default function LegacyPage() {
+  redirect('/painel');
 }

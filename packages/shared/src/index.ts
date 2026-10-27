@@ -19,3 +19,30 @@ export {
   normalizeNicheCodes,
 } from './niches.js';
 export type { NicheDefinition } from './niches.js';
+
+export {
+  AREAS,
+  AREA_LABELS,
+  AREA_MENUS,
+  PAGE_RULES,
+  canOpenPage,
+  flatMenu,
+  isArea,
+  pageAreas,
+  requiresSession,
+} from './areas.js';
+export type { Area, MenuGroup, MenuItem, PageRule } from './areas.js';
+
+export {
+  GRANDE_VULTO_PADRAO,
+  REGIAO_LABELS,
+  REGIOES,
+  UFS,
+  UFS_POR_REGIAO,
+  regiaoDaUf,
+  ufsDaRegiao,
+} from './geo.js';
+export type { Regiao } from './geo.js';
+
+export { HUB_CTA, HUB_NODES, HUB_VISITOR } from './hubs.js';
+export type { HubNodeData, HubTone } from './hubs.js';

@@ -145,8 +145,11 @@ rlsSuite('isolamento RLS efetivo por tenant com role de aplicação', () => {
         'oportunidades_salvas',
       ];
       for (const table of tables) {
+        // Conta só as linhas do tenant A: editais da plataforma são, de propósito, legíveis por
+        // todas as contas (catálogo compartilhado), então a contagem total não prova isolamento.
         const result = await client.query<{ count: string }>(
-          `SELECT count(*)::text AS count FROM ${table}`,
+          `SELECT count(*)::text AS count FROM ${table} WHERE tenant_id = $1`,
+          [tenantA],
         );
         expect(result.rows[0]?.count, table).toBe('0');
       }

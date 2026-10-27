@@ -72,3 +72,41 @@ def test_normalizer_does_not_turn_absence_into_false_or_estimated_value() -> Non
     assert tender.valor_homologado is None
     assert tender.situacao is None
     assert tender.data_abertura_proposta is None
+
+
+def test_normalizer_maps_buyer_identity_and_legal_basis() -> None:
+    payload = json.loads(FIXTURE.read_text())
+    source = {
+        **payload["data"][0],
+        "processo": "00123.000456/2026-11",
+        "amparoLegal": {"codigo": 1, "nome": "Lei 14.133/2021, Art. 28, I"},
+        "orgaoEntidade": {
+            "cnpj": "12.345.678/0001-99",
+            "razaoSocial": "Órgão Público de Exemplo",
+            "esferaId": "F",
+            "poderId": "E",
+        },
+    }
+
+    tender = normalize_pncp_publication(source, "tenant")
+
+    assert tender.orgao_cnpj == "12345678000199"
+    assert tender.numero_compra == "42/2026"
+    assert tender.processo == "00123.000456/2026-11"
+    assert tender.amparo_legal == "Lei 14.133/2021, Art. 28, I"
+    assert tender.informacao_complementar == "Entrega conforme edital e anexos."
+    assert tender.esfera == "Federal"
+    assert tender.poder == "Executivo"
+
+
+def test_unknown_sphere_and_power_codes_stay_empty() -> None:
+    payload = json.loads(FIXTURE.read_text())
+    source = {
+        **payload["data"][0],
+        "orgaoEntidade": {"cnpj": "12345678000199", "esferaId": "?", "poderId": "Z"},
+    }
+
+    tender = normalize_pncp_publication(source, "tenant")
+
+    assert tender.esfera is None
+    assert tender.poder is None

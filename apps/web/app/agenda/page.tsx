@@ -1,10 +1,12 @@
-import { requireDemoMode } from '../workspace/demo';
-export const dynamic = 'force-dynamic';
-import { ModulePage } from '../workspace/ModulePage';
+import { AgendaApp } from './AgendaApp';
 
-export const metadata = { title: 'Agenda e participações | Licite Comigo' };
+export const dynamic = 'force-dynamic';
+
+export const metadata = {
+  title: 'Agenda | Licite Comigo',
+  description: 'Prazos de editais, tarefas e lembretes da sua empresa.',
+};
 
 export default function AgendaPage() {
-  requireDemoMode();
-  return <ModulePage module="agenda" />;
+  return <AgendaApp />;
 }

@@ -28,3 +28,17 @@ export async function PATCH(
 ): Promise<Response> {
   return proxyCore(request, upstreamPath(context.params.path, request));
 }
+
+export async function PUT(
+  request: Request,
+  context: { params: { path: string[] } },
+): Promise<Response> {
+  return proxyCore(request, upstreamPath(context.params.path, request));
+}
+
+export async function DELETE(
+  request: Request,
+  context: { params: { path: string[] } },
+): Promise<Response> {
+  return proxyCore(request, upstreamPath(context.params.path, request));
+}

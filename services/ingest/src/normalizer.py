@@ -70,11 +70,13 @@ def normalize_pncp_publication(raw: JsonObject, tenant_id: str) -> NormalizedTen
         esfera=_optional_text(
             _first_value(raw, "esferaNome", "esfera")
             or _first_value(organization_data, "esferaNome", "esfera")
-        ),
+        )
+        or _coded(ESFERAS, _first_value(raw, "esferaId") or organization_data.get("esferaId")),
         poder=_optional_text(
             _first_value(raw, "poderNome", "poder")
             or _first_value(organization_data, "poderNome", "poder")
-        ),
+        )
+        or _coded(PODERES, _first_value(raw, "poderId") or organization_data.get("poderId")),
         municipio_ibge=_optional_text(
             _first_value(
                 unit_data,
@@ -111,7 +113,36 @@ def normalize_pncp_publication(raw: JsonObject, tenant_id: str) -> NormalizedTen
         estado_completude=_optional_text(
             _first_value(raw, "estadoCompletude", "statusCompletude", "completude")
         ),
+        orgao_cnpj=_digits(organization_data.get("cnpj")),
+        numero_compra=_optional_text(raw.get("numeroCompra")),
+        processo=_optional_text(raw.get("processo")),
+        amparo_legal=_legal_basis(raw.get("amparoLegal")),
+        informacao_complementar=_optional_text(raw.get("informacaoComplementar")),
     )
+
+
+# Códigos de uma letra publicados no manual do PNCP; letra desconhecida vira ``None``.
+ESFERAS = {"F": "Federal", "E": "Estadual", "M": "Municipal", "D": "Distrital"}
+PODERES = {"E": "Executivo", "L": "Legislativo", "J": "Judiciário"}
+
+
+def _coded(table: dict[str, str], value: Any) -> str | None:
+    text = _optional_text(value)
+    return table.get(text.upper()) if text else None
+
+
+def _digits(value: Any) -> str | None:
+    text = _optional_text(value)
+    if not text:
+        return None
+    digits = "".join(char for char in text if char.isdigit())
+    return digits or None
+
+
+def _legal_basis(value: Any) -> str | None:
+    if isinstance(value, dict):
+        return _optional_text(_first_value(value, "nome", "descricao"))
+    return _optional_text(value)
 
 
 def _content_text(raw: JsonObject, organization: JsonObject, unit: JsonObject) -> str:

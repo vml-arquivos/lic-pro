@@ -124,7 +124,7 @@ jobs:
         env:
           PGPASSWORD: change-me-ci-only
         run: |
-          test "$(psql postgresql://licite_admin@127.0.0.1:5432/licite_comigo -tAc "SELECT count(*) FROM schema_migrations" | tr -d '[:space:]')" -eq 14
+          test "$(psql postgresql://licite_admin@127.0.0.1:5432/licite_comigo -tAc "SELECT count(*) FROM schema_migrations" | tr -d '[:space:]')" -eq 22
           test "$(psql postgresql://licite_admin@127.0.0.1:5432/licite_comigo -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('buscas_salvas', 'alertas_regras', 'alerta_entregas')" | tr -d '[:space:]')" -eq 3
           test "$(psql postgresql://licite_admin@127.0.0.1:5432/licite_comigo -tAc "SELECT rolcanlogin FROM pg_roles WHERE rolname = 'licite_owner'" | tr -d '[:space:]')" = "f"
           if psql postgresql://licite_admin@127.0.0.1:5432/licite_comigo -tAc "SELECT 1 FROM pg_roles WHERE rolname IN ('licite_core', 'licite_ingest', 'licite_ai', 'licite_bid', 'licite_realtime') AND (NOT rolcanlogin OR rolsuper OR rolbypassrls)" | grep -q 1; then
