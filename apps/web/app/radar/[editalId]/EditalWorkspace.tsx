@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { send } from '../../../lib/api';
+import { errorText, send } from '../../../lib/api';
 import { Badge } from '../../components/ui';
 import { brl, deadlineInfo } from '../radar-lib';
 
 type Edital = {
   id: string;
+  detalhes_coletados_em?: string | null;
   titulo: string;
   orgao?: string | null;
   uf?: string | null;
@@ -60,6 +61,8 @@ type Item = {
   unidade?: string | null;
   quantidade?: number | string | null;
   catmat_catser?: string | null;
+  beneficio?: string | null;
+  situacao_item?: string | null;
 };
 type Evidence = {
   id?: string;
@@ -166,6 +169,29 @@ export function EditalWorkspace({
     nota: null,
   });
   const [note, setNote] = useState('');
+  const [fetchingDetails, setFetchingDetails] = useState(false);
+
+  async function fetchDetails(force = false) {
+    setFetchingDetails(true);
+    setMessage('');
+    try {
+      const result = await send<{ atualizado: boolean; itens?: number; documentos?: number }>(
+        'POST',
+        `/editais/${editalId}/detalhes/atualizar`,
+        { force },
+      );
+      setMessage(
+        !result.atualizado
+          ? 'Os itens e documentos já foram buscados há pouco. Use “Buscar de novo” se precisar.'
+          : `Encontrados ${result.itens ?? 0} item(ns) e ${result.documentos ?? 0} documento(s) no PNCP.`,
+      );
+      await load();
+    } catch (cause) {
+      setMessage(errorText(cause));
+    } finally {
+      setFetchingDetails(false);
+    }
+  }
 
   async function load() {
     const [detailResponse, companyResponse] = await Promise.all([
@@ -414,6 +440,22 @@ export function EditalWorkspace({
           </form>
         ) : null}
         <h3>Itens ({detail.itens.length})</h3>
+        {signedIn && detail.edital.fonte === 'pncp' ? (
+          <p>
+            <button
+              type="button"
+              className="ui-btn ui-btn-ghost ui-btn-small"
+              disabled={fetchingDetails}
+              onClick={() => void fetchDetails(Boolean(detail.edital.detalhes_coletados_em))}
+            >
+              {fetchingDetails
+                ? 'Buscando no PNCP…'
+                : detail.edital.detalhes_coletados_em
+                  ? 'Buscar de novo itens e documentos'
+                  : 'Buscar itens e documentos no PNCP'}
+            </button>
+          </p>
+        ) : null}
         {detail.itens.length ? (
           <ul className="item-list">
             {detail.itens.map((item) => (
@@ -423,6 +465,15 @@ export function EditalWorkspace({
                 <small>
                   {item.quantidade ?? '—'} {item.unidade ?? ''} ·{' '}
                   {item.catmat_catser ?? 'CATMAT/CATSER não informado'}
+                  {item.beneficio ? ` · ${item.beneficio}` : ''}
+                  {signedIn && item.catmat_catser && /^\d{4,9}$/.test(item.catmat_catser) ? (
+                    <>
+                      {' · '}
+                      <Link href={`/precos?catmat=${item.catmat_catser}`}>
+                        ver preços praticados
+                      </Link>
+                    </>
+                  ) : null}
                 </small>
               </li>
             ))}

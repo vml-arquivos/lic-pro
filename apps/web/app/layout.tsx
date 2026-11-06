@@ -8,6 +8,7 @@ import { AppShell } from './AppShell';
 import './globals.css';
 import './areas.css';
 import './theme.css';
+import './commerce.css';
 
 export const dynamic = 'force-dynamic';
 

@@ -72,7 +72,7 @@ services/ingest     Python/Celery/RabbitMQ. OPCIONAL: coleta externa antiga. A c
 services/bid-engine, realtime-gw   Futuros. Fora do deploy do MVP.
 packages/shared     Regras compartilhadas: áreas, menus, páginas, hubs (rede de especialistas).
 packages/ui         Componentes visuais comuns.
-db/                 migrate.sh, migrations/*.sql (22), seeds (só desenvolvimento).
+db/                 migrate.sh, migrations/*.sql (24), seeds (só desenvolvimento).
 infra/coolify       Checklist de deploy. `infra/reference` é só referência histórica.
 ```
 
@@ -152,6 +152,20 @@ Regras de produção que derrubam o core-api se erradas:
 - `DATABASE_URL` do core-api usa `licite_core`. `MIGRATION_DATABASE_URL` usa `licite_admin` e
   nunca `licite_owner`.
 - `PNCP_SYNC_ENABLED=false` desliga a coleta nativa.
+- Cobrança (Asaas): `ASAAS_API_KEY` + `ASAAS_WEBHOOK_TOKEN` (mínimo 16 caracteres) ligam a venda;
+  `ASAAS_ENV=sandbox|production`. Em produção, chave sem token válido derruba o core-api.
+  Sem as duas, `/curso` mostra "em breve" e nada é cobrado. Webhook a cadastrar no Asaas:
+  `<API_URL>/webhooks/asaas` com o mesmo token, eventos de cobranças e de assinaturas.
+- `PNCP_API_BASE_URL` (itens/documentos do edital) e `COMPRAS_GOV_BASE_URL` (preços) têm padrão.
+
+### Cobrança (visão geral)
+
+`planos` (curso/assinatura; nascem **desativados**, a equipe define preço e ativa em
+Administração → Planos e preços) → `cobrancas` → `cobranca_pagamentos` / `cobranca_eventos`
+(idempotência). O RLS dessas tabelas usa `app.billing_flow` (só `withBilling`). O webhook confere o
+token, reconsulta o pagamento no Asaas e só então libera: curso gera convite/matrícula
+(`billing_liberar_curso`); assinatura define o status e os limites (`billing_definir_assinatura`).
+Limite do plano vale só para quem tem assinatura registrada (hoje: buscas salvas).
 
 ## 6. Migrations (regras)
 
@@ -237,7 +251,7 @@ migrations, build.
 ```sh
 curl -fsS https://apilicitecomigo.buscarr.com.br/ready
 curl -fsS https://applicitecomigo.buscarr.com.br/api/diagnostico
-psql "$MIGRATION_DATABASE_URL" -c "select count(*) from schema_migrations;"   # esperado: 22
+psql "$MIGRATION_DATABASE_URL" -c "select count(*) from schema_migrations;"   # esperado: 24
 ```
 
 Depois entre em `/login` com a conta da equipe, abra **Administração → Fontes de dados** e clique
@@ -276,9 +290,15 @@ Para saber se o erro é senha ou servidor, abra `<app>/api/diagnostico`: se `cor
   falha de fonte, permissões). A chamada real ao governo **precisa ser confirmada na VPS**
   (Administração → Fontes de dados → Sincronizar agora). O ambiente de desenvolvimento não
   alcança os sites do governo.
-- **Compras.gov.br** (pesquisa de preços, atas, contratos, PCA): ainda não coletado. O PNCP cobre
-  os editais da Lei 14.133; o restante é trabalho futuro.
-- **Benefícios ME/EPP** e outros filtros jurídicos finos: futuro.
+- **Compras.gov.br**: só a consulta de preços de referência (`/precos`) foi feita, e **não foi
+  testada contra o site real** (o ambiente de desenvolvimento não o alcança). Confirmar na VPS com
+  um CATMAT conhecido. Atas, contratos e PCA: futuro. A metodologia do preço de referência da
+  proposta continua sendo responsabilidade humana.
+- **Itens e documentos do PNCP** (`POST /editais/:id/detalhes/atualizar`, benefício ME/EPP): testado
+  com fonte simulada; confirmar na VPS em um edital real.
+- **Cobrança Asaas**: testada com um Asaas simulado. Fazer a primeira compra de ponta a ponta no
+  **sandbox** do Asaas (curso e assinatura, inclusive o webhook) antes de ligar em produção.
+- **Portais estaduais e municipais fora do PNCP**: não coletados. Hoje o catálogo é o PNCP.
 - **E-mail**: depende de SMTP configurado. Sem ele, verificação e recuperação não chegam.
 - **WhatsApp**: indisponível.
 - **Textos jurídicos** (termos, privacidade): aguardam revisão jurídica.
@@ -288,7 +308,7 @@ Para saber se o erro é senha ou servidor, abra `<app>/api/diagnostico`: se `cor
 
 ## 12. Antes de chamar de "pronto para produção"
 
-- [ ] CI verde na `main` (22 migrations aplicadas).
+- [ ] CI verde na `main` (24 migrations aplicadas).
 - [ ] `/ready` da API e `/api/diagnostico` do app respondendo.
 - [ ] Login com cada papel: equipe, empresa, aluno, mentor.
 - [ ] Sincronizar agora = execução `ok`, editais aparecendo no Radar da empresa.

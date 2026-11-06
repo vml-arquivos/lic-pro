@@ -44,5 +44,14 @@ cria a conta da equipe direto.
 - `0022_coleta_pncp.sql`: registro das execuções da coleta nativa do PNCP e a função
   `coleta_gravar_editais(jsonb)` (SECURITY DEFINER, só para a empresa-catálogo da plataforma).
 
-Todas rodam em ordem pelo `migrate.sh`, cada uma na sua transação. O CI confere que as 22
+## Cobrança e detalhes do edital (0023 e 0024)
+
+- `0023_cobranca.sql`: planos com preço/ciclo/benefícios/limites (curso e assinaturas, nascem
+  desativados), cobranças, pagamentos e eventos do Asaas (RLS pelo sinalizador `app.billing_flow`),
+  e as funções `billing_liberar_curso()` e `billing_definir_assinatura()` (SECURITY DEFINER, só
+  para o `licite_core`). Assinatura passa a poder existir antes do cadastro da empresa.
+- `0024_detalhes_edital.sql`: benefício ME/EPP e situação do item, data da última coleta de
+  detalhes e a função `coleta_gravar_detalhes()` (itens e documentos do edital do catálogo).
+
+Todas rodam em ordem pelo `migrate.sh`, cada uma na sua transação. O CI confere que as 24
 foram aplicadas. Migration já aplicada nunca é editada: mudança vira arquivo novo.

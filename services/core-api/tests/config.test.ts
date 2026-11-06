@@ -58,7 +58,7 @@ describe('core-api configuration', () => {
       pncpSyncEnabled: true,
       pncpSyncIntervalMinutes: 30,
       pncpSyncDays: 2,
-      pncpSyncModalidades: [6, 8, 4],
+      pncpSyncModalidades: [6, 8, 4, 5, 7, 9],
       pncpSyncMaxPages: 40,
       pncpBaseUrl: 'https://pncp.gov.br/api/consulta',
     });
@@ -78,5 +78,28 @@ describe('core-api configuration', () => {
       pncpSyncModalidades: [6, 9],
       pncpBaseUrl: 'https://pncp.example.test/api/consulta',
     });
+  });
+  it('cobrança (Asaas): desligada sem chave e exige token do webhook em produção', () => {
+    const off = loadConfig({ ...productionEnv, EMAIL_PROVIDER: 'disabled' });
+    expect(off.billingEnabled).toBe(false);
+    expect(off.asaasEnv).toBe('sandbox');
+    expect(off.asaasBaseUrl).toBe('https://api-sandbox.asaas.com/v3');
+
+    const on = loadConfig({
+      ...productionEnv,
+      EMAIL_PROVIDER: 'disabled',
+      ASAAS_API_KEY: ' chave ',
+      ASAAS_WEBHOOK_TOKEN: 'token-bem-comprido-123',
+      ASAAS_ENV: ' Production ',
+    });
+    expect(on).toMatchObject({
+      billingEnabled: true,
+      asaasApiKey: 'chave',
+      asaasEnv: 'production',
+      asaasBaseUrl: 'https://api.asaas.com/v3',
+    });
+    expect(() =>
+      loadConfig({ ...productionEnv, EMAIL_PROVIDER: 'disabled', ASAAS_API_KEY: 'chave' }),
+    ).toThrow(/ASAAS_WEBHOOK_TOKEN/);
   });
 });

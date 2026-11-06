@@ -4,7 +4,7 @@ Quatro áreas separadas. Cada pessoa vê só a sua; a equipe pode "ver como" cad
 
 ## Administração (equipe do Licite Comigo)
 
-Menu: Visão geral · Leads · Empresas clientes · Alunos e turmas · Mentores · Fontes de dados · Auditoria.
+Menu: Visão geral · Leads · Empresas clientes · Alunos e turmas · Mentores · Fontes de dados · Financeiro · Planos e preços · Auditoria.
 Também acessa Radar, Academia, Ana e a própria conta.
 
 - **Visão geral**: empresas clientes, alunos e mentores ativos, convites pendentes, leads,
@@ -15,19 +15,23 @@ Também acessa Radar, Academia, Ana e a própria conta.
   progresso, reenviar ou revogar convites.
 - **Mentores**: convidar, ver alunos ativos, ativar/desativar.
 - **Fontes de dados**: coleta de editais do governo (PNCP) com botão "Sincronizar agora", últimas execuções, editais no catálogo, abertos e novos em 24 h.
+- **Financeiro**: receita do mês e de 30 dias, receita recorrente (MRR), assinantes ativos e em
+  atraso, vendas do curso, conversão, cobranças recentes e liberação manual (Pix fora do sistema).
+- **Planos e preços**: preço, benefícios e limites do curso e das assinaturas; ativar para vender.
 - **Auditoria**: ações da administração e do "ver como".
 - **Leads**: contatos captados pelo site.
 
 ## Empresa
 
 Menu: Início · Explorar licitações · Buscas salvas · Alertas · Oportunidades · Pregões
-publicados · Dados da empresa · Academia · Ana · Minha conta.
+publicados · Preços · Dados da empresa · Academia · Ana · Assinatura · Minha conta.
 
 Radar limitado a 1–3 nichos. Começa vazio e se preenche com o catálogo coletado.
 
 ## Aluno
 
-Menu: Início · Academia · Explorar licitações · Pregões publicados · Ana · Minha conta.
+Menu: Início · Academia · Explorar licitações · Pregões publicados · Preços · Ana · Minha conta.
+A compra do curso é pública em `/curso`; ao pagar, a pessoa recebe o link para criar a senha.
 
 O painel mostra progresso, avisos e nichos de prática. Entra só por matrícula.
 
@@ -48,5 +52,5 @@ O painel mostra os alunos vinculados, quem está sem estudar há 7 dias e o prog
 
 - Catálogo global de editais (hoje compartilhado a partir da conta da plataforma).
 - Equipe dentro da empresa (vários usuários e papéis).
-- Planos, cobrança e limites por plano.
+- Mais limites por plano (hoje só buscas salvas) e nota fiscal.
 - Revogação imediata de sessão.

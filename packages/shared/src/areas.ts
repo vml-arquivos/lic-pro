@@ -24,6 +24,7 @@ const ana: MenuItem = { label: 'Ana', href: '/ana', icon: 'spark' };
 const academy: MenuItem = { label: 'Academia', href: '/academia', icon: 'cap' };
 const radar: MenuItem = { label: 'Explorar licitações', href: '/radar', icon: 'search' };
 const published: MenuItem = { label: 'Pregões publicados', href: '/pregoes', icon: 'globe' };
+const prices: MenuItem = { label: 'Preços de referência', href: '/precos', icon: 'chart' };
 
 /** Somente páginas que existem e funcionam. Nada de item "em breve". */
 export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
@@ -37,6 +38,8 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
         { label: 'Alunos e turmas', href: '/admin/alunos', icon: 'users' },
         { label: 'Mentores', href: '/admin/mentores', icon: 'award' },
         { label: 'Fontes de dados', href: '/admin/fontes', icon: 'sync' },
+        { label: 'Financeiro', href: '/admin/financeiro', icon: 'chart' },
+        { label: 'Planos e preços', href: '/admin/planos', icon: 'clipboard' },
         { label: 'Auditoria', href: '/admin/auditoria', icon: 'list' },
       ],
     },
@@ -55,11 +58,15 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
         { label: 'Agenda', href: '/agenda', icon: 'calendar' },
         { label: 'Documentos', href: '/documentos', icon: 'file' },
         published,
+        prices,
         { label: 'Dados da empresa', href: '/empresas', icon: 'building' },
       ],
     },
     { label: 'Aprender', items: [academy, ana] },
-    { label: 'Conta', items: [account] },
+    {
+      label: 'Conta',
+      items: [{ label: 'Assinatura', href: '/assinatura', icon: 'award' }, account],
+    },
   ],
   aluno: [
     {
@@ -73,7 +80,7 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
         { label: 'Certificado', href: '/certificado', icon: 'check' },
       ],
     },
-    { label: 'Ferramentas', items: [radar, published, ana] },
+    { label: 'Ferramentas', items: [radar, published, prices, ana] },
     { label: 'Conta', items: [account] },
   ],
   mentor: [
@@ -116,6 +123,8 @@ export const PAGE_RULES: readonly PageRule[] = [
   { prefix: '/certificado', areas: STUDENT },
   { prefix: '/radar', areas: WORK },
   { prefix: '/pregoes', areas: WORK },
+  { prefix: '/precos', areas: WORK },
+  { prefix: '/assinatura', areas: COMPANY },
   { prefix: '/oportunidades', areas: COMPANY },
   { prefix: '/agenda', areas: COMPANY },
   { prefix: '/documentos', areas: COMPANY },

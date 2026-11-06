@@ -1,0 +1,212 @@
+/*
+ * Venda e cobrança: página do curso, acompanhamento da compra, planos da assinatura
+ * e gráfico simples do financeiro. Usa só os tokens do tema (theme.css).
+ */
+
+/* Páginas públicas (/curso, /compra) */
+.shop {
+  max-width: 62rem;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 4vw, 3rem) 1rem 4rem;
+  display: grid;
+  gap: 1.75rem;
+}
+.shop-hero {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 46rem;
+  min-width: 0;
+}
+.shop-hero h1 {
+  margin: 0;
+  max-width: none;
+  font-size: clamp(1.75rem, 4.6vw, 2.75rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+}
+.shop-hero p {
+  margin: 0;
+  color: var(--lc-ink-soft);
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+.shop-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+.shop-form {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: var(--lc-surface);
+  border: 1px solid var(--lc-line);
+  border-radius: var(--lc-radius);
+  box-shadow: var(--lc-shadow-card);
+}
+.shop-closed,
+.shop-status {
+  display: grid;
+  gap: 0.9rem;
+  justify-items: start;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  background: var(--lc-surface);
+  border: 1px solid var(--lc-line);
+  border-radius: var(--lc-radius);
+  box-shadow: var(--lc-shadow-card);
+}
+.shop-closed h2,
+.shop-status h1,
+.shop-status h2 {
+  margin: 0;
+}
+.shop-closed p,
+.shop-status p {
+  margin: 0;
+  color: var(--lc-ink-soft);
+}
+
+/* Cartões de plano */
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1rem;
+}
+.plan {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+  padding: 1.5rem;
+  background: var(--lc-surface);
+  border: 1px solid var(--lc-line);
+  border-radius: var(--lc-radius);
+  box-shadow: var(--lc-shadow-card);
+}
+.plan h2,
+.plan h3 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.plan-featured {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--lc-surface), var(--lc-surface)) padding-box,
+    var(--lc-grad) border-box;
+  border: 2px solid transparent;
+  box-shadow: var(--lc-shadow-pop);
+}
+.plan-current {
+  border-color: var(--lc-accent);
+}
+.plan-desc {
+  margin: 0;
+  color: var(--lc-ink-soft);
+  line-height: 1.5;
+}
+.plan-price {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+}
+.plan-price strong {
+  font-size: 2rem;
+  letter-spacing: -0.02em;
+}
+.plan-price small {
+  color: var(--lc-muted-text);
+}
+.plan-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.45rem;
+}
+.plan-list li {
+  position: relative;
+  padding-left: 1.5rem;
+  line-height: 1.45;
+}
+.plan-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.4rem;
+  width: 0.55rem;
+  height: 0.3rem;
+  border-left: 2px solid var(--lc-accent-strong);
+  border-bottom: 2px solid var(--lc-accent-strong);
+  transform: rotate(-45deg);
+}
+.plan-note {
+  margin: 0;
+  color: var(--lc-muted-text);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+code {
+  overflow-wrap: anywhere;
+}
+
+/* Gráfico de barras do financeiro */
+.fin-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(3rem, 1fr);
+  gap: 0.75rem;
+  align-items: end;
+  height: 12rem;
+}
+.fin-bars li {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100%;
+  gap: 0.35rem;
+  justify-items: center;
+}
+.fin-bar {
+  align-self: end;
+  width: min(100%, 3.25rem);
+  border-radius: 0.5rem 0.5rem 0.2rem 0.2rem;
+  background: var(--lc-grad);
+}
+.fin-bar-value {
+  font-size: 0.75rem;
+  color: var(--lc-ink-soft);
+  white-space: nowrap;
+}
+.fin-bar-label {
+  font-size: 0.8rem;
+  color: var(--lc-muted-text);
+}
+
+@media (max-width: 52rem) {
+  .shop-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 30rem) {
+  .fin-bars {
+    gap: 0.4rem;
+    grid-auto-columns: minmax(2.4rem, 1fr);
+  }
+  .fin-bar-value {
+    font-size: 0.65rem;
+  }
+}
+
+/* Formulário de edição de plano */
+.plan-edit textarea {
+  font: inherit;
+  min-height: 7rem;
+}
+.plan-edit label:has(textarea),
+.plan-edit .invite-check {
+  grid-column: 1 / -1;
+}

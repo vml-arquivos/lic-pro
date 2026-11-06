@@ -28,13 +28,24 @@ export type RuntimeConfig = {
   pncpSyncIntervalMinutes: number;
   /** Quantos dias para trás cada rodada agendada olha (1 a 30). */
   pncpSyncDays: number;
-  /** Códigos de modalidade do PNCP (6 = pregão eletrônico, 8 = dispensa, 4 = concorrência eletrônica). */
+  /** Códigos de modalidade do PNCP (6 pregão eletrônico, 8 dispensa, 4 concorrência eletrônica, 5 concorrência presencial, 7 pregão presencial, 9 inexigibilidade). */
   pncpSyncModalidades: number[];
   /** Teto de páginas por modalidade e por rodada (cada página traz até 50 editais). */
   pncpSyncMaxPages: number;
   pncpBaseUrl: string;
+  /** API de detalhes do PNCP (itens e documentos de uma contratação). */
+  pncpApiBaseUrl: string;
   /** Conta da plataforma que recebe o catálogo; sem isso vale a primeira conta da plataforma. */
   pncpSyncTenantId?: string;
+  /** Compras.gov.br Dados Abertos (pesquisa de preços de referência). */
+  comprasBaseUrl: string;
+  /** Cobrança (Asaas). Sem chave e sem token do webhook, a venda fica desligada. */
+  asaasApiKey?: string;
+  asaasWebhookToken?: string;
+  asaasEnv: 'sandbox' | 'production';
+  asaasBaseUrl: string;
+  /** Verdadeiro quando a cobrança está pronta: chave da API e token do webhook definidos. */
+  billingEnabled: boolean;
 };
 
 /** Variável de ambiente sem espaços nas pontas e em minúsculas (erro comum ao colar valores). */
@@ -53,7 +64,7 @@ function modalidades(value: string | undefined): number[] {
     .split(',')
     .map((item) => Number.parseInt(item.trim(), 10))
     .filter((code) => Number.isInteger(code) && code >= 1 && code <= 20);
-  return list.length ? [...new Set(list)] : [6, 8, 4];
+  return list.length ? [...new Set(list)] : [6, 8, 4, 5, 7, 9];
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig {
@@ -88,6 +99,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
     }
   }
 
+  const asaasEnv = clean(env.ASAAS_ENV) === 'production' ? 'production' : 'sandbox';
+  const asaasApiKey = (env.ASAAS_API_KEY ?? '').trim();
+  const asaasWebhookToken = (env.ASAAS_WEBHOOK_TOKEN ?? '').trim();
+  if (nodeEnv === 'production' && asaasApiKey && asaasWebhookToken.length < 16) {
+    throw new Error(
+      'ASAAS_WEBHOOK_TOKEN é obrigatório (mínimo de 16 caracteres) quando ASAAS_API_KEY está definida.',
+    );
+  }
+
   const config: RuntimeConfig = {
     port: Number(env.CORE_API_PORT ?? 3001),
     jwtSecret: jwtSecret ?? 'test-only-secret',
@@ -114,9 +134,24 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
       /\/$/,
       '',
     ),
+    pncpApiBaseUrl: (env.PNCP_API_BASE_URL?.trim() || 'https://pncp.gov.br/pncp-api/v1').replace(
+      /\/$/,
+      '',
+    ),
+    comprasBaseUrl: (
+      env.COMPRAS_GOV_BASE_URL?.trim() || 'https://dadosabertos.compras.gov.br'
+    ).replace(/\/$/, ''),
+    asaasEnv,
+    asaasBaseUrl: (
+      env.ASAAS_BASE_URL?.trim() ||
+      (asaasEnv === 'production' ? 'https://api.asaas.com/v3' : 'https://api-sandbox.asaas.com/v3')
+    ).replace(/\/$/, ''),
+    billingEnabled: Boolean(asaasApiKey && asaasWebhookToken.length >= 16),
     termsVersion: env.TERMS_VERSION ?? '2026-10-17-draft',
     privacyVersion: env.PRIVACY_VERSION ?? '2026-10-17-draft',
   };
+  if (asaasApiKey) config.asaasApiKey = asaasApiKey;
+  if (asaasWebhookToken) config.asaasWebhookToken = asaasWebhookToken;
   if (env.PNCP_SYNC_TENANT_ID?.trim()) config.pncpSyncTenantId = env.PNCP_SYNC_TENANT_ID.trim();
   if (env.JWT_ISSUER) config.jwtIssuer = env.JWT_ISSUER;
   if (env.JWT_AUDIENCE) config.jwtAudience = env.JWT_AUDIENCE;

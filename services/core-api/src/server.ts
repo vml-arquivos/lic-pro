@@ -34,6 +34,10 @@ import {
   withPlatform,
 } from './request-context.js';
 import { registerCollectionRoutes } from './coleta-routes.js';
+import { assertPlanAllows, BillingError, registerBillingRoutes } from './billing.js';
+import { AsaasError, type AsaasClient } from './asaas.js';
+import { registerPriceRoutes } from './precos.js';
+import { registerDetalhesRoutes } from './pncp-detalhes.js';
 import { registerPlatformRoutes } from './platform.js';
 import { loadConfig, type RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
@@ -53,6 +57,8 @@ export type BuildAppOptions = {
   config?: RuntimeConfig;
   jwtSecret?: string;
   logger?: boolean;
+  /** Cliente do Asaas (os testes passam um falso). */
+  asaas?: AsaasClient;
 };
 
 const tenantPathSchema = z.object({ tenantId: z.string().uuid() });
@@ -263,6 +269,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       reply.code(403).send({ error: 'tenant_forbidden' });
       return;
     }
+    if (error instanceof BillingError) {
+      reply.code(error.status).send({ error: error.code, message: error.message });
+      return;
+    }
+    if (error instanceof AsaasError) {
+      reply.code(502).send({ error: 'pagamento_indisponivel' });
+      return;
+    }
     if (error instanceof Error && error.message === 'public_rate_limit') {
       reply.code(429).send({ error: 'rate_limited' });
       return;
@@ -305,6 +319,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       '/auth/invitations/accept',
       '/public/leads',
       '/public/alerts/unsubscribe',
+      '/public/planos',
+      '/public/checkout/curso',
+      '/public/compra',
+      '/webhooks/asaas',
     ]);
     if (publicPaths.has(request.url.split('?')[0] ?? '')) {
       return;
@@ -1359,6 +1377,22 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     const result = await withTenant(pool, authContext(request), async (client) => {
       const preferences = await readUserNiches(client, request.user.tenantId, request.user.sub);
       const scopedFilters = applyNicheScope(body.filtros, preferences, request.user.role);
+      const existing = await client.query(
+        'SELECT 1 FROM buscas_salvas WHERE tenant_id = $1 AND usuario_id = $2 AND nome = $3',
+        [request.user.tenantId, request.user.sub, body.nome],
+      );
+      if (!existing.rows[0]) {
+        const total = await client.query<{ total: number }>(
+          'SELECT count(*)::int AS total FROM buscas_salvas WHERE tenant_id = $1',
+          [request.user.tenantId],
+        );
+        await assertPlanAllows(
+          client,
+          request.user.tenantId,
+          'buscas_salvas',
+          total.rows[0]?.total ?? 0,
+        );
+      }
       const inserted = await client.query(
         `INSERT INTO buscas_salvas (tenant_id, usuario_id, empresa_id, nome, filtros, ativa)
          VALUES ($1, $2, $3, $4, $5::jsonb, $6)
@@ -1563,14 +1597,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
                   data_atualizacao, data_abertura_proposta, data_encerramento_proposta,
                   url_origem, conteudo_texto, hash_conteudo, estado_completude,
                   orgao_cnpj, numero_compra, processo, amparo_legal, informacao_complementar,
-                  created_at, updated_at
+                  created_at, updated_at, detalhes_coletados_em
              FROM editais
             WHERE id = $1`,
           [editalId],
         ),
         client.query(
           `SELECT id, numero, descricao, unidade, quantidade, valor_unitario_estimado,
-                  catmat_catser
+                  catmat_catser, beneficio, situacao_item
              FROM itens_edital
             WHERE edital_id = $1
             ORDER BY numero`,
@@ -1975,6 +2009,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   registerLearningRoutes(app, { pool });
   registerCompanyRoutes(app, { pool });
   registerCollectionRoutes(app, { pool, config });
+  registerPriceRoutes(app, { config });
+  registerDetalhesRoutes(app, { pool, config });
+  registerBillingRoutes(app, { pool, config, ...(options.asaas ? { asaas: options.asaas } : {}) });
 
   return app;
 }

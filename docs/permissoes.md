@@ -59,26 +59,36 @@ Regras e menus ficam em `packages/shared/src/areas.ts`, com testes. As páginas 
 
 ## Rotas da API (papel × rota)
 
-| Rota                                                                                                 | plataforma | admin | operador | mentor | aluno |
-| ---------------------------------------------------------------------------------------------------- | :--------: | :---: | :------: | :----: | :---: |
-| `GET /admin/leads`                                                                                   |     ✔      |       |          |        |       |
-| `GET /admin/users/audit`                                                                             |     ✔      |       |          |        |       |
-| `GET /operations/ingest`                                                                             |     ✔      |       |          |        |       |
-| `GET /admin/coleta/status`, `POST /admin/coleta/run` (coleta nativa do PNCP)                         |     ✔      |       |          |        |       |
-| `GET /users`                                                                                         |     ✔      |       |          |   ✔    |       |
-| `GET /mentor/companies`, `GET /mentor/dashboard`                                                     |     ✔      |       |          |   ✔    |       |
-| `GET /mentorado/dashboard`                                                                           |     ✔      |       |          |        |   ✔   |
-| `GET /professional/dashboard`                                                                        |     ✔      |   ✔   |    ✔     |        |       |
-| `GET/POST /opportunities`, `GET/PATCH/DELETE /opportunities/:id`                                     |     ✔      |   ✔   |    ✔     |        |       |
-| `GET /checklist-models`, `POST /opportunities/:id/checklists`, `/checklists/*`, `/checklist-items/*` |     ✔      |   ✔   |    ✔     |        |       |
-| `GET /agenda`, `/agenda/prazos*`, `/tasks*`                                                          |     ✔      |   ✔   |    ✔     |        |       |
-| `GET/POST/PATCH/DELETE /empresa/documentos*`, `GET /empresa/inicio`                                  |     ✔      |   ✔   |    ✔     |        |       |
-| `DELETE /mentor/concessions/:id`                                                                     |     ✔      |       |          |        |       |
-| `PATCH /me/view-as`                                                                                  |     ✔      |       |          |        |       |
-| `GET /platform/overview, /companies, /students, /mentors, /classes, /invitations`                    |     ✔      |       |          |        |       |
-| `POST /platform/invitations` (+ `/:id/revoke`, `/:id/reissue`)                                       |     ✔      |       |          |        |       |
-| `POST /platform/classes`, `PATCH /platform/classes/:id`                                              |     ✔      |       |          |        |       |
-| `PATCH /platform/users/:id/active`                                                                   |     ✔      |       |          |        |       |
+| Rota                                                                                                          | plataforma | admin | operador | mentor | aluno |
+| ------------------------------------------------------------------------------------------------------------- | :--------: | :---: | :------: | :----: | :---: |
+| `GET /admin/leads`                                                                                            |     ✔      |       |          |        |       |
+| `GET /admin/users/audit`                                                                                      |     ✔      |       |          |        |       |
+| `GET /operations/ingest`                                                                                      |     ✔      |       |          |        |       |
+| `GET /admin/coleta/status`, `POST /admin/coleta/run` (coleta nativa do PNCP)                                  |     ✔      |       |          |        |       |
+| `GET /users`                                                                                                  |     ✔      |       |          |   ✔    |       |
+| `GET /mentor/companies`, `GET /mentor/dashboard`                                                              |     ✔      |       |          |   ✔    |       |
+| `GET /mentorado/dashboard`                                                                                    |     ✔      |       |          |        |   ✔   |
+| `GET /professional/dashboard`                                                                                 |     ✔      |   ✔   |    ✔     |        |       |
+| `GET/POST /opportunities`, `GET/PATCH/DELETE /opportunities/:id`                                              |     ✔      |   ✔   |    ✔     |        |       |
+| `GET /checklist-models`, `POST /opportunities/:id/checklists`, `/checklists/*`, `/checklist-items/*`          |     ✔      |   ✔   |    ✔     |        |       |
+| `GET /agenda`, `/agenda/prazos*`, `/tasks*`                                                                   |     ✔      |   ✔   |    ✔     |        |       |
+| `GET/POST/PATCH/DELETE /empresa/documentos*`, `GET /empresa/inicio`                                           |     ✔      |   ✔   |    ✔     |        |       |
+| `DELETE /mentor/concessions/:id`                                                                              |     ✔      |       |          |        |       |
+| `PATCH /me/view-as`                                                                                           |     ✔      |       |          |        |       |
+| `GET /platform/overview, /companies, /students, /mentors, /classes, /invitations`                             |     ✔      |       |          |        |       |
+| `POST /platform/invitations` (+ `/:id/revoke`, `/:id/reissue`)                                                |     ✔      |       |          |        |       |
+| `POST /platform/classes`, `PATCH /platform/classes/:id`                                                       |     ✔      |       |          |        |       |
+| `PATCH /platform/users/:id/active`                                                                            |     ✔      |       |          |        |       |
+| `GET /admin/planos`, `PUT /admin/planos`, `GET /admin/financeiro`, `POST /admin/cobrancas/:id/liberar-manual` |     ✔      |       |          |        |       |
+| `GET /billing/minha-assinatura`                                                                               |            |   ✔   |    ✔     |        |       |
+| `POST /billing/assinar`, `POST /billing/cancelar`                                                             |            |   ✔   |          |        |       |
+| `GET /precos/referencia` (preço de referência, Compras.gov.br)                                                |     ✔      |   ✔   |    ✔     |   ✔    |   ✔   |
+| `POST /editais/:id/detalhes/atualizar` (itens e documentos do PNCP)                                           |     ✔      |   ✔   |    ✔     |   ✔    |   ✔   |
+
+Rotas públicas da venda: `GET /public/planos`, `POST /public/checkout/curso` (limite por IP),
+`POST /public/compra` (acompanha pelo código da compra) e `POST /webhooks/asaas` (confere o
+token secreto, reconsulta o pagamento no Asaas e ignora evento repetido). Plano só limita a
+conta que tem assinatura registrada: contas antigas continuam sem limite.
 
 Rotas públicas do convite: `POST /auth/invitations/preview` e `POST /auth/invitations/accept`
 (limite de tentativas por IP; resposta genérica para convite inválido).

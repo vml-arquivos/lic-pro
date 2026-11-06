@@ -62,6 +62,13 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
     },
     { label: 'Pregões', caption: 'Publicados', href: '/pregoes', icon: 'globe', tone: 'slate' },
     {
+      label: 'Preços',
+      caption: 'Referência de mercado',
+      href: '/precos',
+      icon: 'chart',
+      tone: 'blue',
+    },
+    {
       label: 'Empresa',
       caption: 'Dados e CNPJ',
       href: '/empresas',
@@ -108,6 +115,13 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
       tone: 'amber',
     },
     { label: 'Pregões', caption: 'Publicados', href: '/pregoes', icon: 'globe', tone: 'slate' },
+    {
+      label: 'Preços',
+      caption: 'Referência de mercado',
+      href: '/precos',
+      icon: 'chart',
+      tone: 'blue',
+    },
     {
       label: 'Certificado',
       caption: 'Conclusão do curso',
@@ -183,6 +197,13 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
       href: '/admin/fontes',
       icon: 'sync',
       tone: 'teal',
+    },
+    {
+      label: 'Financeiro',
+      caption: 'Receita e assinantes',
+      href: '/admin/financeiro',
+      icon: 'chart',
+      tone: 'green',
     },
     {
       label: 'Auditoria',
@@ -265,11 +286,11 @@ export const HUB_VISITOR: readonly HubNodeData[] = [
     tone: 'pink',
   },
   {
-    label: 'Plano de 30 dias',
-    caption: 'Caminho guiado',
-    href: toLogin('/plano-30-dias'),
-    icon: 'clock',
-    tone: 'slate',
+    label: 'Curso',
+    caption: 'Aprenda a vender ao governo',
+    href: '/curso',
+    icon: 'award',
+    tone: 'green',
   },
   {
     label: 'Conversar',
