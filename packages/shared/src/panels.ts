@@ -171,26 +171,10 @@ export function panelApiAllowed(panel: Area, apiPath: string): boolean {
   return !ADMIN_API_PREFIXES.some((prefix) => matches(path, prefix));
 }
 
-/** Rótulos e textos de entrada de cada painel. */
-export const PANEL_COPY: Record<Area, { title: string; headline: string; lead: string }> = {
-  administracao: {
-    title: 'Administração',
-    headline: 'Entrar na Administração',
-    lead: 'Acesso exclusivo da equipe do Licite Comigo.',
-  },
-  empresa: {
-    title: 'Empresas',
-    headline: 'Entrar no painel da empresa',
-    lead: 'Acompanhe licitações, pregões, alertas, prazos e documentos da sua empresa.',
-  },
-  aluno: {
-    title: 'Alunos',
-    headline: 'Entrar na área do aluno',
-    lead: 'Acesse as aulas, o plano de 30 dias, a prática com editais e o suporte da Ana.',
-  },
-  mentor: {
-    title: 'Mentores',
-    headline: 'Entrar na área do mentor',
-    lead: 'Acompanhe os alunos, dê devolutivas e registre as sessões.',
-  },
+/** Nome de cada painel, usado no título da página e na tela de entrada. */
+export const PANEL_COPY: Record<Area, { title: string }> = {
+  administracao: { title: 'Administração' },
+  empresa: { title: 'Empresas' },
+  aluno: { title: 'Alunos' },
+  mentor: { title: 'Mentores' },
 };

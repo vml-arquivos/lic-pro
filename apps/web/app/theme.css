@@ -880,98 +880,11 @@ a {
   color: var(--lc-ink);
 }
 
-.auth-split {
-  align-items: stretch;
-  display: grid;
-  gap: 0;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-  margin: 0 auto;
-  max-width: 68rem;
-  min-height: min(44rem, calc(100vh - 6rem));
-  padding: 1rem clamp(1rem, 3vw, 2.5rem) 3rem;
-}
-
-.auth-split > * {
-  min-width: 0;
-}
-
-.auth-aside {
-  background:
-    radial-gradient(30rem 20rem at 20% 0%, rgba(255, 255, 255, 0.22), transparent 60%),
-    var(--lc-grad);
-  border-radius: 1.6rem 0 0 1.6rem;
-  color: #fff;
-  display: grid;
-  gap: 1.5rem;
-  align-content: center;
-  overflow: hidden;
-  padding: clamp(1.6rem, 4vw, 3rem);
-  position: relative;
-}
-
-.auth-aside h2 {
-  color: #fff;
-  font-size: clamp(1.7rem, 3.4vw, 2.5rem);
-  letter-spacing: -0.04em;
-  line-height: 1.08;
-  margin: 0;
-}
-
-.auth-aside p {
-  color: rgba(255, 255, 255, 0.86);
-  line-height: 1.6;
-  margin: 0;
-}
-
-.auth-aside ul {
-  display: grid;
-  gap: 0.55rem;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.auth-aside li {
-  align-items: center;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 999px;
-  display: flex;
-  font-size: 0.85rem;
-  font-weight: 600;
-  gap: 0.6rem;
-  padding: 0.45rem 0.9rem 0.45rem 0.5rem;
-  width: fit-content;
-}
-
-.auth-aside li .aside-ico {
-  align-items: center;
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 50%;
-  color: var(--lc-primary);
-  display: inline-flex;
-  height: 1.7rem;
-  justify-content: center;
-  width: 1.7rem;
-}
-
-.auth-aside::after {
-  border: 1.4px dashed rgba(255, 255, 255, 0.35);
-  border-radius: 50%;
-  content: '';
-  height: 26rem;
-  position: absolute;
-  right: -10rem;
-  top: -8rem;
-  width: 26rem;
-  animation: hub-spin 60s linear infinite;
-}
-
 .auth-card {
   align-content: center;
   background: var(--lc-surface);
   border: 1px solid var(--lc-line);
-  border-radius: 0 1.6rem 1.6rem 0;
+  border-radius: 1.6rem;
   box-shadow: var(--lc-shadow-card);
   display: grid;
   padding: clamp(1.6rem, 4vw, 3rem);
@@ -1137,18 +1050,6 @@ a {
   .view-as .audience-select-label {
     display: none;
   }
-
-  .auth-split {
-    grid-template-columns: 1fr;
-  }
-
-  .auth-aside {
-    border-radius: 1.6rem 1.6rem 0 0;
-  }
-
-  .auth-card {
-    border-radius: 0 0 1.6rem 1.6rem;
-  }
 }
 
 @media (max-width: 42rem) {
@@ -1241,8 +1142,7 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .hub-line,
   .hub-ring,
-  .hub-core-art::before,
-  .auth-aside::after {
+  .hub-core-art::before {
     animation: none;
   }
 
@@ -1302,4 +1202,28 @@ a {
 
 .ui-list li > span > small {
   display: block;
+}
+
+/* Entrada simples: só o formulário, centralizado. */
+.auth-single {
+  margin: 0 auto;
+  max-width: 28rem;
+  padding: 2rem clamp(1rem, 3vw, 1.5rem) 3rem;
+}
+
+.auth-single .auth-card {
+  border-radius: 1.6rem;
+}
+
+/* Atalhos da área nos painéis. */
+.tool-grid {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  margin: 0 auto 1.6rem;
+  max-width: 68rem;
+}
+
+.tool-grid .hub-node {
+  border-radius: 1rem;
 }
