@@ -3,7 +3,7 @@ import type { Pool, PoolClient } from 'pg';
 import { nextDelivery, type Frequency } from './alert-schedule.js';
 import type { UserRole } from './auth.js';
 import { runReminderCycle } from './reminders.js';
-import type { RuntimeConfig } from './config.js';
+import { panelBaseUrl, type RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
 import type { EmailMessage } from './email.js';
 import { applyNicheScope, readUserNiches } from './niche-scope.js';
@@ -579,7 +579,7 @@ export function buildDigest(
   person: { email: string; nome: string },
   rows: readonly { tipo: string; payload: Record<string, unknown> }[],
 ): EmailMessage {
-  const app = (config.appUrl ?? '').replace(/\/$/, '');
+  const app = panelBaseUrl(config, 'empresa');
   const unsubscribe = `${app}/cancelar-alertas?token=${encodeURIComponent(unsubscribeToken(config.jwtSecret, tenantId, userId))}`;
   const lines = rows.slice(0, 30).map((row) => {
     const p = row.payload;

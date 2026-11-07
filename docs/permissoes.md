@@ -21,6 +21,30 @@ exige mudar a outra.
 - Aluno só entra por matrícula feita pela Administração (convite). Empresa e mentor também
   entram por convite. O cadastro aberto continua desligado (`SIGNUP_ENABLED=false`).
 
+## Endereços por painel
+
+Cada painel pode ter o seu próprio endereço (`PANEL_URL_ADMIN`, `PANEL_URL_EMPRESA`,
+`PANEL_URL_ALUNO` e, opcionalmente, `PANEL_URL_MENTOR`). É o mesmo aplicativo, mas em cada
+endereço só existe o painel dele. Sem essas variáveis nada muda e o sistema segue com um
+endereço só.
+
+- **Páginas**: cada endereço abre só o menu do seu painel. O resto responde 404, não "acesso
+  negado": a página não existe ali. Regras em `packages/shared/src/panels.ts`, com testes.
+- **Login**: empresa, aluno e mentor só entram no endereço da própria área. Quem tenta o
+  endereço errado recebe o aviso e o link do painel certo, e nenhum cookie é gravado.
+- **Equipe**: a Administração entra no seu endereço e também em cada painel, pela porta dele,
+  para dar suporte e testar. Ali vê só aquele painel (sem "ver como") e cada requisição vai
+  para a auditoria com a área daquele painel.
+- **Sessão**: o cookie não tem `Domain`, então cada endereço tem a sua sessão. Entrar na
+  Administração não abre a Empresa.
+- **API**: nos endereços de Empresa e Aluno as rotas `/admin`, `/platform` e `/operations`
+  não existem. O banco continua isolando por papel e por conta.
+- **Links enviados**: convites, e-mails de confirmação, recuperação de senha e alertas apontam
+  para o painel de quem recebe. Mentor sem endereço próprio usa o do Aluno.
+- **Mentor**: faz parte do lado do curso. Sem `PANEL_URL_MENTOR`, entra pelo endereço do Aluno.
+- **Endereço antigo**: um endereço que não esteja em `PANEL_URL_*` continua funcionando como
+  antes (todas as áreas). Depois de configurar os novos, retire o antigo do web.
+
 ## O que a Administração enxerga
 
 - **Leitura** entre contas (empresas, usuários, buscas, alertas, auditoria), sempre com

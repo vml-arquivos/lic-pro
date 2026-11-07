@@ -1,3 +1,4 @@
+import type { Area } from '@licitecomigo/shared';
 export type RuntimeConfig = {
   port: number;
   jwtSecret: string;
@@ -7,6 +8,8 @@ export type RuntimeConfig = {
   databaseUrl?: string;
   redisUrl?: string;
   appUrl?: string;
+  /** Endereço de cada painel (PANEL_URL_*). Vazio = um endereço só (APP_URL). */
+  panelUrls: Partial<Record<Area, string>>;
   apiUrl?: string;
   siteUrl?: string;
   allowedOrigins: string[];
@@ -112,6 +115,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
     port: Number(env.CORE_API_PORT ?? 3001),
     jwtSecret: jwtSecret ?? 'test-only-secret',
     jwtTtlSeconds: Number(env.JWT_TTL_SECONDS ?? 3600),
+    panelUrls: readPanelUrls(env),
     allowedOrigins: (env.ALLOWED_ORIGINS ?? env.APP_URL ?? '')
       .split(',')
       .map((origin) => origin.trim())
@@ -165,4 +169,38 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
   if (env.SMTP_PASSWORD) config.smtpPassword = env.SMTP_PASSWORD;
   if (env.SMTP_FROM) config.emailFrom = env.SMTP_FROM;
   return config;
+}
+
+const PANEL_ENV: Record<Area, string> = {
+  administracao: 'PANEL_URL_ADMIN',
+  empresa: 'PANEL_URL_EMPRESA',
+  aluno: 'PANEL_URL_ALUNO',
+  mentor: 'PANEL_URL_MENTOR',
+};
+
+function readPanelUrls(env: NodeJS.ProcessEnv): Partial<Record<Area, string>> {
+  const urls: Partial<Record<Area, string>> = {};
+  for (const [area, key] of Object.entries(PANEL_ENV) as [Area, string][]) {
+    const raw = env[key]?.trim();
+    if (!raw) continue;
+    try {
+      const url = new URL(raw);
+      if (url.protocol === 'https:' || url.protocol === 'http:') urls[area] = url.origin;
+    } catch {
+      // endereço inválido: ignora
+    }
+  }
+  return urls;
+}
+
+/**
+ * Endereço base para links enviados a uma pessoa. Cada área tem o seu painel; sem endereços por
+ * painel, vale o APP_URL de sempre. `requested` é o painel de onde veio o pedido (repassado pelo
+ * app web) e só vale se for um dos endereços configurados.
+ */
+export function panelBaseUrl(config: RuntimeConfig, area: Area, requested?: string | null): string {
+  const hint = requested?.trim().replace(/\/+$/, '');
+  if (hint && Object.values(config.panelUrls).includes(hint)) return hint;
+  const own = config.panelUrls[area] ?? (area === 'mentor' ? config.panelUrls.aluno : undefined);
+  return (own ?? config.appUrl ?? config.siteUrl ?? '').replace(/\/+$/, '');
 }

@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { LeadForm } from '../components/LeadForm';
+import { companyPanelUrl } from '../lib/panels';
 
-const appUrl = process.env.APP_URL ?? '/';
+const appUrl = companyPanelUrl() || '/';
 const whatsapp = process.env.WHATSAPP_NUMBER
   ? `https://wa.me/${process.env.WHATSAPP_NUMBER.replace(/\D/g, '')}`
   : '/contato';

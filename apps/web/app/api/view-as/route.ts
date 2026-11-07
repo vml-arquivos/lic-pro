@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { isArea } from '@licitecomigo/shared';
+import { currentPanel } from '../../../lib/panel';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,6 +12,8 @@ const secure = process.env.NODE_ENV === 'production';
  * de contas da plataforma; o cookie serve apenas para registrar a escolha na auditoria.
  */
 export async function POST(request: Request): Promise<Response> {
+  // Com endereço por painel não há "ver como": cada painel tem a sua porta.
+  if (currentPanel()) return Response.json({ error: 'not_found' }, { status: 404 });
   const baseUrl = process.env.CORE_API_INTERNAL_URL?.replace(/\/$/, '');
   if (!baseUrl) return Response.json({ error: 'core_api_not_configured' }, { status: 503 });
   const token = cookies().get('lc_access_token')?.value;

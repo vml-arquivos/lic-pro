@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
 import { z } from 'zod';
 import { createOpaqueToken, hashOpaqueToken, PublicRateLimiter } from './auth-public.js';
-import type { RuntimeConfig } from './config.js';
+import { panelBaseUrl, type RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
 import { sendEmail } from './email.js';
 import { assertStrongPassword, hashPassword } from './password.js';
@@ -59,9 +59,13 @@ const acceptBody = tokenBody.extend({
   privacidade_aceita: z.literal(true),
 });
 
-export function invitationLink(config: RuntimeConfig, token: string): string {
-  const base = (config.appUrl ?? config.siteUrl ?? '').replace(/\/+$/, '');
-  return `${base}/convite?token=${token}`;
+/** O convite abre no painel de quem foi convidado: empresa, aluno ou mentor. */
+export function invitationLink(
+  config: RuntimeConfig,
+  token: string,
+  tipo: 'empresa' | 'aluno' | 'mentor' = 'aluno',
+): string {
+  return `${panelBaseUrl(config, tipo)}/convite?token=${token}`;
 }
 
 function slugify(value: string, suffix: string): string {
@@ -420,7 +424,7 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
           },
           { tipo: body.tipo },
         );
-        const link = invitationLink(config, token);
+        const link = invitationLink(config, token, body.tipo);
         await deliverInvitationEmail(config, body.email, body.nome, link);
         // O link só aparece nesta resposta. Quem tem acesso a ele pode criar a conta.
         return reply.code(201).send({
@@ -463,11 +467,16 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
         request,
         'platform.invitation.reissued',
         async (client) => {
-          const result = await client.query<{ email: string; nome: string; expira_em: Date }>(
+          const result = await client.query<{
+            email: string;
+            nome: string;
+            tipo: 'empresa' | 'aluno' | 'mentor';
+            expira_em: Date;
+          }>(
             `UPDATE convites
                 SET token_hash = $3, expira_em = now() + make_interval(days => $4), revogado_em = NULL
               WHERE tenant_id = $1 AND id = $2 AND usado_em IS NULL
-              RETURNING email, nome, expira_em`,
+              RETURNING email, nome, tipo, expira_em`,
             [request.user.tenantId, id, hashOpaqueToken(token), INVITATION_TTL_DAYS],
           );
           return result.rows[0] ?? null;
@@ -475,7 +484,7 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
         { convite_id: id },
       );
       if (!reissued) return reply.code(404).send({ error: 'invitation_not_found' });
-      const link = invitationLink(config, token);
+      const link = invitationLink(config, token, reissued.tipo);
       await deliverInvitationEmail(config, reissued.email, reissued.nome, link);
       return reply.send({
         id,

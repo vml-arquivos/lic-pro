@@ -46,3 +46,20 @@ export type { Regiao } from './geo.js';
 
 export { HUB_CTA, HUB_NODES, HUB_VISITOR } from './hubs.js';
 export type { HubNodeData, HubTone } from './hubs.js';
+
+export {
+  PANEL_COPY,
+  areaOfRole,
+  areasForPanel,
+  normalizeHost,
+  panelApiAllowed,
+  panelForHost,
+  panelPathAllowed,
+  panelPathPublic,
+  panelUrl,
+  panelUrlForRole,
+  panelsConfigured,
+  parsePanels,
+  roleAllowedOnPanel,
+} from './panels.js';
+export type { PanelEntry, PanelMap } from './panels.js';

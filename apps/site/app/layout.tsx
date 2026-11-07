@@ -2,9 +2,10 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import './globals.css';
 import { CookieBanner } from '../components/CookieBanner';
+import { companyPanelUrl, hasSeparateStudentPanel, studentPanelUrl } from '../lib/panels';
 
 const siteUrl = process.env.SITE_URL ?? 'http://localhost:3100';
-const appUrl = process.env.APP_URL ?? '/';
+const appUrl = companyPanelUrl() || '/';
 const description =
   'Encontre oportunidades, confira editais e organize os próximos passos em licitações públicas.';
 
@@ -51,8 +52,13 @@ export default function SiteLayout({ children }: Readonly<{ children: React.Reac
           </nav>
           <div className="header-actions">
             <a className="button button-quiet" href={appUrl}>
-              Entrar
+              {hasSeparateStudentPanel() ? 'Sou empresa' : 'Entrar'}
             </a>
+            {hasSeparateStudentPanel() ? (
+              <a className="button button-quiet" href={studentPanelUrl()}>
+                Sou aluno
+              </a>
+            ) : null}
             {signupEnabled ? (
               <a className="button button-primary" href={`${appUrl.replace(/\/$/, '')}/signup`}>
                 Criar conta

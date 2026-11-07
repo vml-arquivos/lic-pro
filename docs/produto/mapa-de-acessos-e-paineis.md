@@ -1,6 +1,15 @@
 # Mapa de acessos e painéis
 
-Quatro áreas separadas. Cada pessoa vê só a sua; a equipe pode "ver como" cada uma.
+Quatro áreas separadas. Cada pessoa vê só a sua. Com endereços por painel (veja
+`docs/permissoes.md`, "Endereços por painel"), cada área tem a sua porta:
+
+| Painel           | Endereço sugerido  | Quem entra                 |
+| ---------------- | ------------------ | -------------------------- |
+| Administração    | `admin.seudominio` | Equipe do Licite Comigo    |
+| Empresa          | `app.seudominio`   | Empresas assinantes        |
+| Aluno (e Mentor) | `aluno.seudominio` | Alunos do curso e mentores |
+
+Sem esses endereços, a equipe pode "ver como" cada área no mesmo endereço.
 
 ## Administração (equipe do Licite Comigo)
 

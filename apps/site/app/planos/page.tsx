@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ContentPage } from '../../components/ContentPage';
+import { companyPanelUrl, studentPanelUrl } from '../../lib/panels';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,7 +65,8 @@ const FAQ: Array<[string, string]> = [
 
 export default async function PlansPage() {
   const plans = await loadPlans();
-  const appUrl = (process.env.APP_URL ?? '').replace(/\/$/, '');
+  const appUrl = companyPanelUrl();
+  const studentUrl = studentPanelUrl();
   const signup = process.env.SIGNUP_ENABLED === 'true' ? `${appUrl}/signup` : appUrl || '/';
   const subscriptions = plans.filter((plan) => plan.tipo === 'assinatura');
   const course = plans.find((plan) => plan.tipo === 'curso');
@@ -121,7 +123,7 @@ export default async function PlansPage() {
                     <li key={item}>{item}</li>
                   ))}
                 </ul>
-                <a className="button button-secondary" href={`${appUrl}/curso`}>
+                <a className="button button-secondary" href={`${studentUrl}/curso`}>
                   Quero o curso
                 </a>
               </article>

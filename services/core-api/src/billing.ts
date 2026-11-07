@@ -10,7 +10,7 @@ import {
   type AsaasPayment,
 } from './asaas.js';
 import { createOpaqueToken, hashOpaqueToken, PublicRateLimiter } from './auth-public.js';
-import type { RuntimeConfig } from './config.js';
+import { panelBaseUrl, type RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
 import { isValidDocumento, onlyDigits } from './documento.js';
 import { resolverCupom } from './cupom-calc.js';
@@ -247,7 +247,7 @@ async function fulfil(
     [c.id, hashOpaqueToken(token)],
   );
   if (result.rows[0]?.resultado === 'convite') {
-    const base = (config.appUrl ?? config.siteUrl ?? '').replace(/\/+$/, '');
+    const base = panelBaseUrl(config, 'aluno');
     return {
       email: {
         to: c.comprador_email,
@@ -456,7 +456,7 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): void {
         );
         throw error;
       }
-      const base = (config.appUrl ?? config.siteUrl ?? '').replace(/\/+$/, '');
+      const base = panelBaseUrl(config, 'aluno');
       return reply.code(201).send({
         claim,
         acompanhar_url: `${base}/compra?c=${claim}`,
@@ -505,7 +505,7 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): void {
         const state = invite.rows[0];
         if (state?.usado_em) return { ...base, resultado: 'conta_criada', acesso_url: null };
         if (state && !state.revogado_em && state.valido) {
-          const origin = (config.appUrl ?? config.siteUrl ?? '').replace(/\/+$/, '');
+          const origin = panelBaseUrl(config, 'aluno');
           return { ...base, acesso_url: `${origin}/convite?token=${token}` };
         }
         return { ...base, resultado: 'convite_expirado', acesso_url: null };

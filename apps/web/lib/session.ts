@@ -1,6 +1,12 @@
 import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
-import type { Area } from '@licitecomigo/shared';
+import {
+  areasForPanel,
+  panelUrlForRole,
+  roleAllowedOnPanel,
+  type Area,
+} from '@licitecomigo/shared';
+import { configuredPanels, currentPanel } from './panel';
 
 export type Session = {
   id: string;
@@ -15,10 +21,16 @@ export type Session = {
   perfil_jornada: string | null;
   nicho_preferencias: string[] | null;
   onboarding_concluido: boolean;
+  /** Verdadeiro quando o endereço é de um painel só: não há "ver como". */
+  painel_fixo?: boolean;
 };
 
 export type SessionResult =
-  { status: 'ok'; session: Session } | { status: 'anonymous' } | { status: 'unavailable' };
+  | { status: 'ok'; session: Session }
+  | { status: 'anonymous' }
+  | { status: 'unavailable' }
+  /** A conta existe, mas pertence a outro painel (outro endereço). */
+  | { status: 'wrong_panel'; papel: string; url: string | null };
 
 /** Lê a conta atual no core-api, usando o cookie de sessão. Nunca confia em dados do navegador. */
 export async function getSessionResult(): Promise<SessionResult> {
@@ -33,7 +45,33 @@ export async function getSessionResult(): Promise<SessionResult> {
     });
     if (response.status === 401 || response.status === 403) return { status: 'anonymous' };
     if (!response.ok) return { status: 'unavailable' };
-    return { status: 'ok', session: (await response.json()) as Session };
+    const session = (await response.json()) as Session;
+    const panel = currentPanel();
+    if (!panel) return { status: 'ok', session };
+    const panels = configuredPanels();
+    if (!roleAllowedOnPanel(panels, panel, session.papel)) {
+      return {
+        status: 'wrong_panel',
+        papel: session.papel,
+        url: panelUrlForRole(panels, session.papel),
+      };
+    }
+    // Neste endereço só existe o painel dele. A equipe entra pela porta de cada painel e vê só
+    // o que ele mostra (sem trocar de área).
+    if (session.papel === 'plataforma') {
+      const area = areasForPanel(panels, panel)[0] ?? panel;
+      return {
+        status: 'ok',
+        session: {
+          ...session,
+          area,
+          areas_permitidas: [area],
+          visualizar_como: null,
+          painel_fixo: true,
+        },
+      };
+    }
+    return { status: 'ok', session: { ...session, painel_fixo: true } };
   } catch {
     return { status: 'unavailable' };
   }
@@ -50,7 +88,7 @@ export async function getSession(): Promise<Session | null> {
  */
 export async function requireArea(...areas: Area[]): Promise<Session> {
   const result = await getSessionResult();
-  if (result.status === 'anonymous') redirect('/login');
+  if (result.status === 'anonymous' || result.status === 'wrong_panel') redirect('/login');
   if (result.status === 'unavailable') throw new Error('Serviço de contas indisponível.');
   const allowed = result.session.areas_permitidas;
   if (!areas.some((area) => allowed.includes(area))) notFound();

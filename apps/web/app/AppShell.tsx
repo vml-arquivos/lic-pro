@@ -57,13 +57,13 @@ function homeFor(area: Area) {
   return area === 'administracao' ? '/admin' : '/painel';
 }
 
-export function AccessDenied() {
+export function AccessDenied({ href = '/painel' }: Readonly<{ href?: string }>) {
   return (
     <main className="ui-denied" role="alert">
       <p className="eyebrow">Acesso restrito</p>
       <h1>Esta página não faz parte da sua área.</h1>
       <p>Use o menu ao lado para voltar ao que está liberado para a sua conta.</p>
-      <Link className="ui-btn" href="/painel">
+      <Link className="ui-btn" href={href}>
         Ir para o meu painel
       </Link>
     </main>
@@ -79,7 +79,9 @@ export function AppShell({ session, children }: AppShellProps) {
   const groups = area ? AREA_MENUS[area] : ANONYMOUS_MENU;
   const current = area ? flatMenu(area).find((item) => isCurrent(pathname, item.href)) : undefined;
   const blocked = session ? !canOpenPage(session.areas_permitidas, pathname) : false;
-  const viewingAs = Boolean(session?.plataforma && area && area !== 'administracao');
+  const viewingAs = Boolean(
+    session?.plataforma && area && area !== 'administracao' && !session.painel_fixo,
+  );
   const name = session?.nome ?? session?.email ?? 'Visitante';
 
   async function viewAs(next: Area) {
@@ -172,7 +174,7 @@ export function AppShell({ session, children }: AppShellProps) {
             </div>
           ))}
         </nav>
-        {session?.plataforma ? (
+        {session?.plataforma && !session.painel_fixo ? (
           <div className="view-as">
             <p className="sidebar-label">Ver como</p>
             <label className="audience-select-label">
@@ -239,7 +241,9 @@ export function AppShell({ session, children }: AppShellProps) {
             </Link>
           </div>
         </header>
-        <div className="app-shell-content">{blocked ? <AccessDenied /> : children}</div>
+        <div className="app-shell-content">
+          {blocked ? <AccessDenied href={area ? homeFor(area) : '/login'} /> : children}
+        </div>
       </div>
     </div>
   );

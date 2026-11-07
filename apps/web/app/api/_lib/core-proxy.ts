@@ -1,9 +1,16 @@
 import { cookies } from 'next/headers';
-import { isArea } from '@licitecomigo/shared';
+import { areasForPanel, isArea, panelApiAllowed } from '@licitecomigo/shared';
+import { configuredPanels, currentPanel } from '../../../lib/panel';
 
 export async function proxyCore(request: Request, path: string): Promise<Response> {
   const baseUrl = process.env.CORE_API_INTERNAL_URL?.replace(/\/$/, '');
   if (!baseUrl) return Response.json({ error: 'core_api_not_configured' }, { status: 503 });
+
+  // Com endereços por painel, as rotas de administração só existem no painel da Administração.
+  const panel = currentPanel();
+  if (panel && !panelApiAllowed(panel, path.split('?')[0] ?? path)) {
+    return Response.json({ error: 'not_found' }, { status: 404 });
+  }
 
   const headers = new Headers();
   const contentType = request.headers.get('content-type');
@@ -11,8 +18,12 @@ export async function proxyCore(request: Request, path: string): Promise<Respons
   const authorization = request.headers.get('authorization') ?? sessionAuthorization();
   if (authorization) headers.set('authorization', authorization);
   // Só registra na auditoria o "ver como" da equipe; não muda nenhuma permissão.
-  const viewAs = cookies().get('lc_view_as')?.value;
-  if (viewAs && isArea(viewAs)) headers.set('x-acting-as', viewAs);
+  if (panel) {
+    headers.set('x-acting-as', areasForPanel(configuredPanels(), panel)[0] ?? panel);
+  } else {
+    const viewAs = cookies().get('lc_view_as')?.value;
+    if (viewAs && isArea(viewAs)) headers.set('x-acting-as', viewAs);
+  }
   const body =
     request.method === 'GET' || request.method === 'HEAD' || request.method === 'DELETE'
       ? undefined

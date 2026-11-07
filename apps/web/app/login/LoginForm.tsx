@@ -8,6 +8,7 @@ type TenantChoice = { id: string; nome: string };
 /** Mensagem por causa real: senha errada não pode se confundir com servidor fora do ar. */
 export function loginErrorText(status: number, code?: string): string {
   if (code === 'email_not_verified') return 'Confirme seu e-mail antes de entrar.';
+  if (code === 'wrong_panel') return 'Esta conta é de outro painel. Entre pelo endereço certo.';
   if (status === 401 || code === 'invalid_credentials') return 'E-mail ou senha incorretos.';
   if (status === 429 || code === 'public_rate_limit') {
     return 'Muitas tentativas seguidas. Aguarde um minuto e tente de novo.';
@@ -35,9 +36,11 @@ export function LoginForm({
   const [password, setPassword] = useState(demoMode ? 'local-dev-password' : '');
   const [tenants, setTenants] = useState<TenantChoice[]>([]);
   const [error, setError] = useState('');
+  const [otherPanel, setOtherPanel] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function submit() {
+    setOtherPanel(null);
     setLoading(true);
     setError('');
     try {
@@ -49,6 +52,7 @@ export function LoginForm({
       const payload = (await response.json().catch(() => ({}))) as {
         tenants?: TenantChoice[];
         error?: string;
+        url?: string | null;
       };
       if (response.status === 409 && payload.tenants) {
         setTenants(payload.tenants);
@@ -56,6 +60,7 @@ export function LoginForm({
       }
       if (!response.ok) {
         setError(loginErrorText(response.status, payload.error));
+        if (payload.error === 'wrong_panel' && payload.url) setOtherPanel(payload.url);
         return;
       }
       router.push(nextPath());
@@ -123,6 +128,11 @@ export function LoginForm({
       {error ? (
         <p role="alert" className="error-message">
           {error}
+        </p>
+      ) : null}
+      {otherPanel ? (
+        <p className="notice">
+          O seu painel fica em <a href={otherPanel}>{otherPanel.replace(/^https?:\/\//, '')}</a>.
         </p>
       ) : null}
       <p className="auth-help">

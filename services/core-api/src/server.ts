@@ -41,7 +41,7 @@ import { AsaasError, type AsaasClient } from './asaas.js';
 import { registerPriceRoutes } from './precos.js';
 import { registerDetalhesRoutes } from './pncp-detalhes.js';
 import { registerPlatformRoutes } from './platform.js';
-import { loadConfig, type RuntimeConfig } from './config.js';
+import { loadConfig, panelBaseUrl, type RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
 import { assertStrongPassword, hashPassword, verifyPassword } from './password.js';
 import { sendEmail } from './email.js';
@@ -572,7 +572,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     await sendEmail(config, {
       to: body.email,
       subject: 'Confirme seu e-mail — Licite Comigo',
-      text: `Confirme seu e-mail em ${config.appUrl ?? config.siteUrl ?? ''}/verify-email?token=${verificationToken}`,
+      text: `Confirme seu e-mail em ${panelBaseUrl(config, 'empresa', request.headers['x-panel-url'] as string | undefined)}/verify-email?token=${verificationToken}`,
     });
     return reply
       .code(202)
@@ -667,7 +667,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         await sendEmail(config, {
           to: body.email,
           subject: 'Recuperação de senha — Licite Comigo',
-          text: `Redefina sua senha em ${config.appUrl ?? config.siteUrl ?? ''}/password-reset?token=${token}`,
+          text: `Redefina sua senha em ${panelBaseUrl(config, 'empresa', request.headers['x-panel-url'] as string | undefined)}/password-reset?token=${token}`,
         });
       }
       return reply

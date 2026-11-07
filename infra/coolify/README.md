@@ -24,6 +24,18 @@ Todos os recursos de aplicação usam **Base Directory `/`** e o repositório co
 
 `bid-engine` e `realtime-gw` continuam recursos futuros e não fazem parte do deploy ativo do MVP 1. Seus Dockerfiles permanecem disponíveis para uma parada posterior.
 
+## Endereços por painel (Administração, Empresa, Aluno)
+
+O mesmo recurso `web` atende os três painéis, cada um com o seu domínio:
+
+1. No DNS, crie um registro `A` para cada subdomínio (por exemplo `admin`, `app` e `aluno`) apontando para o IP do servidor.
+2. No recurso `web`, em **Domains**, informe os três separados por vírgula (`https://admin.seudominio,https://app.seudominio,https://aluno.seudominio`). Retire o domínio antigo.
+3. Nos recursos `web`, `core-api` e `site`, defina `PANEL_URL_ADMIN`, `PANEL_URL_EMPRESA` e `PANEL_URL_ALUNO` com esses endereços (mesmos valores nos três). `APP_URL` pode ficar como está.
+4. Redeploy de `web`, `core-api` e `site`.
+5. Confira: cada endereço mostra a própria entrada; `/admin` no endereço da empresa responde 404; uma conta de empresa no endereço do aluno é recusada com o link certo.
+
+Sem as variáveis `PANEL_URL_*` o sistema segue com um endereço só.
+
 ## Ordem de criação
 
 1. Crie PostgreSQL usando `pgvector/pgvector:pg16` com `POSTGRES_ADMIN_USER=licite_admin`, Redis com AOF e RabbitMQ em rede privada usando o vhost `licite_comigo` (sem barra no nome do vhost).
