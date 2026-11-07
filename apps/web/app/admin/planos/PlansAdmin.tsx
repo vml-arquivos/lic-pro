@@ -17,6 +17,7 @@ type Plan = {
   limites: Record<string, number>;
   turma_nome: string | null;
   ordem: number;
+  trial_dias: number;
   ativo: boolean;
 };
 type Payload = { vendas_ativas: boolean; planos: Plan[] };
@@ -109,6 +110,7 @@ function PlanForm({
   );
   const [beneficios, setBeneficios] = useState(plan.beneficios.join('\n'));
   const [buscas, setBuscas] = useState(String(plan.limites.buscas_salvas ?? ''));
+  const [trial, setTrial] = useState(String(plan.trial_dias ?? 0));
   const [ativo, setAtivo] = useState(plan.ativo);
   const [busy, setBusy] = useState(false);
 
@@ -135,6 +137,7 @@ function PlanForm({
         limites,
         turma_nome: plan.turma_nome,
         ordem: plan.ordem,
+        trial_dias: plan.tipo === 'assinatura' ? Number(trial || 0) : 0,
         ativo,
       });
       onDone({ kind: 'success', text: `Plano “${nome}” salvo.` });
@@ -192,6 +195,16 @@ function PlanForm({
               value={buscas}
               onChange={(e) => setBuscas(e.target.value.replace(/\D/g, ''))}
               placeholder="Sem limite se vazio"
+            />
+          </label>
+        ) : null}
+        {plan.tipo === 'assinatura' ? (
+          <label>
+            Dias de teste grátis (0 = sem teste)
+            <input
+              inputMode="numeric"
+              value={trial}
+              onChange={(e) => setTrial(e.target.value.replace(/\D/g, '').slice(0, 2))}
             />
           </label>
         ) : null}

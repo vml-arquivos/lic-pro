@@ -13,6 +13,7 @@ import { createOpaqueToken, hashOpaqueToken, PublicRateLimiter } from './auth-pu
 import type { RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
 import { isValidDocumento, onlyDigits } from './documento.js';
+import { resolverCupom } from './cupom-calc.js';
 import { sendEmail } from './email.js';
 import {
   authContext,
@@ -59,11 +60,13 @@ const checkoutBody = z.object({
   email: z.string().trim().toLowerCase().email().max(200),
   documento: documentoField,
   termos_aceitos: z.literal(true),
+  cupom: z.string().trim().max(32).optional(),
 });
 const claimBody = z.object({ claim: z.string().min(20).max(200) });
 const assinarBody = z.object({
   plano: z.string().trim().min(1).max(80),
   documento: documentoField,
+  cupom: z.string().trim().max(32).optional(),
 });
 
 const planBody = z.object({
@@ -81,6 +84,7 @@ const planBody = z.object({
   limites: z.record(z.enum(LIMIT_KEYS), z.number().int().min(0).max(100_000)).default({}),
   turma_nome: z.string().trim().min(2).max(120).nullable().optional(),
   ordem: z.number().int().min(0).max(1000).default(100),
+  trial_dias: z.number().int().min(0).max(60).default(0),
   ativo: z.boolean().default(false),
 });
 
@@ -96,6 +100,7 @@ type PlanRow = {
   limites: Record<string, number>;
   turma_nome: string | null;
   ordem: number;
+  trial_dias: number;
   ativo: boolean;
 };
 
@@ -118,8 +123,15 @@ type CobrancaRow = {
   resultado_liberacao: string | null;
 };
 
-const PLAN_COLUMNS = `id, slug, nome, descricao, tipo, preco_centavos, ciclo, beneficios, limites,
-                      turma_nome, ordem, ativo`;
+export const PLAN_COLUMNS = `id, slug, nome, descricao, tipo, preco_centavos, ciclo, beneficios, limites,
+                      turma_nome, ordem, trial_dias, ativo`;
+
+/** Situação "de verdade": teste com prazo vencido conta como expirado, sem precisar de rotina. */
+export const statusEfetivoSql = (alias = ''): string => {
+  const prefix = alias ? `${alias}.` : '';
+  return `CASE WHEN ${prefix}status = 'trial' AND ${prefix}fim_em IS NOT NULL AND ${prefix}fim_em < now()
+                THEN 'expirada' ELSE ${prefix}status END`;
+};
 
 /** Token do convite do curso: derivado da cobrança, para a página de compra reexibir o acesso. */
 export function deriveCourseInviteToken(config: RuntimeConfig, cobrancaId: string): string {
@@ -135,7 +147,7 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 /** Sessão do fluxo de cobrança (checkout público e webhook): liga `app.billing_flow` só aqui. */
-async function withBilling<T>(
+export async function withBilling<T>(
   pool: Pool,
   callback: (client: PoolClient) => Promise<T>,
 ): Promise<T> {
@@ -163,10 +175,11 @@ function publicPlan(row: PlanRow) {
     preco_centavos: row.preco_centavos,
     ciclo: row.ciclo,
     beneficios: row.beneficios,
+    trial_dias: row.trial_dias,
   };
 }
 
-function sendBillingError(reply: FastifyReply, error: unknown): FastifyReply {
+export function sendBillingError(reply: FastifyReply, error: unknown): FastifyReply {
   if (error instanceof BillingError) {
     return reply.code(error.status).send({ error: error.code, message: error.message });
   }
@@ -193,7 +206,7 @@ export async function assertPlanAllows(
   currentCount: number,
 ): Promise<void> {
   const result = await client.query<{ status: string; limites_snapshot: Record<string, unknown> }>(
-    `SELECT status, limites_snapshot FROM assinaturas
+    `SELECT ${statusEfetivoSql()} AS status, limites_snapshot FROM assinaturas
       WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 1`,
     [tenantId],
   );
@@ -203,7 +216,7 @@ export async function assertPlanAllows(
     throw new BillingError(
       402,
       'assinatura_inativa',
-      'Sua assinatura não está ativa. Renove em Assinatura para criar novas buscas.',
+      'Sua assinatura ou teste grátis terminou. Escolha um plano em Assinatura para criar novas buscas.',
     );
   }
   const limit = row.limites_snapshot?.[key];
@@ -349,7 +362,11 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): void {
           )
         ).rows,
     );
-    return reply.send({ vendas_ativas: billingOn(), planos: rows.map(publicPlan) });
+    return reply.send({
+      vendas_ativas: billingOn(),
+      site_url: config.siteUrl ?? null,
+      planos: rows.map(publicPlan),
+    });
   });
 
   app.post('/public/checkout/curso', async (request, reply) => {
@@ -383,11 +400,15 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): void {
             'Este e-mail já comprou o curso. Entre com sua conta ou use "Esqueci a senha".',
           );
         }
+        const coupon = body.cupom ? await resolverCupom(db, body.cupom, plan) : null;
+        if (coupon && !coupon.ok) throw new BillingError(400, 'cupom_invalido', coupon.mensagem);
+        const applied = coupon?.ok ? coupon.cupom : null;
+        const valor = applied?.valor_final_centavos ?? plan.preco_centavos;
         const id = randomUUID();
         await db.query(
           `INSERT INTO cobrancas (id, tipo, plano_id, comprador_nome, comprador_email, documento_final,
-                                  claim_hash, valor_centavos)
-           VALUES ($1, 'curso', $2, $3, $4, $5, $6, $7)`,
+                                  claim_hash, valor_centavos, cupom_codigo, desconto_centavos)
+           VALUES ($1, 'curso', $2, $3, $4, $5, $6, $7, $8, $9)`,
           [
             id,
             plan.id,
@@ -395,10 +416,12 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): void {
             body.email,
             onlyDigits(body.documento).slice(-4),
             hashOpaqueToken(claim),
-            plan.preco_centavos,
+            valor,
+            applied?.codigo ?? null,
+            applied?.desconto_centavos ?? 0,
           ],
         );
-        return { id, plan };
+        return { id, plan, valor };
       });
 
       let payment: AsaasPayment;
@@ -411,7 +434,7 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): void {
         });
         payment = await client.createPayment({
           customer: customer.id,
-          valueCents: created.plan.preco_centavos,
+          valueCents: created.valor,
           dueDate: asaasDate(new Date(), 3),
           description: created.plan.nome,
           externalReference: created.id,
@@ -637,7 +660,8 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): void {
       async (client) =>
         (
           await client.query(
-            `SELECT a.status, a.inicio_em, a.fim_em, a.limites_snapshot AS limites,
+            `SELECT ${statusEfetivoSql('a')} AS status,
+                  a.inicio_em, a.fim_em, a.limites_snapshot AS limites,
                   p.slug, p.nome, p.preco_centavos, p.ciclo
              FROM assinaturas a JOIN planos p ON p.id = a.plano_id
             WHERE a.tenant_id = $1 ORDER BY a.created_at DESC LIMIT 1`,
@@ -674,6 +698,7 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): void {
     return reply.send({
       vendas_ativas: billingOn(),
       assinatura: subscription,
+      pode_testar: !subscription,
       pagamento_pendente: pending,
       planos: plans.map(publicPlan),
     });
@@ -725,7 +750,7 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): void {
         ).rows[0];
         if (open) {
           if (open.plano_id === plan.id && open.status === 'pendente') {
-            return { reuse: { link: open.link_pagamento }, plan, id: open.id };
+            return { reuse: { link: open.link_pagamento }, plan, id: open.id, valor: 0 };
           }
           throw new BillingError(
             409,
@@ -733,11 +758,15 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): void {
             'Sua conta já tem uma assinatura. Cancele a atual antes de contratar outro plano.',
           );
         }
+        const coupon = body.cupom ? await resolverCupom(db, body.cupom, plan) : null;
+        if (coupon && !coupon.ok) throw new BillingError(400, 'cupom_invalido', coupon.mensagem);
+        const applied = coupon?.ok ? coupon.cupom : null;
+        const valor = applied?.valor_final_centavos ?? plan.preco_centavos;
         const id = randomUUID();
         await db.query(
           `INSERT INTO cobrancas (id, tipo, plano_id, empresa_tenant_id, empresa_id, usuario_id, comprador_nome,
-                                  comprador_email, documento_final, valor_centavos)
-           VALUES ($1, 'assinatura', $2, $3, $4, $5, $6, $7, $8, $9)`,
+                                  comprador_email, documento_final, valor_centavos, cupom_codigo, desconto_centavos)
+           VALUES ($1, 'assinatura', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
           [
             id,
             plan.id,
@@ -747,10 +776,12 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): void {
             user.nome,
             user.email.toLowerCase(),
             onlyDigits(body.documento).slice(-4),
-            plan.preco_centavos,
+            valor,
+            applied?.codigo ?? null,
+            applied?.desconto_centavos ?? 0,
           ],
         );
-        return { reuse: null, plan, id };
+        return { reuse: null, plan, id, valor };
       });
       if (created.reuse) return reply.send({ link_pagamento: created.reuse.link });
 
@@ -764,7 +795,7 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): void {
         });
         const subscription = await client.createSubscription({
           customer: customer.id,
-          valueCents: created.plan.preco_centavos,
+          valueCents: created.valor,
           nextDueDate: asaasDate(new Date(), 1),
           cycle: created.plan.ciclo === 'anual' ? 'YEARLY' : 'MONTHLY',
           description: `Licite Comigo — ${created.plan.nome}`,
@@ -869,12 +900,13 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): void {
           (
             await client.query<PlanRow>(
               `INSERT INTO planos (slug, nome, descricao, tipo, preco_centavos, ciclo, beneficios, limites,
-                                   turma_nome, ordem, ativo)
-               VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9, $10, $11)
+                                   turma_nome, ordem, trial_dias, ativo)
+               VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9, $10, $11, $12)
                ON CONFLICT (slug) DO UPDATE SET nome = EXCLUDED.nome, descricao = EXCLUDED.descricao,
                  tipo = EXCLUDED.tipo, preco_centavos = EXCLUDED.preco_centavos, ciclo = EXCLUDED.ciclo,
                  beneficios = EXCLUDED.beneficios, limites = EXCLUDED.limites, turma_nome = EXCLUDED.turma_nome,
-                 ordem = EXCLUDED.ordem, ativo = EXCLUDED.ativo, updated_at = now()
+                 ordem = EXCLUDED.ordem, trial_dias = EXCLUDED.trial_dias, ativo = EXCLUDED.ativo,
+                 updated_at = now()
                RETURNING ${PLAN_COLUMNS}`,
               [
                 body.slug,
@@ -887,6 +919,7 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): void {
                 JSON.stringify(body.limites),
                 body.turma_nome ?? null,
                 body.ordem,
+                body.trial_dias,
                 body.ativo,
               ],
             )

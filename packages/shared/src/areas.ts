@@ -39,6 +39,8 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
         { label: 'Mentores', href: '/admin/mentores', icon: 'award' },
         { label: 'Fontes de dados', href: '/admin/fontes', icon: 'sync' },
         { label: 'Financeiro', href: '/admin/financeiro', icon: 'chart' },
+        { label: 'Assinantes', href: '/admin/assinantes', icon: 'users' },
+        { label: 'Cupons', href: '/admin/cupons', icon: 'award' },
         { label: 'Planos e preços', href: '/admin/planos', icon: 'clipboard' },
         { label: 'Auditoria', href: '/admin/auditoria', icon: 'list' },
       ],

@@ -53,5 +53,15 @@ cria a conta da equipe direto.
 - `0024_detalhes_edital.sql`: benefício ME/EPP e situação do item, data da última coleta de
   detalhes e a função `coleta_gravar_detalhes()` (itens e documentos do edital do catálogo).
 
-Todas rodam em ordem pelo `migrate.sh`, cada uma na sua transação. O CI confere que as 24
+## Teste grátis, cupons e assinantes (0025)
+
+- `planos.trial_dias` e os planos de exemplo ainda desativados passam a ter só o que o sistema
+  entrega hoje, com 7 dias de teste.
+- Tabela `cupons` (RLS: leitura no fluxo de cobrança, escrita só da plataforma); `cobrancas`
+  guarda `cupom_codigo` e `desconto_centavos`.
+- `billing_iniciar_teste()` (a empresa começa o teste, uma vez por conta) e
+  `admin_ajustar_assinatura()` (a equipe estende, cancela ou reativa). Leitura de `assinaturas`
+  para a plataforma.
+
+Todas rodam em ordem pelo `migrate.sh`, cada uma na sua transação. O CI confere que as 25
 foram aplicadas. Migration já aplicada nunca é editada: mudança vira arquivo novo.

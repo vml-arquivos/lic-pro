@@ -47,6 +47,8 @@ export type AsaasClient = {
   }): Promise<{ id: string }>;
   listSubscriptionPayments(subscriptionId: string): Promise<AsaasPayment[]>;
   getPayment(paymentId: string): Promise<AsaasPayment>;
+  /** Teste de conexão (só leitura). Opcional para facilitar simulações nos testes. */
+  ping?(): Promise<void>;
   cancelSubscription(subscriptionId: string): Promise<void>;
 };
 
@@ -136,6 +138,9 @@ export function createAsaasClient(config: RuntimeConfig, fetchImpl: Fetch = fetc
         )
       ).data ?? [],
     getPayment: (paymentId) => call('GET', `/payments/${encodeURIComponent(paymentId)}`),
+    ping: async () => {
+      await call('GET', '/customers?limit=1');
+    },
     cancelSubscription: async (subscriptionId) => {
       await call('DELETE', `/subscriptions/${encodeURIComponent(subscriptionId)}`);
     },

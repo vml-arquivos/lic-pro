@@ -206,6 +206,13 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
       tone: 'green',
     },
     {
+      label: 'Assinantes',
+      caption: 'Testes e planos ativos',
+      href: '/admin/assinantes',
+      icon: 'users',
+      tone: 'amber',
+    },
+    {
       label: 'Auditoria',
       caption: 'Quem fez o quê',
       href: '/admin/auditoria',

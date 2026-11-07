@@ -210,3 +210,42 @@ code {
 .plan-edit .invite-check {
   grid-column: 1 / -1;
 }
+
+/* Teste das integrações e cupons */
+.diag-list li {
+  display: grid;
+  gap: 0.2rem;
+}
+.diag-list small {
+  color: var(--lc-muted-text);
+}
+.coupon-plans {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  border: 1px solid var(--lc-line);
+  border-radius: var(--lc-radius-sm, 0.75rem);
+  padding: 0.75rem 1rem;
+}
+.coupon-plans legend {
+  padding: 0 0.35rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.coupon-line {
+  display: grid;
+  gap: 0.35rem;
+}
+.coupon-ok {
+  color: var(--lc-accent-strong);
+  font-weight: 600;
+}
+.coupon-row {
+  display: flex;
+  gap: 0.5rem;
+}
+.coupon-row input {
+  flex: 1;
+  min-width: 0;
+}

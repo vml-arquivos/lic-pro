@@ -23,6 +23,21 @@ export default function TermsPage() {
         A plataforma não garante vitória, contratação, economia, lucro ou qualquer resultado. Não
         envia propostas, lances ou comandos a portais públicos.
       </p>
+      <h2>Planos, cobrança e cancelamento</h2>
+      <p>
+        As assinaturas são cobradas por Pix, boleto ou cartão, por meio de um meio de pagamento
+        parceiro. Não há fidelidade: você pode cancelar quando quiser e novas cobranças deixam de
+        ser feitas. O teste grátis, quando oferecido, não pede cartão e termina sozinho no fim do
+        prazo. Preços e limites de cada plano ficam na página de planos e podem mudar para novas
+        contratações.
+      </p>
+      <h2>Curso</h2>
+      <p>
+        O acesso ao curso é liberado depois da confirmação do pagamento. Compras feitas pela
+        internet por pessoa física podem ser desfeitas em até 7 dias, nos termos do art. 49 do
+        Código de Defesa do Consumidor; para isso, use o canal de contato. O CPF ou CNPJ informado
+        na compra vai apenas ao meio de pagamento; guardamos somente os quatro últimos dígitos.
+      </p>
       <h2>Dados</h2>
       <p>
         O tratamento de dados pessoais deve ser lido junto da Política de Privacidade publicada

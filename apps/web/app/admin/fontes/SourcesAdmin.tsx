@@ -291,10 +291,84 @@ function PncpCollector() {
   );
 }
 
+type Teste = {
+  id: string;
+  nome: string;
+  estado: 'ok' | 'falha' | 'nao_configurado' | 'sem_dados';
+  detalhe: string;
+  ms: number;
+};
+
+const TESTE_ESTADO = {
+  ok: { label: 'Funcionando', tone: 'ok' },
+  falha: { label: 'Falhou', tone: 'bad' },
+  nao_configurado: { label: 'Não configurado', tone: 'warn' },
+  sem_dados: { label: 'Sem dados', tone: 'warn' },
+} as const;
+
+/** Testa de verdade cada fonte externa (só leitura): serve para conferir a produção. */
+function IntegrationTests() {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [result, setResult] = useState<{ testado_em: string; testes: Teste[] } | null>(null);
+
+  async function run() {
+    setBusy(true);
+    setError('');
+    try {
+      setResult(await send('POST', '/admin/integracoes/testar'));
+    } catch (cause) {
+      setError(errorText(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Panel
+      title="Testar integrações"
+      description="Confere agora se o PNCP, o Compras.gov.br, o Asaas e o e-mail respondem. Só leitura: não cobra nem grava nada."
+      actions={
+        <button
+          type="button"
+          className="ui-btn ui-btn-small"
+          disabled={busy}
+          onClick={() => void run()}
+        >
+          {busy ? 'Testando…' : 'Testar agora'}
+        </button>
+      }
+    >
+      {error ? <Alert kind="error">{error}</Alert> : null}
+      {result ? (
+        <>
+          <ul className="plan-list diag-list">
+            {result.testes.map((test) => {
+              const state = TESTE_ESTADO[test.estado];
+              return (
+                <li key={test.id}>
+                  <strong>{test.nome}</strong> <Badge tone={state.tone}>{state.label}</Badge>
+                  <small>
+                    {test.detalhe} ({test.ms} ms)
+                  </small>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="plan-note">Testado em {formatDate(result.testado_em, true)}.</p>
+        </>
+      ) : (
+        <p className="plan-note">Clique em “Testar agora” para ver o resultado.</p>
+      )}
+    </Panel>
+  );
+}
+
 export function SourcesAdmin() {
   const [ingest] = useResource<Ingest>('/operations/ingest');
   return (
     <>
+      <IntegrationTests />
       <PncpCollector />
       <LegacyIngest ingest={ingest} />
       <AlertEngine />

@@ -4,7 +4,7 @@ Quatro áreas separadas. Cada pessoa vê só a sua; a equipe pode "ver como" cad
 
 ## Administração (equipe do Licite Comigo)
 
-Menu: Visão geral · Leads · Empresas clientes · Alunos e turmas · Mentores · Fontes de dados · Financeiro · Planos e preços · Auditoria.
+Menu: Visão geral · Leads · Empresas clientes · Alunos e turmas · Mentores · Fontes de dados · Financeiro · Planos e preços · Assinantes · Cupons · Auditoria.
 Também acessa Radar, Academia, Ana e a própria conta.
 
 - **Visão geral**: empresas clientes, alunos e mentores ativos, convites pendentes, leads,
@@ -18,6 +18,10 @@ Também acessa Radar, Academia, Ana e a própria conta.
 - **Financeiro**: receita do mês e de 30 dias, receita recorrente (MRR), assinantes ativos e em
   atraso, vendas do curso, conversão, cobranças recentes e liberação manual (Pix fora do sistema).
 - **Planos e preços**: preço, benefícios e limites do curso e das assinaturas; ativar para vender.
+- **Assinantes**: quem está em teste, ativo, em atraso ou encerrado; estender o teste, cancelar ou
+  reativar de cortesia.
+- **Cupons**: criar código de desconto (percentual ou valor fixo), por plano, com limite de usos e
+  validade; ver quantos usos e pagamentos.
 - **Auditoria**: ações da administração e do "ver como".
 - **Leads**: contatos captados pelo site.
 

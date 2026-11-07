@@ -72,7 +72,7 @@ services/ingest     Python/Celery/RabbitMQ. OPCIONAL: coleta externa antiga. A c
 services/bid-engine, realtime-gw   Futuros. Fora do deploy do MVP.
 packages/shared     Regras compartilhadas: áreas, menus, páginas, hubs (rede de especialistas).
 packages/ui         Componentes visuais comuns.
-db/                 migrate.sh, migrations/*.sql (24), seeds (só desenvolvimento).
+db/                 migrate.sh, migrations/*.sql (25), seeds (só desenvolvimento).
 infra/coolify       Checklist de deploy. `infra/reference` é só referência histórica.
 ```
 
@@ -167,6 +167,17 @@ token, reconsulta o pagamento no Asaas e só então libera: curso gera convite/m
 (`billing_liberar_curso`); assinatura define o status e os limites (`billing_definir_assinatura`).
 Limite do plano vale só para quem tem assinatura registrada (hoje: buscas salvas).
 
+**Teste grátis, cupons e assinantes (0025):** `planos.trial_dias` (0 = sem teste). A empresa inicia
+o teste em `POST /billing/teste-gratis` (uma vez por conta, sem cartão). O fim do teste é
+calculado na leitura (`statusEfetivoSql`: `trial` com `fim_em` vencido vale como `expirada`), sem
+tarefa agendada; assinatura expirada devolve 402 `assinatura_inativa`. Cupom (`cupons`,
+percentual 1–95% ou valor fixo, por plano, com limite de usos e validade) é validado em
+`POST /public/cupom/validar` e aplicado no checkout do curso e na assinatura; vale para todas as
+cobranças mensais do plano; cobrança mínima R$ 5,00 (regra do Asaas). A equipe acompanha em
+Administração → Assinantes (estender teste, cancelar, reativar) e Cupons. Em Fontes de dados, o
+botão "Testar integrações" (`POST /admin/integracoes/testar`) confere PNCP, Compras.gov.br, Asaas e
+e-mail na VPS.
+
 ## 6. Migrations (regras)
 
 1. Só se **acrescenta**. Nunca editar migration já aplicada em algum ambiente.
@@ -251,7 +262,7 @@ migrations, build.
 ```sh
 curl -fsS https://apilicitecomigo.buscarr.com.br/ready
 curl -fsS https://applicitecomigo.buscarr.com.br/api/diagnostico
-psql "$MIGRATION_DATABASE_URL" -c "select count(*) from schema_migrations;"   # esperado: 24
+psql "$MIGRATION_DATABASE_URL" -c "select count(*) from schema_migrations;"   # esperado: 25
 ```
 
 Depois entre em `/login` com a conta da equipe, abra **Administração → Fontes de dados** e clique
@@ -308,7 +319,7 @@ Para saber se o erro é senha ou servidor, abra `<app>/api/diagnostico`: se `cor
 
 ## 12. Antes de chamar de "pronto para produção"
 
-- [ ] CI verde na `main` (24 migrations aplicadas).
+- [ ] CI verde na `main` (25 migrations aplicadas).
 - [ ] `/ready` da API e `/api/diagnostico` do app respondendo.
 - [ ] Login com cada papel: equipe, empresa, aluno, mentor.
 - [ ] Sincronizar agora = execução `ok`, editais aparecendo no Radar da empresa.

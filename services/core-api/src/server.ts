@@ -35,6 +35,8 @@ import {
 } from './request-context.js';
 import { registerCollectionRoutes } from './coleta-routes.js';
 import { assertPlanAllows, BillingError, registerBillingRoutes } from './billing.js';
+import { registerBillingExtras } from './billing-extras.js';
+import { registerDiagnosticoRoutes } from './diagnostico.js';
 import { AsaasError, type AsaasClient } from './asaas.js';
 import { registerPriceRoutes } from './precos.js';
 import { registerDetalhesRoutes } from './pncp-detalhes.js';
@@ -322,6 +324,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       '/public/planos',
       '/public/checkout/curso',
       '/public/compra',
+      '/public/cupom/validar',
       '/webhooks/asaas',
     ]);
     if (publicPaths.has(request.url.split('?')[0] ?? '')) {
@@ -2012,6 +2015,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   registerPriceRoutes(app, { config });
   registerDetalhesRoutes(app, { pool, config });
   registerBillingRoutes(app, { pool, config, ...(options.asaas ? { asaas: options.asaas } : {}) });
+  registerBillingExtras(app, { pool, config, ...(options.asaas ? { asaas: options.asaas } : {}) });
+  registerDiagnosticoRoutes(app, {
+    pool,
+    config,
+    ...(options.asaas ? { asaas: options.asaas } : {}),
+  });
 
   return app;
 }

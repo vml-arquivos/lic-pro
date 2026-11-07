@@ -3,15 +3,20 @@
 import { useState } from 'react';
 import { errorText, send } from '../../lib/api';
 import { maskDocumento } from '../../lib/money';
+import { CouponField } from '../components/CouponField';
 import { Alert } from '../components/ui';
 
 type Created = { claim: string; acompanhar_url: string; link_pagamento: string | null };
 
-export function CursoCheckout({ plano }: Readonly<{ plano: string }>) {
+export function CursoCheckout({
+  plano,
+  siteUrl,
+}: Readonly<{ plano: string; siteUrl: string | null }>) {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [documento, setDocumento] = useState('');
   const [aceite, setAceite] = useState(false);
+  const [cupom, setCupom] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -26,6 +31,7 @@ export function CursoCheckout({ plano }: Readonly<{ plano: string }>) {
         email,
         documento,
         termos_aceitos: aceite,
+        ...(cupom ? { cupom } : {}),
       });
       // A página da compra acompanha o pagamento e mostra o acesso quando for confirmado.
       window.location.href = `/compra?c=${encodeURIComponent(created.claim)}`;
@@ -71,6 +77,7 @@ export function CursoCheckout({ plano }: Readonly<{ plano: string }>) {
           />
         </label>
       </div>
+      <CouponField plano={plano} onApplied={setCupom} />
       <label className="invite-check">
         <input
           type="checkbox"
@@ -79,8 +86,23 @@ export function CursoCheckout({ plano }: Readonly<{ plano: string }>) {
           required
         />
         <span>
-          Li e aceito os <a href="/termos">Termos de Uso</a> e a{' '}
-          <a href="/privacidade">Política de Privacidade</a>.
+          Li e aceito os{' '}
+          {siteUrl ? (
+            <a href={`${siteUrl}/termos`} target="_blank" rel="noreferrer">
+              Termos de Uso
+            </a>
+          ) : (
+            'Termos de Uso'
+          )}{' '}
+          e a{' '}
+          {siteUrl ? (
+            <a href={`${siteUrl}/privacidade`} target="_blank" rel="noreferrer">
+              Política de Privacidade
+            </a>
+          ) : (
+            'Política de Privacidade'
+          )}
+          .
         </span>
       </label>
       {error ? <Alert kind="error">{error}</Alert> : null}

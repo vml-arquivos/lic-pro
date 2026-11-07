@@ -12,7 +12,7 @@ export const metadata = {
 };
 
 export default async function CursoPage() {
-  const { vendasAtivas, planos } = await loadPublicPlans();
+  const { vendasAtivas, siteUrl, planos } = await loadPublicPlans();
   const curso = planos.find((plano) => plano.tipo === 'curso') ?? null;
 
   return (
@@ -48,7 +48,7 @@ export default async function CursoPage() {
               confirmado.
             </p>
           </article>
-          <CursoCheckout plano={curso.slug} />
+          <CursoCheckout plano={curso.slug} siteUrl={siteUrl} />
         </section>
       ) : (
         <section className="shop-closed">
