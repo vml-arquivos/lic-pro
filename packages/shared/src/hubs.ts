@@ -99,6 +99,13 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
       tone: 'violet',
     },
     { label: 'Academia', caption: 'Trilhas e aulas', href: '/academia', icon: 'cap', tone: 'blue' },
+    {
+      label: 'Materiais',
+      caption: 'Modelos e guias',
+      href: '/materiais',
+      icon: 'file',
+      tone: 'amber',
+    },
     { label: 'Praticar', caption: 'Editais reais', href: '/praticar', icon: 'pen', tone: 'rose' },
     {
       label: 'Mentoria',
@@ -106,6 +113,13 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
       href: '/mentoria',
       icon: 'chat',
       tone: 'teal',
+    },
+    {
+      label: 'Ao vivo',
+      caption: 'Encontros e grupo',
+      href: '/encontros',
+      icon: 'video',
+      tone: 'green',
     },
     {
       label: 'Radar',
@@ -160,6 +174,13 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
       tone: 'teal',
     },
     {
+      label: 'Ao vivo',
+      caption: 'Encontros da turma',
+      href: '/mentor/encontros',
+      icon: 'calendar',
+      tone: 'amber',
+    },
+    {
       label: 'Academia',
       caption: 'Conteúdo do curso',
       href: '/academia',
@@ -190,6 +211,13 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
       href: '/admin/mentores',
       icon: 'award',
       tone: 'amber',
+    },
+    {
+      label: 'Materiais',
+      caption: 'Biblioteca do aluno',
+      href: '/admin/materiais',
+      icon: 'file',
+      tone: 'violet',
     },
     {
       label: 'Fontes de dados',

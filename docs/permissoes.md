@@ -77,6 +77,10 @@ não tem esse limite.
 | `/oportunidades`, `/agenda`, `/documentos`, `/buscas-salvas`, `/alertas`, `/empresas` |      sim      |   sim   |  não  |  não   |
 | `/academia`                                                                           |      sim      |   sim   |  sim  |  sim   |
 | `/mentor`, `/academia/mentor`                                                         |      sim      |   não   |  não  |  sim   |
+| `/diagnostico`, `/encontros`                                                          |      sim      |   não   |  sim  |  não   |
+| `/materiais`                                                                          |      sim      |   não   |  sim  |  sim   |
+| `/admin/materiais`                                                                    |      sim      |   não   |  não  |  não   |
+| `/mentor/encontros`                                                                   |      sim      |   não   |  não  |  sim   |
 
 Regras e menus ficam em `packages/shared/src/areas.ts`, com testes. As páginas conferem a
 área no servidor; a API confere de novo.

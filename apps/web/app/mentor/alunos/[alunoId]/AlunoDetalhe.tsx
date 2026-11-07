@@ -28,6 +28,11 @@ type Dia = {
 };
 type Detail = {
   aluno: { id: string; nome: string; email: string };
+  diagnostico: {
+    atuacao: string;
+    respostas: Record<string, string>;
+    concluido_em: string;
+  } | null;
   aulas: Array<{
     trilha: string;
     modulo: string;
@@ -52,6 +57,41 @@ type Detail = {
   sessoes: Sessao[];
   certificados: Array<{ codigo: string; emitido_em: string; titulo: string }>;
   perguntas: Pergunta[];
+};
+
+const PERGUNTAS_DIAGNOSTICO: Record<string, string> = {
+  ocupacao: 'Ocupação',
+  tem_empresa: 'Empresa',
+  contador_certificado: 'Contador e certificado digital',
+  nicho: 'Nicho',
+  experiencia: 'Experiência com licitações',
+  lei: 'Conhecimento da lei',
+  dedicacao: 'Tempo de dedicação',
+  ajuda: 'Quem ajuda',
+  desafio: 'Maior desafio',
+  duvida: 'Maior dúvida',
+  como_aprende: 'Como prefere aprender',
+  prazo: 'Prazo para resultados',
+  objetivo: 'Objetivo',
+};
+const RESPOSTAS_DIAGNOSTICO: Record<string, string> = {
+  nao: 'Ainda não tem',
+  mei: 'MEI',
+  me_epp: 'ME ou EPP',
+  outra: 'Outro porte',
+  ambos: 'Os dois',
+  so_contador: 'Só contador',
+  so_certificado: 'Só certificado digital',
+  nenhum: 'Nenhum',
+  nunca: 'Nunca participou',
+  pouco: 'Participou algumas vezes',
+  sempre: 'Participa com frequência',
+  basico: 'Básico',
+  bom: 'Bom',
+  videos: 'Vídeos',
+  leitura: 'Leitura',
+  pratica: 'Exercícios práticos',
+  ao_vivo: 'Aulas ao vivo',
 };
 
 const TABS = [
@@ -134,6 +174,22 @@ export function AlunoDetalhe({
 
             {tab === 'progresso' ? (
               <>
+                <Panel title="Diagnóstico inicial" description="O que o aluno respondeu ao entrar.">
+                  {data.diagnostico ? (
+                    <dl className="ui-dl">
+                      <dt>Como vai atuar</dt>
+                      <dd>{data.diagnostico.atuacao === 'assessor' ? 'Assessor' : 'Fornecedor'}</dd>
+                      {Object.entries(data.diagnostico.respostas).map(([id, value]) => (
+                        <div key={id}>
+                          <dt>{PERGUNTAS_DIAGNOSTICO[id] ?? id}</dt>
+                          <dd>{RESPOSTAS_DIAGNOSTICO[value] ?? value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  ) : (
+                    <Empty>O aluno ainda não respondeu ao diagnóstico.</Empty>
+                  )}
+                </Panel>
                 <Panel title="Aulas">
                   {data.aulas.length === 0 ? (
                     <Empty>Nenhuma aula cadastrada.</Empty>

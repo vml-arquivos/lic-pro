@@ -40,6 +40,9 @@ type ClassRow = {
   mentor_id: string | null;
   mentor_nome: string | null;
   alunos_ativos: number;
+  acesso_ate: string | null;
+  mentoria_ate: string | null;
+  grupo_url: string | null;
 };
 type Mentor = { id: string; nome: string; ativo: boolean };
 type Invitation = {
@@ -218,6 +221,9 @@ function ClassesTab({
   const [mentor, setMentor] = useState('');
   const [inicio, setInicio] = useState('');
   const [fim, setFim] = useState('');
+  const [acessoAte, setAcessoAte] = useState('');
+  const [mentoriaAte, setMentoriaAte] = useState('');
+  const [grupo, setGrupo] = useState('');
   const [busy, setBusy] = useState(false);
 
   async function create(event: React.FormEvent) {
@@ -229,7 +235,13 @@ function ClassesTab({
         mentor_id: mentor || null,
         inicio: inicio || null,
         fim: fim || null,
+        acesso_ate: acessoAte || null,
+        mentoria_ate: mentoriaAte || null,
+        grupo_url: grupo || null,
       });
+      setAcessoAte('');
+      setMentoriaAte('');
+      setGrupo('');
       setNome('');
       setMentor('');
       setInicio('');
@@ -281,6 +293,23 @@ function ClassesTab({
             Fim
             <input type="date" value={fim} onChange={(e) => setFim(e.target.value)} />
           </label>
+          <label>
+            Aulas e materiais até
+            <input type="date" value={acessoAte} onChange={(e) => setAcessoAte(e.target.value)} />
+            <small>Vazio = sem prazo.</small>
+          </label>
+          <label>
+            Mentoria e encontros até
+            <input
+              type="date"
+              value={mentoriaAte}
+              onChange={(e) => setMentoriaAte(e.target.value)}
+            />
+          </label>
+          <label>
+            Link do grupo de conversa (https)
+            <input type="url" value={grupo} onChange={(e) => setGrupo(e.target.value)} />
+          </label>
           <div className="ui-form-actions">
             <button className="ui-btn" type="submit" disabled={busy}>
               {busy ? 'Criando…' : 'Criar turma'}
@@ -288,13 +317,23 @@ function ClassesTab({
           </div>
         </form>
       </Panel>
+      <TurmaPrazos classes={classes} onChanged={onChanged} onError={onError} />
       <Panel title="Turmas">
         <Resource value={classes}>
           {({ data }) =>
             data.length ? (
               <Table
                 label="Turmas"
-                head={['Turma', 'Mentor', 'Período', 'Alunos ativos', 'Situação', '']}
+                head={[
+                  'Turma',
+                  'Mentor',
+                  'Período',
+                  'Acesso até',
+                  'Mentoria até',
+                  'Alunos ativos',
+                  'Situação',
+                  '',
+                ]}
               >
                 {data.map((turma) => (
                   <tr key={turma.id}>
@@ -305,6 +344,8 @@ function ClassesTab({
                     <td>
                       {formatDate(turma.inicio)} → {formatDate(turma.fim)}
                     </td>
+                    <td>{turma.acesso_ate ? formatDate(turma.acesso_ate) : 'Sem prazo'}</td>
+                    <td>{turma.mentoria_ate ? formatDate(turma.mentoria_ate) : 'Sem prazo'}</td>
                     <td>{turma.alunos_ativos}</td>
                     <td>
                       <Badge>{turma.status === 'ativa' ? 'Ativa' : 'Encerrada'}</Badge>
@@ -421,6 +462,100 @@ function InvitationsTab({
           )
         }
       </Resource>
+    </Panel>
+  );
+}
+
+function TurmaPrazos({
+  classes,
+  onChanged,
+  onError,
+}: Readonly<{
+  classes: ReturnType<typeof useResource<{ data: ClassRow[] }>>[0];
+  onChanged: () => void;
+  onError: (message: string) => void;
+}>) {
+  const [turmaId, setTurmaId] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const rows = classes.state === 'ready' ? classes.data.data : [];
+  const turma = rows.find((item) => item.id === turmaId);
+
+  async function save(form: FormData) {
+    const text = (name: string) => String(form.get(name) ?? '').trim();
+    setBusy(true);
+    setSaved(false);
+    try {
+      await send('PATCH', `/platform/classes/${turmaId}`, {
+        acesso_ate: text('acesso') || null,
+        mentoria_ate: text('mentoria') || null,
+        grupo_url: text('grupo') || null,
+      });
+      setSaved(true);
+      onChanged();
+    } catch (cause) {
+      onError(errorText(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!rows.length) return null;
+  return (
+    <Panel
+      title="Prazos e grupo da turma"
+      description="Depois do prazo, o aluno deixa de abrir aulas e materiais (acesso) ou de ver encontros e o grupo (mentoria). Deixe vazio para não ter prazo."
+    >
+      <form
+        className="ui-form"
+        key={turmaId}
+        onSubmit={(event) => {
+          event.preventDefault();
+          void save(new FormData(event.currentTarget));
+        }}
+      >
+        <label>
+          Turma
+          <select value={turmaId} onChange={(e) => setTurmaId(e.target.value)} required>
+            <option value="">Escolha a turma</option>
+            {rows.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nome}
+              </option>
+            ))}
+          </select>
+        </label>
+        {turma ? (
+          <>
+            <label>
+              Aulas e materiais até
+              <input
+                name="acesso"
+                type="date"
+                defaultValue={turma.acesso_ate?.slice(0, 10) ?? ''}
+              />
+            </label>
+            <label>
+              Mentoria e encontros até
+              <input
+                name="mentoria"
+                type="date"
+                defaultValue={turma.mentoria_ate?.slice(0, 10) ?? ''}
+              />
+            </label>
+            <label>
+              Link do grupo de conversa (https)
+              <input name="grupo" type="url" defaultValue={turma.grupo_url ?? ''} />
+            </label>
+            <div className="ui-form-actions">
+              <button className="ui-btn" type="submit" disabled={busy}>
+                {busy ? 'Salvando…' : 'Salvar prazos'}
+              </button>
+              {saved ? <small>Salvo.</small> : null}
+            </div>
+          </>
+        ) : null}
+      </form>
     </Panel>
   );
 }

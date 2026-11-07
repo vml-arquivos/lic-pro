@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
 import { z } from 'zod';
+import { readStudentAccess } from './aluno-apoio.js';
 import { withTenant } from './db.js';
 import { buildPlan } from './plan-generator.js';
 import { MIN_ANSWER_LENGTH, PRACTICE_QUESTIONS, missingAnswers } from './practice.js';
@@ -144,6 +145,11 @@ export function registerLearningRoutes(app: FastifyInstance, { pool }: Deps): vo
     if (!pool) return sendDatabaseUnavailable(reply);
     const { aulaId } = z.object({ aulaId: uuid }).parse(request.params);
     const result = await withTenant(pool, authContext(request), async (client) => {
+      // Aluno com prazo vencido deixa de abrir as aulas; os demais papéis seguem como antes.
+      if (request.user.role === 'aluno') {
+        const access = await readStudentAccess(client);
+        if (!access.acesso_ativo) return { expired: access.acesso_ate } as const;
+      }
       const lesson = await client.query<{ trilha_id: string }>(
         `SELECT a.id, a.titulo, a.tipo, a.conteudo, a.video_url, a.status,
                 m.id AS modulo_id, m.titulo AS modulo, m.trilha_id,
@@ -174,6 +180,9 @@ export function registerLearningRoutes(app: FastifyInstance, { pool }: Deps): vo
       };
     });
     if (!result) return reply.code(404).send({ error: 'lesson_not_found' });
+    if ('expired' in result) {
+      return reply.code(403).send({ error: 'access_expired', acesso_ate: result.expired });
+    }
     return reply.send(result);
   });
 
@@ -252,7 +261,23 @@ export function registerLearningRoutes(app: FastifyInstance, { pool }: Deps): vo
         'SELECT count(*)::int AS total FROM certificados_internos WHERE tenant_id = $1 AND aluno_id = $2',
         [tenantId, userId],
       );
+      const diagnostico = await client.query(
+        'SELECT atuacao FROM diagnosticos_aluno WHERE tenant_id = $1 AND aluno_id = $2',
+        [tenantId, userId],
+      );
+      const encontro = await client.query(
+        `SELECT id, titulo, inicio_at, link FROM encontros
+          WHERE tenant_id = $1 AND status = 'agendado' AND inicio_at >= now()
+          ORDER BY inicio_at LIMIT 1`,
+        [tenantId],
+      );
+      const acesso = await readStudentAccess(client);
       return {
+        diagnostico_feito: Boolean(diagnostico.rows[0]),
+        atuacao: diagnostico.rows[0]?.atuacao ?? null,
+        proximo_encontro: encontro.rows[0] ?? null,
+        acesso_ate: acesso.acesso_ate,
+        acesso_ativo: acesso.acesso_ativo,
         progresso: progresso.rows[0] ?? { aulas_total: 0, aulas_concluidas: 0 },
         continuar: partial.rows[0] ?? next?.rows[0] ?? null,
         plano_criado: Boolean(temPlano.rows[0]),
@@ -692,8 +717,14 @@ export function registerLearningRoutes(app: FastifyInstance, { pool }: Deps): vo
           WHERE c.tenant_id = $1 AND c.aluno_id = $2`,
         [tenantId, alunoId],
       );
+      const diagnostico = await client.query(
+        `SELECT atuacao, respostas, concluido_em FROM diagnosticos_aluno
+          WHERE tenant_id = $1 AND aluno_id = $2`,
+        [tenantId, alunoId],
+      );
       return {
         aluno: student,
+        diagnostico: diagnostico.rows[0] ?? null,
         aulas: lessons.rows,
         questionarios: quizzes.rows,
         plano: plan,

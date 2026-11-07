@@ -28,6 +28,10 @@ const MESSAGES: Record<string, string> = {
   assinatura_inativa: 'Sua assinatura não está ativa. Regularize em Assinatura.',
   curso_ja_comprado: 'Este e-mail já comprou o curso. Entre com a sua conta.',
   assinatura_existente: 'Sua empresa já tem uma assinatura.',
+  access_expired: 'O seu prazo de acesso terminou. Fale com a equipe do curso para renovar.',
+  material_not_found: 'Material não encontrado.',
+  missing_answers: 'Responda as perguntas marcadas com *.',
+  encontro_not_found: 'Encontro não encontrado.',
   core_api_unavailable: 'O serviço não respondeu. Tente novamente em instantes.',
   database_unavailable: 'O banco de dados não respondeu. Tente novamente em instantes.',
 };

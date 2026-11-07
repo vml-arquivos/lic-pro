@@ -50,6 +50,7 @@ import { applyNicheScope, readUserNiches } from './niche-scope.js';
 import { registerAlertRoutes } from './alerts-routes.js';
 import { registerCompanyRoutes } from './empresa.js';
 import { registerLearningRoutes } from './learning.js';
+import { registerStudentSupportRoutes } from './aluno-apoio.js';
 import { registerRadarRoutes } from './radar.js';
 import { ESTADO_USUARIO, ORDEM, PERIODO_TIPO, SITUACAO_PRAZO, SITUACAO_TIPO } from './search.js';
 import { alertReadSchema, savedSearchPatchSchema, savedSearchSchema } from './alerts.js';
@@ -2010,6 +2011,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   registerRadarRoutes(app, { pool });
   registerAlertRoutes(app, { pool, config });
   registerLearningRoutes(app, { pool });
+  registerStudentSupportRoutes(app, { pool });
   registerCompanyRoutes(app, { pool });
   registerCollectionRoutes(app, { pool, config });
   registerPriceRoutes(app, { config });

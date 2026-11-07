@@ -22,6 +22,7 @@ export type MenuGroup = { label: string; items: readonly MenuItem[] };
 const account: MenuItem = { label: 'Minha conta', href: '/conta', icon: 'user' };
 const ana: MenuItem = { label: 'Ana', href: '/ana', icon: 'spark' };
 const academy: MenuItem = { label: 'Academia', href: '/academia', icon: 'cap' };
+const materials: MenuItem = { label: 'Materiais', href: '/materiais', icon: 'file' };
 const radar: MenuItem = { label: 'Explorar licitações', href: '/radar', icon: 'search' };
 const published: MenuItem = { label: 'Pregões publicados', href: '/pregoes', icon: 'globe' };
 const prices: MenuItem = { label: 'Preços de referência', href: '/precos', icon: 'chart' };
@@ -37,6 +38,7 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
         { label: 'Empresas clientes', href: '/admin/empresas', icon: 'building' },
         { label: 'Alunos e turmas', href: '/admin/alunos', icon: 'users' },
         { label: 'Mentores', href: '/admin/mentores', icon: 'award' },
+        { label: 'Materiais', href: '/admin/materiais', icon: 'file' },
         { label: 'Fontes de dados', href: '/admin/fontes', icon: 'sync' },
         { label: 'Financeiro', href: '/admin/financeiro', icon: 'chart' },
         { label: 'Assinantes', href: '/admin/assinantes', icon: 'users' },
@@ -75,10 +77,13 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
       label: 'Meu curso',
       items: [
         { label: 'Início', href: '/painel', icon: 'home' },
+        { label: 'Meu diagnóstico', href: '/diagnostico', icon: 'clipboard' },
         { label: 'Plano de 30 dias', href: '/plano-30-dias', icon: 'calendar' },
         academy,
+        materials,
         { label: 'Praticar com editais', href: '/praticar', icon: 'pen' },
         { label: 'Mentoria', href: '/mentoria', icon: 'chat' },
+        { label: 'Encontros ao vivo', href: '/encontros', icon: 'video' },
         { label: 'Certificado', href: '/certificado', icon: 'check' },
       ],
     },
@@ -93,7 +98,9 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
         { label: 'Meus alunos', href: '/mentor', icon: 'users' },
         { label: 'Devolutivas', href: '/mentor/devolutivas', icon: 'pen' },
         { label: 'Sessões', href: '/mentor/sessoes', icon: 'video' },
+        { label: 'Encontros ao vivo', href: '/mentor/encontros', icon: 'calendar' },
         academy,
+        materials,
         ana,
       ],
     },
@@ -121,6 +128,9 @@ export const PAGE_RULES: readonly PageRule[] = [
   { prefix: '/academia', areas: ALL },
   { prefix: '/plano-30-dias', areas: STUDENT },
   { prefix: '/praticar', areas: STUDENT },
+  { prefix: '/diagnostico', areas: STUDENT },
+  { prefix: '/encontros', areas: STUDENT },
+  { prefix: '/materiais', areas: ['administracao', 'aluno', 'mentor'] },
   { prefix: '/mentoria', areas: STUDENT },
   { prefix: '/certificado', areas: STUDENT },
   { prefix: '/radar', areas: WORK },

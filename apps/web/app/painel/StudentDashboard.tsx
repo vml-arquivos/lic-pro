@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { NICHE_CATALOG } from '@licitecomigo/shared';
 import {
+  Alert,
   Badge,
   Kpi,
   PageHeader,
@@ -29,6 +30,10 @@ type Home = {
   proxima_sessao: { titulo: string; inicio_at: string; link: string | null } | null;
   praticas: { devolvidas: number; aguardando: number; rascunhos: number };
   certificados: number;
+  diagnostico_feito?: boolean;
+  proximo_encontro?: { titulo: string; inicio_at: string; link: string | null } | null;
+  acesso_ate?: string | null;
+  acesso_ativo?: boolean;
 };
 
 export function StudentDashboard({
@@ -59,6 +64,22 @@ export function StudentDashboard({
             : 0;
           return (
             <>
+              {data.acesso_ativo === false ? (
+                <Alert kind="info">
+                  O prazo de acesso da sua turma terminou em {formatDate(data.acesso_ate)}. Fale com
+                  a equipe do curso para renovar.
+                </Alert>
+              ) : null}
+              {data.diagnostico_feito === false ? (
+                <Panel
+                  title="Comece pelo seu diagnóstico"
+                  description="Cinco minutos para o seu mentor conhecer o seu ponto de partida e para os materiais seguirem o seu caminho."
+                >
+                  <Link className="ui-btn" href="/diagnostico">
+                    Responder agora
+                  </Link>
+                </Panel>
+              ) : null}
               <div className="ui-kpis">
                 <Kpi
                   label="Aulas concluídas"
@@ -139,6 +160,13 @@ export function StudentDashboard({
                   ) : (
                     <p className="ui-empty">Nenhum recado por enquanto.</p>
                   )}
+                  {data.proximo_encontro ? (
+                    <p>
+                      Próximo encontro ao vivo: <strong>{data.proximo_encontro.titulo}</strong> em{' '}
+                      {formatDate(data.proximo_encontro.inicio_at, true)} ·{' '}
+                      <Link href="/encontros">ver agenda</Link>
+                    </p>
+                  ) : null}
                   {data.proxima_sessao ? (
                     <p>
                       Próxima sessão: <strong>{data.proxima_sessao.titulo}</strong> em{' '}

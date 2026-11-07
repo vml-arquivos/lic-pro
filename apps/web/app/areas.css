@@ -276,6 +276,30 @@
 .ui-list small {
   color: var(--workspace-muted);
 }
+.ui-list li > div > small {
+  display: block;
+  margin-top: 0.15rem;
+}
+.ui-form label.ui-choice {
+  align-items: flex-start;
+  background: var(--workspace-surface, #fff);
+  border: 1px solid var(--workspace-line);
+  border-radius: 12px;
+  cursor: pointer;
+  display: grid;
+  gap: 0.15rem 0.6rem;
+  grid-template-columns: auto 1fr;
+  padding: 0.8rem 1rem;
+  text-align: left;
+}
+.ui-form label.ui-choice input {
+  grid-row: 1 / span 2;
+  margin: 0.2rem 0 0;
+  width: auto;
+}
+.ui-form label.ui-choice small {
+  grid-column: 2;
+}
 .ui-denied {
   margin: 4rem auto;
   max-width: 34rem;
@@ -1077,4 +1101,55 @@
   .op-detail {
     grid-template-columns: 1fr;
   }
+}
+
+/* Apoio ao aluno: materiais, diagnóstico e encontros. */
+.ui-link {
+  background: none;
+  border: 0;
+  color: var(--lc-primary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.ui-hint {
+  color: var(--lc-muted-text);
+  margin: 0 0 1rem;
+}
+
+.ui-choice {
+  align-items: baseline;
+  display: block;
+}
+
+.ui-choice small {
+  color: var(--lc-muted-text);
+  display: block;
+  margin-left: 1.4rem;
+}
+
+.material-texto {
+  line-height: 1.7;
+  max-width: 52rem;
+  white-space: pre-wrap;
+}
+
+.ui-dl {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.ui-dl dt {
+  color: var(--lc-muted-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.ui-dl dd {
+  margin: 0;
+  white-space: pre-wrap;
 }

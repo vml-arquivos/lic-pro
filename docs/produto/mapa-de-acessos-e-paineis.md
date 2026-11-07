@@ -21,7 +21,11 @@ Também acessa Radar, Academia, Ana e a própria conta.
 - **Empresas clientes**: convidar empresa (um usuário por empresa), ver nichos, uso e situação;
   ativar/desativar.
 - **Alunos e turmas**: criar turma (com mentor), matricular aluno (gera convite), acompanhar
-  progresso, reenviar ou revogar convites.
+  progresso, reenviar ou revogar convites. Cada turma tem prazo de acesso, prazo de mentoria e
+  link do grupo de conversa. Aluno com prazo vencido fica só com leitura e o aviso de renovar.
+- **Materiais**: biblioteca do aluno (guias, checklists, modelos, listas, lei). "Carregar catálogo
+  inicial" traz os itens do curso sem mexer no que já existe. Item sem texto e sem link fica
+  oculto até a equipe anexar o link do arquivo.
 - **Mentores**: convidar, ver alunos ativos, ativar/desativar.
 - **Fontes de dados**: coleta de editais do governo (PNCP) com botão "Sincronizar agora", últimas execuções, editais no catálogo, abertos e novos em 24 h.
 - **Financeiro**: receita do mês e de 30 dias, receita recorrente (MRR), assinantes ativos e em
@@ -43,16 +47,26 @@ Radar limitado a 1–3 nichos. Começa vazio e se preenche com o catálogo colet
 
 ## Aluno
 
-Menu: Início · Academia · Explorar licitações · Pregões publicados · Preços · Ana · Minha conta.
+Menu: Início · Meu diagnóstico · Plano de 30 dias · Academia · Materiais · Praticar com editais ·
+Mentoria · Encontros ao vivo · Certificado · Explorar licitações · Pregões publicados · Preços ·
+Ana · Minha conta.
 A compra do curso é pública em `/curso`; ao pagar, a pessoa recebe o link para criar a senha.
 
 O painel mostra progresso, avisos e nichos de prática. Entra só por matrícula.
 
+- **Diagnóstico**: o aluno diz se vai atuar como fornecedor ou como assessor em licitações e
+  responde perguntas do ponto de partida. O mentor vê as respostas na ficha do aluno.
+- **Materiais**: lê a biblioteca por etapa (começar, encontrar, documentos, proposta, sessão, depois
+  de ganhar, assessor, leis). O caminho escolhido no diagnóstico mostra primeiro o que serve a ele.
+- **Encontros ao vivo**: agenda dos encontros em grupo da turma, com link e atalho para o grupo.
+
 ## Mentor
 
-Menu: Início · Meus alunos · Academia · Ana · Minha conta.
+Menu: Início · Meus alunos · Devolutivas · Sessões · Encontros ao vivo · Academia · Materiais ·
+Ana · Minha conta.
 
 O painel mostra os alunos vinculados, quem está sem estudar há 7 dias e o progresso.
+Em Encontros ao vivo o mentor marca o encontro (para uma turma ou todas); os alunos são avisados.
 
 ## Como a pessoa entra
 

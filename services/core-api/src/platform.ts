@@ -21,6 +21,9 @@ const classBody = z.object({
   mentor_id: uuid.nullable().optional(),
   inicio: z.string().date().nullable().optional(),
   fim: z.string().date().nullable().optional(),
+  acesso_ate: z.string().date().nullable().optional(),
+  mentoria_ate: z.string().date().nullable().optional(),
+  grupo_url: z.string().url().startsWith('https://').max(500).nullable().optional(),
 });
 const classPatch = classBody
   .partial()
@@ -271,6 +274,7 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
       const result = await withPlatform(pool!, request, 'platform.classes.listed', (client) =>
         client.query(
           `SELECT t.id, t.nome, t.status, t.inicio, t.fim, t.mentor_id, mu.nome AS mentor_nome,
+                  t.acesso_ate, t.mentoria_ate, t.grupo_url,
                   (SELECT count(*) FROM matriculas m WHERE m.turma_id = t.id AND m.status = 'ativa')::int AS alunos_ativos
              FROM turmas t LEFT JOIN usuarios mu ON mu.id = t.mentor_id
             WHERE t.tenant_id = $1
@@ -291,15 +295,18 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
           async (client) => {
             if (body.mentor_id) await assertMentor(client, request.user.tenantId, body.mentor_id);
             const inserted = await client.query(
-              `INSERT INTO turmas (tenant_id, nome, mentor_id, inicio, fim)
-             VALUES ($1, $2, $3, $4, $5)
-             RETURNING id, nome, status, inicio, fim, mentor_id`,
+              `INSERT INTO turmas (tenant_id, nome, mentor_id, inicio, fim, acesso_ate, mentoria_ate, grupo_url)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             RETURNING id, nome, status, inicio, fim, mentor_id, acesso_ate, mentoria_ate, grupo_url`,
               [
                 request.user.tenantId,
                 body.nome,
                 body.mentor_id ?? null,
                 body.inicio ?? null,
                 body.fim ?? null,
+                body.acesso_ate ?? null,
+                body.mentoria_ate ?? null,
+                body.grupo_url ?? null,
               ],
             );
             return inserted.rows[0];
@@ -328,9 +335,12 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
                       inicio = CASE WHEN $6::boolean THEN $7::date ELSE inicio END,
                       fim = CASE WHEN $8::boolean THEN $9::date ELSE fim END,
                       status = COALESCE($10, status),
+                      acesso_ate = CASE WHEN $11::boolean THEN $12::date ELSE acesso_ate END,
+                      mentoria_ate = CASE WHEN $13::boolean THEN $14::date ELSE mentoria_ate END,
+                      grupo_url = CASE WHEN $15::boolean THEN $16::text ELSE grupo_url END,
                       updated_at = now()
                 WHERE tenant_id = $1 AND id = $2
-                RETURNING id, nome, status, inicio, fim, mentor_id`,
+                RETURNING id, nome, status, inicio, fim, mentor_id, acesso_ate, mentoria_ate, grupo_url`,
               [
                 request.user.tenantId,
                 id,
@@ -342,6 +352,12 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
                 body.fim !== undefined,
                 body.fim ?? null,
                 body.status ?? null,
+                body.acesso_ate !== undefined,
+                body.acesso_ate ?? null,
+                body.mentoria_ate !== undefined,
+                body.mentoria_ate ?? null,
+                body.grupo_url !== undefined,
+                body.grupo_url ?? null,
               ],
             );
             return result.rows[0] ?? null;
