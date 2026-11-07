@@ -1214,16 +1214,3 @@ a {
 .auth-single .auth-card {
   border-radius: 1.6rem;
 }
-
-/* Atalhos da área nos painéis. */
-.tool-grid {
-  display: grid;
-  gap: 0.7rem;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-  margin: 0 auto 1.6rem;
-  max-width: 68rem;
-}
-
-.tool-grid .hub-node {
-  border-radius: 1rem;
-}

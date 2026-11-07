@@ -1,11 +1,17 @@
 import Link from 'next/link';
+import { getSessionResult } from '../../lib/session';
+import { AreaHub } from '../components/AreaHub';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata = {
   title: 'Ana | Licite Comigo',
   description: 'Assistente de leitura e organização do Licite Comigo.',
 };
 
-export default function AnaPage() {
+export default async function AnaPage() {
+  const result = await getSessionResult();
+  const area = result.status === 'ok' ? result.session.area : null;
   return (
     <main className="academy-page ana-page">
       <Link className="back-link" href="/">
@@ -19,6 +25,7 @@ export default function AnaPage() {
           limites e evidências, sem substituir o edital ou uma análise profissional.
         </p>
       </div>
+      {area ? <AreaHub area={area} /> : null}
       <section className="detail-card">
         <h2>Como Ana pode ajudar agora</h2>
         <p>
