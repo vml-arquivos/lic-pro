@@ -16,6 +16,10 @@ const MESSAGES: Record<string, string> = {
   class_not_found: 'Turma não encontrada ou encerrada.',
   mentor_not_found: 'Mentor não encontrado.',
   niches_locked: 'Os nichos da sua conta são definidos pela Administração.',
+  niche_preferences_required: 'Escolha os nichos da sua conta (Minha conta) para ver esta lista.',
+  niche_not_allowed: 'Este nicho não está entre os da sua conta.',
+  itens_nao_coletados:
+    'Busque os itens do edital primeiro (botão “Buscar itens e documentos no PNCP”).',
   invitation_not_found: 'Convite não encontrado ou já usado.',
   cannot_change_self: 'Você não pode desativar a própria conta.',
   invalid_token: 'Link inválido ou expirado. Use o link do e-mail mais recente.',

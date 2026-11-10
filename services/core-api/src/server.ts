@@ -2033,7 +2033,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   registerStudentSupportRoutes(app, { pool });
   registerCompanyRoutes(app, { pool });
   registerCollectionRoutes(app, { pool, config });
-  registerPriceRoutes(app, { config });
+  registerPriceRoutes(app, { config, pool });
   registerDetalhesRoutes(app, { pool, config });
   registerBillingRoutes(app, { pool, config, ...(options.asaas ? { asaas: options.asaas } : {}) });
   registerBillingExtras(app, { pool, config, ...(options.asaas ? { asaas: options.asaas } : {}) });

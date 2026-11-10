@@ -5,12 +5,37 @@ import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { loadConfig } from '../src/config.js';
 import { hashPassword } from '../src/password.js';
-import { normalizeDocumento, normalizeItem, parseNumeroControle } from '../src/pncp-detalhes.js';
+import {
+  normalizeDocumento,
+  normalizeItem,
+  normalizeResultado,
+  parseNumeroControle,
+} from '../src/pncp-detalhes.js';
 import { buildApp } from '../src/server.js';
 
 const connectionString = process.env.TEST_DATABASE_URL;
 const setupConnectionString = process.env.TEST_ADMIN_DATABASE_URL;
 const suite = describe.skipIf(!connectionString || !setupConnectionString);
+
+describe('resultado de item do PNCP: leitura', () => {
+  it('lê valor fechado e vencedor; ignora cancelado e valor inválido', () => {
+    expect(
+      normalizeResultado({
+        valorUnitarioHomologado: 12.5,
+        nomeRazaoSocialFornecedor: 'ACME',
+        dataResultado: '2026-10-20T10:00:00',
+      }),
+    ).toMatchObject({ valor_unitario_homologado: 12.5, fornecedor: 'ACME', desconto_pct: null });
+    expect(normalizeResultado({ valorUnitarioHomologado: 0 })).toBeNull();
+    expect(
+      normalizeResultado({
+        valorUnitarioHomologado: 9,
+        situacaoCompraItemResultadoNome: 'Cancelado',
+      }),
+    ).toBeNull();
+    expect(normalizeResultado(null)).toBeNull();
+  });
+});
 
 describe('detalhes do PNCP: leitura', () => {
   it('separa o número de controle', () => {
@@ -71,6 +96,20 @@ suite('detalhes do edital (PostgreSQL real, PNCP simulado)', () => {
         response.writeHead(status, { 'content-type': 'application/json' });
         response.end(JSON.stringify(body));
       };
+      if ((request.url ?? '').includes(`/compras/2026/${sequencial}/itens/1/resultados`)) {
+        return send(200, [
+          {
+            valorUnitarioHomologado: 20,
+            valorTotalHomologado: 2000,
+            quantidadeHomologada: 100,
+            percentualDesconto: 21.57,
+            niFornecedor: '11222333000181',
+            nomeRazaoSocialFornecedor: 'Papelaria Vencedora LTDA',
+            dataResultado: '2026-10-20T10:00:00',
+            situacaoCompraItemResultadoNome: 'Informado',
+          },
+        ]);
+      }
       if ((request.url ?? '').includes(`/compras/2026/${sequencial}/itens`)) {
         return send(200, [
           {
@@ -231,5 +270,120 @@ suite('detalhes do edital (PostgreSQL real, PNCP simulado)', () => {
     expect(manual.statusCode).toBe(422);
     expect(manual.json().error).toBe('fonte_sem_detalhes');
     expect((await refresh(randomUUID())).statusCode).toBe(404);
+  });
+  it('resultados por item: valor fechado, vencedor e economia; item sem resultado fica vazio', async () => {
+    expect(
+      (await app.inject({ method: 'GET', url: `/editais/${editalPncp}/resultados` })).statusCode,
+    ).toBe(401);
+    const response = await app.inject({
+      method: 'GET',
+      url: `/editais/${editalPncp}/resultados`,
+      headers: headers(),
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    const body = response.json();
+    expect(body.itens).toHaveLength(2);
+    expect(body.itens[0]).toMatchObject({
+      numero: '1',
+      valor_unitario_estimado: 25.5,
+      resultado: { valor_unitario_homologado: 20, fornecedor: 'Papelaria Vencedora LTDA' },
+    });
+    expect(body.itens[1].resultado).toBeNull();
+    expect(body.resumo).toMatchObject({ itens: 2, com_resultado: 1, total_homologado: 2000 });
+    expect(body.resumo.economia_pct).toBeCloseTo(21.6, 1);
+    expect(
+      (
+        await app.inject({
+          method: 'GET',
+          url: `/editais/${editalManual}/resultados`,
+          headers: headers(),
+        })
+      ).statusCode,
+    ).toBe(422);
+    expect(
+      (
+        await app.inject({
+          method: 'GET',
+          url: `/editais/${randomUUID()}/resultados`,
+          headers: headers(),
+        })
+      ).statusCode,
+    ).toBe(404);
+  });
+
+  it('lista de itens do nicho e pregões fechados, sem sair do nicho da pessoa', async () => {
+    await setup.query(
+      `INSERT INTO itens_edital (tenant_id, edital_id, numero, descricao, unidade, quantidade, valor_unitario_estimado, catmat_catser)
+       VALUES ($1, $2, '9', 'Cadeira de escritório giratória', 'UN', 10, 400, '123456'),
+              ($1, $2, '10', 'Cadeira de escritório giratória', 'UN', 5, 600, '123456'),
+              ($1, $2, '11', 'Detergente neutro', 'L', 5, 4, '654321')`,
+      [platformTenant, editalPncp],
+    );
+    await setup.query(
+      `UPDATE editais SET valor_estimado = 10000, valor_homologado = 8000, data_publicacao = now() WHERE id = $1`,
+      [editalPncp],
+    );
+    // sem nicho escolhido: o sistema pede para escolher, não despeja tudo
+    await setup.query(`UPDATE usuarios SET nicho_preferencias = '[]'::jsonb WHERE id = $1`, [
+      clientUser,
+    ]);
+    const none = await app.inject({ method: 'GET', url: '/precos/itens', headers: headers() });
+    expect(none.statusCode).toBe(409);
+    expect(none.json().error).toBe('niche_preferences_required');
+
+    await setup.query(
+      `UPDATE usuarios SET nicho_preferencias = '["expediente-mobiliario"]'::jsonb WHERE id = $1`,
+      [clientUser],
+    );
+    const itens = await app.inject({ method: 'GET', url: '/precos/itens', headers: headers() });
+    expect(itens.statusCode, itens.body).toBe(200);
+    expect(itens.json().itens).toEqual([
+      expect.objectContaining({
+        catmat: '123456',
+        editais: 1,
+        mediana_estimada: 500,
+        unidade: 'UN',
+      }),
+    ]);
+    const filtered = await app.inject({
+      method: 'GET',
+      url: '/precos/itens?q=cadeira',
+      headers: headers(),
+    });
+    expect(filtered.json().itens).toHaveLength(1);
+    const miss = await app.inject({
+      method: 'GET',
+      url: '/precos/itens?q=detergente',
+      headers: headers(),
+    });
+    expect(miss.json().itens).toEqual([]);
+    // nicho que a pessoa não escolheu é recusado
+    const foreign = await app.inject({
+      method: 'GET',
+      url: '/precos/itens?nicho=limpeza-conservacao',
+      headers: headers(),
+    });
+    expect(foreign.statusCode).toBe(403);
+
+    const closed = await app.inject({ method: 'GET', url: '/precos/fechados', headers: headers() });
+    expect(closed.statusCode, closed.body).toBe(200);
+    expect(closed.json().resumo).toMatchObject({
+      pregoes: 1,
+      total_estimado: 10000,
+      total_homologado: 8000,
+      economia_pct: 20,
+    });
+    expect(closed.json().itens[0]).toMatchObject({
+      id: editalPncp,
+      valor_homologado: 8000,
+      economia_pct: 20,
+    });
+    const otherState = await app.inject({
+      method: 'GET',
+      url: '/precos/fechados?uf=SP',
+      headers: headers(),
+    });
+    expect(otherState.json().resumo.pregoes).toBe(0);
+    expect((await app.inject({ method: 'GET', url: '/precos/fechados' })).statusCode).toBe(401);
   });
 });

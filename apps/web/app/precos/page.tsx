@@ -1,24 +1,31 @@
-import { requireArea } from '../../lib/session';
+import { NICHE_CATALOG } from '@licitecomigo/shared';
+import { getSession, requireArea } from '../../lib/session';
 import { PageHeader } from '../components/ui';
 import { PrecosApp } from './PrecosApp';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Preços de referência | Licite Comigo',
-  description: 'Preços praticados pelo governo para um item, a partir do Compras.gov.br.',
+  title: 'Preços pagos | Licite Comigo',
+  description: 'O que o governo pagou por item e como fecharam os pregões do seu nicho.',
 };
 
 export default async function PrecosPage() {
   await requireArea('empresa', 'aluno', 'administracao', 'colaborador');
+  const session = await getSession();
+  const chosen = session?.nicho_preferencias ?? [];
+  // Quem já escolheu nichos vê só os dele; a Administração, sem nichos, vê todos.
+  const nichos = NICHE_CATALOG.filter((niche) =>
+    chosen.length ? chosen.includes(niche.code) : session?.area === 'administracao',
+  ).map(({ code, label }) => ({ code, label }));
   return (
     <main className="ui-page">
       <PageHeader
         eyebrow="Ferramentas"
-        title="Preços de referência"
-        description="Quanto o governo pagou por um item (CATMAT) nos últimos meses, com a fonte oficial."
+        title="Preços pagos"
+        description="Quanto o governo pagou por um item e como os pregões do seu nicho fecharam, com a fonte oficial."
       />
-      <PrecosApp />
+      <PrecosApp nichos={nichos} />
     </main>
   );
 }

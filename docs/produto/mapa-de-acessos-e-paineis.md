@@ -72,7 +72,7 @@ Em Encontros ao vivo o mentor marca o encontro (para uma turma ou todas); os alu
 ## Colaborador (equipe de operação do Licite Comigo)
 
 Menu: Início · Explorar licitações · Buscas salvas · Alertas · Oportunidades · Agenda ·
-Documentos · Pregões publicados · Preços de referência · Dados da empresa · Academia · Ana ·
+Documentos · Pregões publicados · Preços pagos · Dados da empresa · Academia · Ana ·
 Minha conta.
 
 O Licite Comigo também atua com licitações: o colaborador busca, consulta e acompanha editais

@@ -15,7 +15,7 @@ export type HubNode = HubNodeData & {
 
 export type HubProps = {
   nodes: readonly HubNode[];
-  /** Nome do núcleo coordenador. */
+  /** Papel mostrado sob o nome (ex.: Sua assistente). */
   coreName?: string;
   coreRole?: string;
   /** Imagem opcional do núcleo (ex.: foto da mentora). Se falhar, aparece o orbe. */
@@ -98,7 +98,7 @@ function Orb() {
 export function NetworkHub({
   nodes,
   coreName = 'Ana',
-  coreRole = 'Núcleo coordenador',
+  coreRole = 'Sua assistente',
   photo,
   head,
   cta,

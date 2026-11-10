@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { UFS } from '@licitecomigo/shared';
 import { api, errorText } from '../../lib/api';
@@ -35,16 +36,109 @@ type Result = {
   }>;
   fonte: { nome: string; consultado_em: string; paginas: number };
 };
+type ItemDoNicho = {
+  catmat: string;
+  descricao: string;
+  unidade: string | null;
+  editais: number;
+  mediana_estimada: number | null;
+};
+type Fechados = {
+  resumo: {
+    pregoes: number;
+    total_estimado: number | null;
+    total_homologado: number | null;
+    economia_pct: number | null;
+  };
+  itens: Array<{
+    id: string;
+    titulo: string | null;
+    orgao: string | null;
+    uf: string | null;
+    valor_estimado: number | null;
+    valor_homologado: number;
+    economia_pct: number | null;
+    data_publicacao: string | null;
+  }>;
+};
+export type NichoOption = { code: string; label: string };
 
-export function PrecosApp() {
+const pct = (value: number | null | undefined) =>
+  typeof value === 'number' ? `${value.toLocaleString('pt-BR')}%` : '—';
+
+/**
+ * Preços pagos: o que o governo pagou por um item e como fecharam os pregões do nicho.
+ * Tudo parte de listas (nicho, item, estado, período); digitar o código CATMAT é só plano B.
+ */
+export function PrecosApp({ nichos }: Readonly<{ nichos: readonly NichoOption[] }>) {
+  const [nicho, setNicho] = useState('');
+  const [filtro, setFiltro] = useState('');
+  const [filtroAplicado, setFiltroAplicado] = useState('');
+  const [lista, setLista] = useState<{
+    state: 'loading' | 'ready' | 'error';
+    itens: ItemDoNicho[];
+    message?: string;
+  }>({
+    state: 'loading',
+    itens: [],
+  });
   const [catmat, setCatmat] = useState('');
+  const [codigo, setCodigo] = useState('');
   const [uf, setUf] = useState('');
   const [meses, setMeses] = useState('12');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<Result | null>(null);
+  const [fechados, setFechados] = useState<
+    { state: 'loading' } | { state: 'error'; message: string } | { state: 'ready'; data: Fechados }
+  >({ state: 'loading' });
 
-  async function search(code = catmat) {
+  // O filtro de texto só vale depois de uma pausa na digitação.
+  useEffect(() => {
+    const timer = setTimeout(() => setFiltroAplicado(filtro.trim()), 350);
+    return () => clearTimeout(timer);
+  }, [filtro]);
+
+  // Lista de itens do nicho escolhido (ou de todos os nichos da conta).
+  useEffect(() => {
+    let active = true;
+    setLista((current) => ({ ...current, state: 'loading' }));
+    const query = new URLSearchParams();
+    if (nicho) query.set('nicho', nicho);
+    if (filtroAplicado.length >= 2) query.set('q', filtroAplicado);
+    api<{ itens: ItemDoNicho[] }>(`/precos/itens?${query.toString()}`)
+      .then((data) => active && setLista({ state: 'ready', itens: data.itens }))
+      .catch(
+        (cause: unknown) =>
+          active && setLista({ state: 'error', itens: [], message: errorText(cause) }),
+      );
+    return () => {
+      active = false;
+    };
+  }, [nicho, filtroAplicado]);
+
+  // Pregões já fechados no nicho.
+  useEffect(() => {
+    let active = true;
+    setFechados({ state: 'loading' });
+    const query = new URLSearchParams({ meses });
+    if (nicho) query.set('nicho', nicho);
+    if (uf) query.set('uf', uf);
+    api<Fechados>(`/precos/fechados?${query.toString()}`)
+      .then((data) => active && setFechados({ state: 'ready', data }))
+      .catch(
+        (cause: unknown) => active && setFechados({ state: 'error', message: errorText(cause) }),
+      );
+    return () => {
+      active = false;
+    };
+  }, [nicho, uf, meses]);
+
+  async function search(code: string) {
+    if (!code) {
+      setResult(null);
+      return;
+    }
     setBusy(true);
     setError('');
     try {
@@ -59,41 +153,83 @@ export function PrecosApp() {
     }
   }
 
+  // Escolher o item, o estado ou o período já consulta, sem botão extra.
+  useEffect(() => {
+    if (catmat) void search(catmat);
+  }, [catmat, uf, meses]);
+
   // Vindo do detalhe do edital: /precos?catmat=460789
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get('catmat');
-    if (code && /^\d{4,9}$/.test(code)) {
-      setCatmat(code);
-      void search(code);
-    }
+    if (code && /^\d{4,9}$/.test(code)) setCatmat(code);
   }, []);
 
   const stats = result?.sem_extremos ?? result?.todas ?? null;
+  const chosen = lista.itens.find((item) => item.catmat === catmat);
+  const outsideList = catmat && !chosen;
 
   return (
     <>
       <Panel
-        title="Consultar item"
-        description="Digite o código CATMAT do material. Ele aparece nos itens do edital."
+        title="Quanto o governo pagou"
+        description="Escolha o nicho e o item. O resultado aparece na hora, com a fonte oficial."
       >
-        <form
-          className="ui-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void search();
-          }}
-        >
+        <div className="ui-form precos-form">
           <label>
-            Código CATMAT
+            Nicho
+            <select
+              value={nicho}
+              onChange={(event) => {
+                setNicho(event.target.value);
+                setCatmat('');
+                setResult(null);
+              }}
+            >
+              <option value="">{nichos.length === 1 ? nichos[0]!.label : 'Todos os nichos'}</option>
+              {nichos.length > 1
+                ? nichos.map((item) => (
+                    <option key={item.code} value={item.code}>
+                      {item.label}
+                    </option>
+                  ))
+                : null}
+            </select>
+          </label>
+          <label>
+            Filtrar a lista de itens
             <input
-              required
-              inputMode="numeric"
-              pattern="\d{4,9}"
-              title="4 a 9 números"
-              value={catmat}
-              onChange={(event) => setCatmat(event.target.value.replace(/\D/g, ''))}
-              placeholder="Ex.: 460789"
+              value={filtro}
+              onChange={(event) => setFiltro(event.target.value)}
+              placeholder="Ex.: cadeira, papel, detergente"
+              maxLength={80}
             />
+          </label>
+          <label className="precos-item">
+            Item
+            <select
+              value={catmat}
+              onChange={(event) => {
+                setCatmat(event.target.value);
+                setCodigo('');
+              }}
+              disabled={lista.state === 'loading' && !lista.itens.length}
+            >
+              <option value="">
+                {lista.state === 'loading'
+                  ? 'Carregando itens…'
+                  : lista.itens.length
+                    ? 'Selecione o item'
+                    : 'Nenhum item encontrado'}
+              </option>
+              {outsideList ? <option value={catmat}>CATMAT {catmat}</option> : null}
+              {lista.itens.map((item) => (
+                <option key={item.catmat} value={item.catmat}>
+                  {item.descricao.length > 70 ? `${item.descricao.slice(0, 67)}…` : item.descricao}{' '}
+                  · {item.catmat}
+                  {item.mediana_estimada ? ` · típico ${reais(item.mediana_estimada)}` : ''}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             Estado
@@ -115,12 +251,42 @@ export function PrecosApp() {
               <option value="36">Últimos 36 meses</option>
             </select>
           </label>
-          <div className="ui-form-actions">
-            <button className="ui-btn" type="submit" disabled={busy}>
-              {busy ? 'Consultando…' : 'Consultar'}
-            </button>
-          </div>
-        </form>
+        </div>
+        {lista.state === 'error' ? <Alert kind="error">{lista.message}</Alert> : null}
+        {lista.state === 'ready' && !lista.itens.length ? (
+          <Alert kind="info">
+            Ainda não há itens deste nicho nos editais coletados. Abra um edital no Radar e use
+            “Buscar itens e documentos no PNCP”, ou consulte pelo código abaixo.
+          </Alert>
+        ) : null}
+        <details className="ui-details">
+          <summary>Já sabe o código CATMAT? Consulte direto</summary>
+          <form
+            className="ui-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (/^\d{4,9}$/.test(codigo)) setCatmat(codigo);
+            }}
+          >
+            <label>
+              Código CATMAT
+              <input
+                inputMode="numeric"
+                pattern="\d{4,9}"
+                title="4 a 9 números"
+                value={codigo}
+                onChange={(event) => setCodigo(event.target.value.replace(/\D/g, ''))}
+                placeholder="Ex.: 460789"
+              />
+            </label>
+            <div className="ui-form-actions">
+              <button className="ui-btn" type="submit" disabled={busy || codigo.length < 4}>
+                Consultar
+              </button>
+            </div>
+          </form>
+        </details>
+        {busy ? <p className="ui-loading">Consultando o Compras.gov.br…</p> : null}
         {error ? <Alert kind="error">{error}</Alert> : null}
       </Panel>
 
@@ -139,7 +305,7 @@ export function PrecosApp() {
               />
             </section>
             <Panel
-              title={result.descricao ?? `CATMAT ${result.catmat}`}
+              title={result.descricao ?? chosen?.descricao ?? `CATMAT ${result.catmat}`}
               description={`${result.extremos_removidos ? `${result.extremos_removidos} valor(es) muito fora da curva foram desconsiderados no resumo. ` : ''}Faixa comum (25% a 75%): ${reais(stats.p25)} a ${reais(stats.p75)}.`}
             >
               <Table
@@ -177,6 +343,56 @@ export function PrecosApp() {
           </Panel>
         )
       ) : null}
+
+      <Panel
+        title="Pregões já fechados no nicho"
+        description="Quanto foi estimado e quanto o pregão realmente fechou (valor homologado)."
+      >
+        {fechados.state === 'loading' ? <p className="ui-loading">Carregando…</p> : null}
+        {fechados.state === 'error' ? <Alert kind="error">{fechados.message}</Alert> : null}
+        {fechados.state === 'ready' ? (
+          fechados.data.itens.length ? (
+            <>
+              <section className="ui-kpis" aria-label="Resumo dos pregões fechados">
+                <Kpi label="Pregões fechados" value={formatNumber(fechados.data.resumo.pregoes)} />
+                <Kpi label="Estimado" value={reais(fechados.data.resumo.total_estimado)} />
+                <Kpi label="Fechado" value={reais(fechados.data.resumo.total_homologado)} />
+                <Kpi
+                  label="Economia média"
+                  value={pct(fechados.data.resumo.economia_pct)}
+                  hint="sobre o estimado"
+                  tone="ok"
+                />
+              </section>
+              <Table
+                label="Pregões fechados"
+                head={['Licitação', 'Órgão', 'UF', 'Estimado', 'Fechou em', 'Economia']}
+              >
+                {fechados.data.itens.map((item) => (
+                  <tr key={item.id}>
+                    <td>
+                      <Link href={`/radar/${item.id}`}>{item.titulo ?? 'Sem título'}</Link>
+                      <small>{formatDate(item.data_publicacao)}</small>
+                    </td>
+                    <td>{item.orgao ?? '—'}</td>
+                    <td>{item.uf ?? '—'}</td>
+                    <td>{reais(item.valor_estimado)}</td>
+                    <td>
+                      <strong>{reais(item.valor_homologado)}</strong>
+                    </td>
+                    <td>{pct(item.economia_pct)}</td>
+                  </tr>
+                ))}
+              </Table>
+            </>
+          ) : (
+            <Empty>
+              Nenhum pregão fechado encontrado neste nicho e período. Amplie o período ou tire o
+              filtro de estado.
+            </Empty>
+          )
+        ) : null}
+      </Panel>
     </>
   );
 }

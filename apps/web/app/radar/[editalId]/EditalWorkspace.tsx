@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { errorText, send } from '../../../lib/api';
 import { Badge } from '../../components/ui';
 import { brl, deadlineInfo } from '../radar-lib';
+import { ValoresFechados } from './ValoresFechados';
 
 type Edital = {
   id: string;
@@ -481,6 +482,9 @@ export function EditalWorkspace({
         ) : (
           <p>Nenhum item normalizado ainda.</p>
         )}
+        {signedIn && detail.edital.fonte === 'pncp' && detail.itens.length ? (
+          <ValoresFechados editalId={editalId} />
+        ) : null}
       </section>
       <section id="historico" className="detail-card">
         <h2>O que mudou e documentos</h2>

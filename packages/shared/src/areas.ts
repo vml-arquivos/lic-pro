@@ -26,7 +26,7 @@ const academy: MenuItem = { label: 'Academia', href: '/academia', icon: 'cap' };
 const materials: MenuItem = { label: 'Materiais', href: '/materiais', icon: 'file' };
 const radar: MenuItem = { label: 'Explorar licitações', href: '/radar', icon: 'search' };
 const published: MenuItem = { label: 'Pregões publicados', href: '/pregoes', icon: 'globe' };
-const prices: MenuItem = { label: 'Preços de referência', href: '/precos', icon: 'chart' };
+const prices: MenuItem = { label: 'Preços pagos', href: '/precos', icon: 'chart' };
 
 /** Somente páginas que existem e funcionam. Nada de item "em breve". */
 export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {

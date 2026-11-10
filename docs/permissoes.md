@@ -74,6 +74,18 @@ Empresa e aluno usam o Radar limitado a 1–3 nichos (aluno somente leitura). A 
 não tem esse limite. O colaborador só enxerga os nichos que a Administração liberou para ele
 (a tela Minha conta mostra os nichos sem permitir troca; a API responde `niches_locked`).
 
+## Preços pagos
+
+- Página `/precos` (Empresa, Aluno, Colaborador e Administração): escolhe-se nicho, item, estado e
+  período em listas. A lista de itens vem dos editais já coletados do nicho (código CATMAT e valor
+  estimado típico); digitar o código é só plano B.
+- "Quanto o governo pagou": preços praticados do Compras.gov.br para o item escolhido.
+- "Pregões já fechados no nicho": valor estimado × valor homologado dos editais do catálogo.
+- Dentro do edital (PNCP, com itens buscados): "Ver valores fechados" mostra, item a item, o valor
+  estimado, o valor fechado, o desconto e o vencedor, direto do PNCP.
+- Quem tem nichos travados (aluno e colaborador) só vê os do próprio perfil; sem nicho escolhido,
+  a API responde `niche_preferences_required`.
+
 ## Alertas e sessão ao vivo
 
 - Tipos de aviso: `novos` (aberturas), `alteracao` (mudanças no edital), `prazo` (prazos
@@ -133,6 +145,9 @@ Regras e menus ficam em `packages/shared/src/areas.ts`, com testes. As páginas 
 | `GET /billing/minha-assinatura`                                                                                           |            |   ✔   |    ✔     |             |        |       |
 | `POST /billing/assinar`, `POST /billing/cancelar`                                                                         |            |   ✔   |          |             |        |       |
 | `GET /precos/referencia` (preço de referência, Compras.gov.br)                                                            |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
+| `GET /precos/itens` (itens do nicho com valor típico)                                                                     |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
+| `GET /precos/fechados` (pregões fechados: estimado × homologado)                                                          |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
+| `GET /editais/:id/resultados` (valor fechado e vencedor por item, PNCP)                                                   |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
 | `POST /editais/:id/detalhes/atualizar` (itens e documentos do PNCP)                                                       |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
 
 Rotas públicas da venda: `GET /public/planos`, `POST /public/checkout/curso` (limite por IP),

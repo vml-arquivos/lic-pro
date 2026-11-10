@@ -1191,3 +1191,132 @@
   margin: 0;
   padding: 0.6rem 0.8rem;
 }
+
+/* Página da Ana: conversa aberta, sem textos longos */
+.ana-hero {
+  align-items: center;
+  display: flex;
+  gap: 0.9rem;
+  margin-bottom: 1.1rem;
+}
+.ana-hero h1 {
+  font-size: clamp(1.8rem, 3.4vw, 2.4rem);
+  line-height: 1.1;
+  margin: 0;
+}
+.ana-hero .eyebrow {
+  margin: 0 0 0.15rem;
+}
+.ana-hero-orb {
+  background: radial-gradient(circle at 32% 28%, #fff 0, #a5b4fc 22%, #6366f1 58%, #14b8a6 100%);
+  border-radius: 50%;
+  box-shadow: 0 10px 26px -10px rgba(79, 70, 229, 0.7);
+  display: block;
+  flex: none;
+  height: 3.2rem;
+  width: 3.2rem;
+}
+.ana-box {
+  background: #fff;
+  border: 1px solid var(--lc-line, #e4e7f2);
+  border-radius: 1.2rem;
+  box-shadow: var(--lc-shadow-pop, 0 18px 40px -26px rgba(30, 41, 90, 0.35));
+  display: grid;
+  gap: 0.9rem;
+  padding: 1.1rem;
+}
+.ana-box-messages {
+  display: grid;
+  gap: 0.6rem;
+  max-height: min(48vh, 26rem);
+  min-height: 7rem;
+  overflow-y: auto;
+}
+.ana-box .ana-message {
+  font-size: 0.92rem;
+  max-width: 46rem;
+}
+.ana-box .ana-message.usuario {
+  justify-self: end;
+}
+.ana-box-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.ana-box-suggestions button {
+  background: #f4f5ff;
+  border: 1px solid #d9dcfb;
+  border-radius: 999px;
+  color: #3f3fa8;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.85rem;
+}
+.ana-box-suggestions button:hover:not(:disabled) {
+  background: #e9ebff;
+}
+.ana-box-input {
+  display: flex;
+  gap: 0.6rem;
+}
+.ana-box-input input {
+  border: 1px solid var(--lc-line, #e4e7f2);
+  border-radius: 0.8rem;
+  flex: 1;
+  font: inherit;
+  min-width: 0;
+  padding: 0.8rem 0.95rem;
+}
+.ana-box-input button {
+  background: var(--lc-grad, linear-gradient(135deg, #4f46e5, #14b8a6));
+  border: 0;
+  border-radius: 0.8rem;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0 1.3rem;
+}
+.ana-box-input button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.ana-box-note {
+  color: #6b7390;
+  font-size: 0.76rem;
+  margin: 0;
+}
+.ana-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.ana-shortcuts a {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--lc-line, #e4e7f2);
+  border-radius: 999px;
+  color: inherit;
+  display: inline-flex;
+  font-size: 0.85rem;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  text-decoration: none;
+}
+.ana-shortcuts a:hover {
+  border-color: #a5b4fc;
+}
+
+/* Preços pagos: o seletor de item precisa de largura para o nome completo */
+.precos-form {
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+}
+.precos-form .precos-item {
+  grid-column: span 2;
+}
+@media (max-width: 42rem) {
+  .precos-form .precos-item {
+    grid-column: auto;
+  }
+}

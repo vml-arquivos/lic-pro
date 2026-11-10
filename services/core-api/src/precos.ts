@@ -1,6 +1,11 @@
+import { nicheSearchExpression } from '@licitecomigo/shared';
 import type { FastifyInstance } from 'fastify';
+import type { Pool } from 'pg';
 import { z } from 'zod';
 import type { RuntimeConfig } from './config.js';
+import { withTenant } from './db.js';
+import { applyNicheScope, readUserNiches } from './niche-scope.js';
+import { authContext, sendDatabaseUnavailable } from './request-context.js';
 
 /**
  * Preços de referência a partir do Compras.gov.br (Dados Abertos, pesquisa de preços de material).
@@ -147,6 +152,7 @@ export function withoutExtremes(values: number[]): { kept: number[]; removed: nu
 
 type Deps = {
   config: Pick<RuntimeConfig, 'comprasBaseUrl'>;
+  pool?: Pool | undefined;
   fetchImpl?: typeof fetch;
   now?: () => Date;
 };
@@ -270,8 +276,169 @@ const querySchema = z.object({
   meses: z.coerce.number().int().min(1).max(36).default(12),
 });
 
+const likeContains = (value: string): string => `%${value.replace(/[\\%_]/g, '\\$&')}%`;
+
+const catalogScope =
+  "e.tenant_id IN (SELECT current_setting('app.tenant_id')::uuid UNION SELECT id FROM plataforma_tenants)";
+
+const itensQuery = z.object({
+  nicho: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((value) =>
+      value === undefined ? undefined : Array.isArray(value) ? value : [value],
+    ),
+  q: z.string().trim().min(2).max(80).optional(),
+});
+
+const fechadosQuery = itensQuery.extend({
+  uf: z.string().trim().length(2).toUpperCase().optional(),
+  meses: z.coerce.number().int().min(1).max(36).default(12),
+});
+
+/** Itens (CATMAT) que aparecem nos editais do catálogo, com o valor estimado típico. */
+export type ItemDoNicho = {
+  catmat: string;
+  descricao: string;
+  unidade: string | null;
+  editais: number;
+  mediana_estimada: number | null;
+};
+
+export type PregaoFechado = {
+  id: string;
+  titulo: string | null;
+  orgao: string | null;
+  uf: string | null;
+  modalidade: string | null;
+  valor_estimado: number | null;
+  valor_homologado: number;
+  economia_pct: number | null;
+  data_publicacao: string | null;
+  url_origem: string | null;
+};
+
 export function registerPriceRoutes(app: FastifyInstance, deps: Deps): void {
+  const { pool } = deps;
   const cache = new Map<string, { at: number; value: PrecosResultado }>();
+
+  /** Lista de itens para escolher (em vez de digitar o código), já restrita ao nicho da pessoa. */
+  app.get('/precos/itens', async (request, reply) => {
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const query = itensQuery.parse(request.query);
+    const context = authContext(request);
+    const result = await withTenant(pool, context, async (client) => {
+      const preferences = await readUserNiches(client, context.tenantId, context.userId);
+      const scoped = applyNicheScope(
+        query.nicho ? { nicho: query.nicho } : {},
+        preferences,
+        request.user.role,
+      );
+      const terms = Array.isArray(scoped.nicho_termos) ? (scoped.nicho_termos as string[]) : [];
+      const values: unknown[] = [];
+      const where: string[] = ["ie.catmat_catser ~ '^[0-9]{4,9}$'", catalogScope];
+      if (terms.length) {
+        values.push(terms.map(likeContains));
+        where.push(`ie.descricao ILIKE ANY($${values.length}::text[])`);
+      }
+      if (query.q) {
+        values.push(likeContains(query.q));
+        where.push(`ie.descricao ILIKE $${values.length}`);
+      }
+      const rows = await client.query<ItemDoNicho>(
+        `SELECT ie.catmat_catser AS catmat,
+                mode() WITHIN GROUP (ORDER BY ie.descricao) AS descricao,
+                mode() WITHIN GROUP (ORDER BY ie.unidade) AS unidade,
+                count(DISTINCT ie.edital_id)::int AS editais,
+                round((percentile_cont(0.5) WITHIN GROUP (ORDER BY ie.valor_unitario_estimado)
+                        FILTER (WHERE ie.valor_unitario_estimado > 0))::numeric, 2)::float8 AS mediana_estimada
+           FROM itens_edital ie
+           JOIN editais e ON e.id = ie.edital_id
+          WHERE ${where.join(' AND ')}
+          GROUP BY ie.catmat_catser
+          ORDER BY count(DISTINCT ie.edital_id) DESC, 2
+          LIMIT 80`,
+        values,
+      );
+      return { nichos: scoped.nicho ?? [], itens: rows.rows };
+    });
+    return reply.send(result);
+  });
+
+  /** Pregões do catálogo que já têm valor homologado: quanto foi estimado e quanto fechou. */
+  app.get('/precos/fechados', async (request, reply) => {
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const query = fechadosQuery.parse(request.query);
+    const context = authContext(request);
+    const result = await withTenant(pool, context, async (client) => {
+      const preferences = await readUserNiches(client, context.tenantId, context.userId);
+      const scoped = applyNicheScope(
+        query.nicho ? { nicho: query.nicho } : {},
+        preferences,
+        request.user.role,
+      );
+      const codes = Array.isArray(scoped.nicho) ? (scoped.nicho as string[]) : [];
+      const values: unknown[] = [];
+      const where: string[] = [
+        catalogScope.replaceAll('e.tenant_id', 'tenant_id'),
+        'valor_homologado > 0',
+        `COALESCE(data_publicacao, created_at) >= now() - make_interval(months => $${values.push(query.meses)})`,
+      ];
+      const expression = codes.length ? nicheSearchExpression(codes) : '';
+      if (expression) {
+        values.push(expression);
+        where.push(`search_vector @@ websearch_to_tsquery('portuguese', $${values.length})`);
+      }
+      if (query.q) {
+        values.push(query.q);
+        where.push(`search_vector @@ websearch_to_tsquery('portuguese', $${values.length})`);
+      }
+      if (query.uf) {
+        values.push(query.uf);
+        where.push(`uf = $${values.length}`);
+      }
+      const condition = where.join(' AND ');
+      const summary = await client.query<{
+        pregoes: number;
+        total_estimado: number | null;
+        total_homologado: number | null;
+      }>(
+        `SELECT count(*)::int AS pregoes,
+                  sum(valor_estimado) FILTER (WHERE valor_estimado > 0)::float8 AS total_estimado,
+                  sum(valor_homologado) FILTER (WHERE valor_estimado > 0)::float8 AS total_homologado
+             FROM editais WHERE ${condition}`,
+        values,
+      );
+      // Em sequência: um mesmo client não executa duas consultas ao mesmo tempo.
+      const rows = await client.query<PregaoFechado>(
+        `SELECT id, titulo, orgao, uf, modalidade, valor_estimado::float8 AS valor_estimado,
+                valor_homologado::float8 AS valor_homologado,
+                CASE WHEN valor_estimado > 0
+                     THEN round(((1 - valor_homologado / valor_estimado) * 100)::numeric, 1)::float8 END AS economia_pct,
+                data_publicacao, url_origem
+           FROM editais WHERE ${condition}
+          ORDER BY data_publicacao DESC NULLS LAST, id DESC
+          LIMIT 50`,
+        values,
+      );
+      const sums = summary.rows[0]!;
+      const comparable = sums.total_estimado && sums.total_estimado > 0;
+      return {
+        nichos: codes,
+        resumo: {
+          pregoes: sums.pregoes,
+          total_estimado: sums.total_estimado,
+          total_homologado: sums.total_homologado,
+          economia_pct: comparable
+            ? Math.round((1 - (sums.total_homologado ?? 0) / sums.total_estimado!) * 1000) / 10
+            : null,
+        },
+        itens: rows.rows,
+      };
+    });
+    return reply.send(result);
+  });
+
   app.get('/precos/referencia', async (request, reply) => {
     const query = querySchema.parse(request.query);
     const key = `${query.catmat}|${query.uf ?? ''}|${query.meses}`;

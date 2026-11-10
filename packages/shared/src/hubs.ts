@@ -62,8 +62,8 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
     },
     { label: 'Pregões', caption: 'Publicados', href: '/pregoes', icon: 'globe', tone: 'slate' },
     {
-      label: 'Preços',
-      caption: 'Referência de mercado',
+      label: 'Preços pagos',
+      caption: 'O que o governo pagou',
       href: '/precos',
       icon: 'chart',
       tone: 'blue',
@@ -130,8 +130,8 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
     },
     { label: 'Pregões', caption: 'Publicados', href: '/pregoes', icon: 'globe', tone: 'slate' },
     {
-      label: 'Preços',
-      caption: 'Referência de mercado',
+      label: 'Preços pagos',
+      caption: 'O que o governo pagou',
       href: '/precos',
       icon: 'chart',
       tone: 'blue',
@@ -240,8 +240,8 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
       tone: 'slate',
     },
     {
-      label: 'Preços',
-      caption: 'Referência de mercado',
+      label: 'Preços pagos',
+      caption: 'O que o governo pagou',
       href: '/precos',
       icon: 'chart',
       tone: 'blue',

@@ -112,7 +112,7 @@ export function registerDiagnosticoRoutes(app: FastifyInstance, deps: Deps): voi
           : {
               estado: 'sem_dados',
               detalhe:
-                'Respondeu, mas sem preços para o CATMAT 460789. Teste outro código em Preços de referência.',
+                'Respondeu, mas sem preços para o CATMAT 460789. Teste outro código em Preços pagos.',
             };
       }),
       timed('asaas', 'Asaas: cobrança', async () => {

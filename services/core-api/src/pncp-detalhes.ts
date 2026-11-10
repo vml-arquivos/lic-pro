@@ -155,6 +155,100 @@ export async function buscarDetalhes(
   return { itens, documentos };
 }
 
+/** Resultado de um item de pregão já encerrado: quanto fechou e quem ganhou. */
+export type ResultadoPncp = {
+  valor_unitario_homologado: number;
+  valor_total_homologado: number | null;
+  quantidade_homologada: number | null;
+  desconto_pct: number | null;
+  fornecedor: string | null;
+  cnpj_fornecedor: string | null;
+  data: string | null;
+  situacao: string | null;
+};
+
+export type ItemComResultado = {
+  numero: string;
+  descricao: string;
+  unidade: string | null;
+  quantidade: number | null;
+  valor_unitario_estimado: number | null;
+  resultado: ResultadoPncp | null;
+};
+
+export function normalizeResultado(raw: unknown): ResultadoPncp | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const row = raw as Record<string, unknown>;
+  const unit = number(row.valorUnitarioHomologado);
+  if (unit === null || unit <= 0) return null;
+  const situacao = str(row.situacaoCompraItemResultadoNome ?? row.situacaoCompraItemNome);
+  if (situacao && /cancelad|anulad|revogad/i.test(situacao)) return null;
+  const data = str(row.dataResultado ?? row.dataInclusao);
+  const parsed = data ? new Date(data) : null;
+  return {
+    valor_unitario_homologado: unit,
+    valor_total_homologado: number(row.valorTotalHomologado),
+    quantidade_homologada: number(row.quantidadeHomologada),
+    desconto_pct: number(row.percentualDesconto),
+    fornecedor: str(row.nomeRazaoSocialFornecedor ?? row.nomeFornecedor),
+    cnpj_fornecedor: str(row.niFornecedor),
+    data: parsed && !Number.isNaN(parsed.getTime()) ? parsed.toISOString() : null,
+    situacao,
+  };
+}
+
+/**
+ * Busca no PNCP o resultado de cada item do edital (valor homologado e vencedor).
+ * Item sem resultado publicado (404/204) volta com `resultado: null`. Se a fonte falhar em
+ * todos os itens, o erro sobe: nunca se inventa valor.
+ */
+export async function buscarResultados(
+  config: Pick<RuntimeConfig, 'pncpApiBaseUrl'>,
+  idExterno: string,
+  itens: ReadonlyArray<Omit<ItemComResultado, 'resultado'>>,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ItemComResultado[]> {
+  const key = parseNumeroControle(idExterno);
+  if (!key)
+    throw new DetalhesError(
+      422,
+      'identificador_invalido',
+      'Este edital não tem identificador do PNCP.',
+    );
+  const base = `${config.pncpApiBaseUrl}/orgaos/${key.cnpj}/compras/${key.ano}/${key.sequencial}/itens`;
+  const out: ItemComResultado[] = [];
+  let failures = 0;
+  const queue = itens.slice(0, 120);
+  const worker = async (): Promise<void> => {
+    for (let item = queue.shift(); item; item = queue.shift()) {
+      try {
+        const body = await getJson(
+          fetchImpl,
+          `${base}/${encodeURIComponent(item.numero)}/resultados`,
+        );
+        const resultado =
+          listOf(body)
+            .map(normalizeResultado)
+            .find((value): value is ResultadoPncp => value !== null) ?? null;
+        out.push({ ...item, resultado });
+      } catch {
+        failures += 1;
+        out.push({ ...item, resultado: null });
+      }
+    }
+  };
+  const total = queue.length;
+  await Promise.all(Array.from({ length: Math.min(6, total) }, worker));
+  if (total > 0 && failures === total) {
+    throw new DetalhesError(
+      502,
+      'fonte_indisponivel',
+      'O PNCP não respondeu agora. Tente novamente em instantes.',
+    );
+  }
+  return out.sort((a, b) => Number(a.numero) - Number(b.numero));
+}
+
 type Deps = { pool: Pool | undefined; config: RuntimeConfig; fetchImpl?: typeof fetch };
 
 export function registerDetalhesRoutes(
@@ -162,6 +256,87 @@ export function registerDetalhesRoutes(
   { pool, config, fetchImpl }: Deps,
 ): void {
   const limiter = new PublicRateLimiter(20);
+  const resultCache = new Map<string, { at: number; value: unknown }>();
+
+  /** Valor fechado e vencedor de cada item do edital (consulta sob demanda ao PNCP). */
+  app.get('/editais/:id/resultados', async (request, reply) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
+    limiter.check(`resultados:${request.user.sub}`);
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const loaded = await withTenant(pool, authContext(request), async (client) => {
+      const edital = (
+        await client.query<{ id_externo: string; fonte: string; valor_homologado: string | null }>(
+          'SELECT id_externo, fonte, valor_homologado FROM editais WHERE id = $1',
+          [id],
+        )
+      ).rows[0];
+      if (!edital) return null;
+      const itens = await client.query<Omit<ItemComResultado, 'resultado'>>(
+        `SELECT numero, descricao, unidade, quantidade::float8 AS quantidade,
+                valor_unitario_estimado::float8 AS valor_unitario_estimado
+           FROM itens_edital WHERE edital_id = $1 ORDER BY numero`,
+        [id],
+      );
+      return { edital, itens: itens.rows };
+    });
+    if (!loaded) return reply.code(404).send({ error: 'edital_not_found' });
+    if (loaded.edital.fonte !== 'pncp') {
+      return reply.code(422).send({
+        error: 'fonte_sem_detalhes',
+        message: 'Os resultados por item só existem para editais do PNCP.',
+      });
+    }
+    if (!loaded.itens.length) {
+      return reply.code(409).send({
+        error: 'itens_nao_coletados',
+        message: 'Busque os itens do edital primeiro (botão “Buscar itens e documentos no PNCP”).',
+      });
+    }
+    const hit = resultCache.get(id);
+    if (hit && Date.now() - hit.at < 10 * 60_000) return reply.send(hit.value);
+    try {
+      const itens = await buscarResultados(
+        config,
+        loaded.edital.id_externo,
+        loaded.itens,
+        fetchImpl,
+      );
+      const comResultado = itens.filter((item) => item.resultado);
+      const estimado = comResultado.reduce(
+        (total, item) => total + (item.valor_unitario_estimado ?? 0) * (item.quantidade ?? 1),
+        0,
+      );
+      const fechado = comResultado.reduce(
+        (total, item) =>
+          total +
+          (item.resultado!.valor_total_homologado ??
+            item.resultado!.valor_unitario_homologado * (item.quantidade ?? 1)),
+        0,
+      );
+      const value = {
+        itens,
+        resumo: {
+          itens: itens.length,
+          com_resultado: comResultado.length,
+          total_estimado: comResultado.length ? Math.round(estimado * 100) / 100 : null,
+          total_homologado: comResultado.length ? Math.round(fechado * 100) / 100 : null,
+          economia_pct:
+            comResultado.length && estimado > 0
+              ? Math.round((1 - fechado / estimado) * 1000) / 10
+              : null,
+        },
+        fonte: { nome: 'PNCP — resultado dos itens', consultado_em: new Date().toISOString() },
+      };
+      resultCache.set(id, { at: Date.now(), value });
+      if (resultCache.size > 200) resultCache.delete(resultCache.keys().next().value as string);
+      return reply.send(value);
+    } catch (error) {
+      if (error instanceof DetalhesError) {
+        return reply.code(error.status).send({ error: error.code, message: error.message });
+      }
+      throw error;
+    }
+  });
   app.post('/editais/:id/detalhes/atualizar', async (request, reply) => {
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
     const { force } = z.object({ force: z.boolean().default(false) }).parse(request.body ?? {});
