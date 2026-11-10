@@ -21,6 +21,13 @@ const withMentor = parsePanels({
   PANEL_URL_MENTOR: 'https://mentor.licite.test',
 });
 
+const withColaborador = parsePanels({
+  PANEL_URL_ADMIN: 'https://admin.licite.test',
+  PANEL_URL_EMPRESA: 'https://app.licite.test',
+  PANEL_URL_ALUNO: 'https://aluno.licite.test',
+  PANEL_URL_COLABORADOR: 'https://equipe.licite.test',
+});
+
 describe('painéis por endereço', () => {
   it('lê só endereços válidos e tira a barra final', () => {
     expect(all.empresa?.url).toBe('https://app.licite.test');
@@ -59,9 +66,21 @@ describe('painéis por endereço', () => {
     expect(panelUrlForRole(all, 'operador')).toBe('https://app.licite.test');
   });
 
+  it('sem endereço de Colaborador, o colaborador usa o painel da Administração; com endereço, não', () => {
+    expect(roleAllowedOnPanel(all, 'administracao', 'colaborador')).toBe(true);
+    expect(roleAllowedOnPanel(withColaborador, 'administracao', 'colaborador')).toBe(false);
+    expect(roleAllowedOnPanel(withColaborador, 'colaborador', 'colaborador')).toBe(true);
+    expect(roleAllowedOnPanel(all, 'empresa', 'colaborador')).toBe(false);
+    expect(roleAllowedOnPanel(all, 'aluno', 'colaborador')).toBe(false);
+    expect(panelUrlForRole(all, 'colaborador')).toBe('https://admin.licite.test');
+    expect(panelUrlForRole(withColaborador, 'colaborador')).toBe('https://equipe.licite.test');
+    expect(panelPathAllowed(all, 'administracao', '/oportunidades')).toBe(true);
+    expect(panelPathAllowed(all, 'administracao', '/assinatura')).toBe(false);
+  });
+
   it('cada painel só abre as próprias páginas', () => {
     expect(panelPathAllowed(all, 'administracao', '/admin/assinantes')).toBe(true);
-    expect(panelPathAllowed(all, 'administracao', '/oportunidades')).toBe(false);
+    expect(panelPathAllowed(withColaborador, 'administracao', '/oportunidades')).toBe(false);
     expect(panelPathAllowed(all, 'administracao', '/plano-30-dias')).toBe(false);
     expect(panelPathAllowed(all, 'administracao', '/mentor')).toBe(false);
     expect(panelPathAllowed(all, 'empresa', '/admin')).toBe(false);

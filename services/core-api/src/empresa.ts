@@ -11,10 +11,11 @@ import {
   sendDatabaseUnavailable,
   type DbClient,
 } from './request-context.js';
+import { OPERATION_ROLES } from './auth.js';
 
 type Deps = { pool: Pool | undefined };
 
-const COMPANY = ['plataforma', 'admin', 'operador'] as const;
+const COMPANY = OPERATION_ROLES;
 const uuid = z.string().uuid();
 const idParams = z.object({ id: uuid });
 

@@ -6,7 +6,10 @@ import { Empty } from '../components/ui';
 import { ResultList } from '../radar/RadarResults';
 import type { ListResponse } from '../radar/radar-lib';
 
-export function PregoesResults({ signedIn }: Readonly<{ signedIn: boolean }>) {
+export function PregoesResults({
+  signedIn,
+  nichosTravados = false,
+}: Readonly<{ signedIn: boolean; nichosTravados?: boolean }>) {
   const [result, setResult] = useState<ListResponse | null>(null);
   const [state, setState] = useState<
     'loading' | 'ready' | 'anonymous' | 'niche_required' | 'error'
@@ -41,7 +44,13 @@ export function PregoesResults({ signedIn }: Readonly<{ signedIn: boolean }>) {
   if (state === 'niche_required')
     return (
       <Empty>
-        Escolha seus nichos para ver os pregões. <Link href="/onboarding">Escolher nichos</Link>
+        {nichosTravados ? (
+          'Seus nichos ainda não foram liberados pela Administração.'
+        ) : (
+          <>
+            Escolha seus nichos para ver os pregões. <Link href="/onboarding">Escolher nichos</Link>
+          </>
+        )}
       </Empty>
     );
   if (state === 'error' || !result)

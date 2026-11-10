@@ -176,6 +176,7 @@ const PANEL_ENV: Record<Area, string> = {
   empresa: 'PANEL_URL_EMPRESA',
   aluno: 'PANEL_URL_ALUNO',
   mentor: 'PANEL_URL_MENTOR',
+  colaborador: 'PANEL_URL_COLABORADOR',
 };
 
 function readPanelUrls(env: NodeJS.ProcessEnv): Partial<Record<Area, string>> {
@@ -201,6 +202,12 @@ function readPanelUrls(env: NodeJS.ProcessEnv): Partial<Record<Area, string>> {
 export function panelBaseUrl(config: RuntimeConfig, area: Area, requested?: string | null): string {
   const hint = requested?.trim().replace(/\/+$/, '');
   if (hint && Object.values(config.panelUrls).includes(hint)) return hint;
-  const own = config.panelUrls[area] ?? (area === 'mentor' ? config.panelUrls.aluno : undefined);
+  const own =
+    config.panelUrls[area] ??
+    (area === 'mentor'
+      ? config.panelUrls.aluno
+      : area === 'colaborador'
+        ? config.panelUrls.administracao
+        : undefined);
   return (own ?? config.appUrl ?? config.siteUrl ?? '').replace(/\/+$/, '');
 }

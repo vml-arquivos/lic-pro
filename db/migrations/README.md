@@ -63,5 +63,19 @@ cria a conta da equipe direto.
   `admin_ajustar_assinatura()` (a equipe estende, cancela ou reativa). Leitura de `assinaturas`
   para a plataforma.
 
-Todas rodam em ordem pelo `migrate.sh`, cada uma na sua transação. O CI confere que as 25
+## Aluno: materiais e encontros (0026)
+
+- Materiais de apoio, diagnóstico do aluno e encontros ao vivo da turma, com prazo de acesso.
+
+## Colaboradores da Licite Comigo (0027 e 0028)
+
+- `0027`: novo valor `colaborador` no tipo `papel_usuario`. Fica em arquivo próprio porque um
+  valor novo de enum só pode ser usado depois de confirmado (cada migration roda numa transação).
+- `0028`: o convite e o "ver como" aceitam `colaborador`; a trava que mantém a equipe na conta
+  da plataforma passa a valer para `plataforma` e `colaborador`; as regras de alerta aceitam o
+  tipo `sessao` (aviso de sessão de disputa ao vivo), e as entregas também.
+- O colaborador usa as mesmas políticas de linha (RLS) do operador, dentro da conta da
+  plataforma. Os nichos dele ficam em `usuarios.nicho_preferencias` e só a Administração altera.
+
+Todas rodam em ordem pelo `migrate.sh`, cada uma na sua transação. O CI confere que as 28
 foram aplicadas. Migration já aplicada nunca é editada: mudança vira arquivo novo.

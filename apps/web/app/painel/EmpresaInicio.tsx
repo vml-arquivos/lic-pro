@@ -34,12 +34,19 @@ export function EmpresaInicio({
   nome,
   nichos,
   hub,
-}: Readonly<{ nome: string; nichos: readonly string[]; hub?: React.ReactNode }>) {
+  operacao = false,
+}: Readonly<{
+  nome: string;
+  nichos: readonly string[];
+  hub?: React.ReactNode;
+  /** Colaborador da operação: mesmo painel de trabalho, com os nichos travados pela Administração. */
+  operacao?: boolean;
+}>) {
   const [home] = useResource<Home>('/empresa/inicio');
   return (
     <div className="ui-page">
       <PageHeader
-        eyebrow="Minha empresa"
+        eyebrow={operacao ? 'Operação' : 'Minha empresa'}
         title={`Olá, ${nome.split(' ')[0] ?? nome}`}
         description="O que mudou hoje, o que vence nesta semana e o que fazer a seguir."
         actions={
@@ -64,6 +71,12 @@ export function EmpresaInicio({
                   hint={`${alteracoes} alteração(ões) nos seus editais`}
                 />
                 <Kpi label="Buscas com aviso" value={data.buscas_ativas} hint="Salvas e ativas" />
+                <Kpi
+                  label="Sessões ao vivo hoje"
+                  value={data.hoje.sessao ?? 0}
+                  hint="Avisos de disputa começando"
+                  tone={data.hoje.sessao ? 'warn' : undefined}
+                />
                 <Kpi
                   label="Prazos em 7 dias"
                   value={data.prazos_semana.length}

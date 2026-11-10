@@ -189,6 +189,71 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
     },
     { label: 'Conversar', caption: 'Apoio com fontes', href: '/ana', icon: 'spark', tone: 'pink' },
   ],
+  colaborador: [
+    {
+      label: 'Radar',
+      caption: 'Editais dos seus nichos',
+      href: '/radar',
+      icon: 'search',
+      tone: 'violet',
+    },
+    {
+      label: 'Buscas salvas',
+      caption: 'Seu funil de busca',
+      href: '/buscas-salvas',
+      icon: 'target',
+      tone: 'blue',
+    },
+    {
+      label: 'Alertas',
+      caption: 'Aberturas e sessões',
+      href: '/alertas',
+      icon: 'bell',
+      tone: 'rose',
+    },
+    {
+      label: 'Oportunidades',
+      caption: 'Pipeline de disputa',
+      href: '/oportunidades',
+      icon: 'columns',
+      tone: 'teal',
+    },
+    {
+      label: 'Agenda',
+      caption: 'Prazos e sessões',
+      href: '/agenda',
+      icon: 'calendar',
+      tone: 'amber',
+    },
+    {
+      label: 'Documentos',
+      caption: 'Habilitação em dia',
+      href: '/documentos',
+      icon: 'file',
+      tone: 'green',
+    },
+    {
+      label: 'Pregões',
+      caption: 'Publicados',
+      href: '/pregoes',
+      icon: 'globe',
+      tone: 'slate',
+    },
+    {
+      label: 'Preços',
+      caption: 'Referência de mercado',
+      href: '/precos',
+      icon: 'chart',
+      tone: 'blue',
+    },
+    {
+      label: 'Conversar',
+      caption: 'Dúvidas com fontes',
+      href: '/ana',
+      icon: 'spark',
+      tone: 'pink',
+    },
+  ],
   administracao: [
     { label: 'Leads', caption: 'Contatos do site', href: '/leads', icon: 'inbox', tone: 'rose' },
     {
@@ -211,6 +276,13 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
       href: '/admin/mentores',
       icon: 'award',
       tone: 'amber',
+    },
+    {
+      label: 'Colaboradores',
+      caption: 'Equipe da operação',
+      href: '/admin/colaboradores',
+      icon: 'users',
+      tone: 'teal',
     },
     {
       label: 'Materiais',
@@ -348,6 +420,10 @@ export const HUB_CTA: Record<Area, { title: string; text: string }> = {
   mentor: {
     title: 'Ana',
     text: 'Apoio para explicar conceitos e conferir referências antes de devolver uma prática ao aluno.',
+  },
+  colaborador: {
+    title: 'Ana',
+    text: 'Apoio para ler editais dos seus nichos, conferir prazos e preparar a participação na sessão, com fontes e limites claros.',
   },
   administracao: {
     title: 'Ana',

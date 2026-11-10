@@ -25,6 +25,7 @@ const TIPOS: Record<string, string> = {
   novos: 'Nova oportunidade',
   alteracao: 'Edital alterado',
   prazo: 'Prazo chegando',
+  sessao: 'Sessão ao vivo',
 };
 
 export function AlertasApp() {

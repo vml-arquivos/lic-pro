@@ -38,6 +38,7 @@ const journeyByArea: Record<Area, readonly string[]> = {
   empresa: ['iniciante', 'profissional'],
   aluno: ['iniciante', 'mentorado'],
   mentor: ['iniciante', 'mentorado', 'profissional'],
+  colaborador: ['iniciante', 'profissional'],
 };
 
 const panelDescriptions: Record<string, string> = {
@@ -46,6 +47,7 @@ const panelDescriptions: Record<string, string> = {
   '/admin/empresas': 'Convidar e acompanhar empresas clientes.',
   '/admin/alunos': 'Matrículas, turmas e convites do curso.',
   '/admin/mentores': 'Mentores e seus alunos.',
+  '/admin/colaboradores': 'Equipe da operação e nichos liberados.',
   '/admin/fontes': 'Situação da coleta de editais.',
   '/admin/auditoria': 'Registro das ações administrativas.',
   '/painel': 'Resumo da sua área.',
@@ -73,6 +75,7 @@ function roleLabel(role: string) {
       plataforma: 'Equipe Licite Comigo',
       admin: 'Empresa',
       operador: 'Empresa',
+      colaborador: 'Colaborador',
       mentor: 'Mentor',
       aluno: 'Aluno',
     }[role] ?? role
@@ -163,7 +166,11 @@ export function AccountSettings() {
     const selected = niches.filter(Boolean);
     setProfileMessage('');
     setProfileError('');
-    if (selected.length < 1 || selected.length > 3 || new Set(selected).size !== selected.length) {
+    const nichosTravados = account?.papel === 'colaborador';
+    if (
+      !nichosTravados &&
+      (selected.length < 1 || selected.length > 3 || new Set(selected).size !== selected.length)
+    ) {
       setProfileError('Escolha de um a três nichos diferentes para o escopo do Radar.');
       return;
     }
@@ -172,7 +179,7 @@ export function AccountSettings() {
       const response = await fetch('/api/core/me', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ...profileForm, nichos: selected }),
+        body: JSON.stringify(nichosTravados ? profileForm : { ...profileForm, nichos: selected }),
       });
       if (!response.ok) {
         setProfileError(errorMessage(await responseCode(response)));
@@ -180,9 +187,11 @@ export function AccountSettings() {
       }
       const updated = (await response.json()) as Partial<Account>;
       setAccount((current) =>
-        current ? { ...current, ...updated, nicho_preferencias: selected } : current,
+        current
+          ? { ...current, ...updated, ...(nichosTravados ? {} : { nicho_preferencias: selected }) }
+          : current,
       );
-      setNiches([selected[0] ?? '', selected[1] ?? '', selected[2] ?? '']);
+      if (!nichosTravados) setNiches([selected[0] ?? '', selected[1] ?? '', selected[2] ?? '']);
       setProfileMessage('Dados do perfil atualizados.');
     } catch {
       setProfileError('Não foi possível salvar os dados agora.');
@@ -356,33 +365,49 @@ export function AccountSettings() {
                 </select>
               </label>
             </div>
-            <fieldset className="account-fieldset">
-              <legend>Nichos do Radar</legend>
-              <p className="form-hint">
-                Esses nichos definem o escopo de oportunidades e alertas da conta.
-              </p>
-              <div className="account-form-grid account-niche-grid">
-                {niches.map((value, index) => (
-                  <label key={index}>
-                    {`Nicho ${index + 1}`}
-                    <select
-                      value={value}
-                      onChange={(event) => updateNiche(index, event.target.value)}
-                      required={index === 0}
-                    >
-                      <option value="">
-                        {index === 0 ? 'Selecione um nicho' : 'Não usar este campo'}
-                      </option>
-                      {NICHE_CATALOG.map((niche) => (
-                        <option key={niche.code} value={niche.code}>
-                          {niche.label}
+            {account?.papel === 'colaborador' ? (
+              <fieldset className="account-fieldset">
+                <legend>Nichos do Radar</legend>
+                <p className="form-hint">
+                  Os nichos da sua conta são definidos pela Administração.
+                </p>
+                <p>
+                  {(account.nicho_preferencias ?? []).length
+                    ? (account.nicho_preferencias ?? [])
+                        .map((code) => NICHE_CATALOG.find((n) => n.code === code)?.label ?? code)
+                        .join(' · ')
+                    : 'Nenhum nicho liberado ainda.'}
+                </p>
+              </fieldset>
+            ) : (
+              <fieldset className="account-fieldset">
+                <legend>Nichos do Radar</legend>
+                <p className="form-hint">
+                  Esses nichos definem o escopo de oportunidades e alertas da conta.
+                </p>
+                <div className="account-form-grid account-niche-grid">
+                  {niches.map((value, index) => (
+                    <label key={index}>
+                      {`Nicho ${index + 1}`}
+                      <select
+                        value={value}
+                        onChange={(event) => updateNiche(index, event.target.value)}
+                        required={index === 0}
+                      >
+                        <option value="">
+                          {index === 0 ? 'Selecione um nicho' : 'Não usar este campo'}
                         </option>
-                      ))}
-                    </select>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+                        {NICHE_CATALOG.map((niche) => (
+                          <option key={niche.code} value={niche.code}>
+                            {niche.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            )}
             <div className="account-form-actions">
               <button className="button-primary" type="submit" disabled={savingProfile}>
                 {savingProfile ? 'Salvando…' : 'Salvar dados do perfil'}

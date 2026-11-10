@@ -17,7 +17,14 @@ export function RadarApp({
   signedIn,
   canExport,
   canSave,
-}: Readonly<{ signedIn: boolean; canExport: boolean; canSave: boolean }>) {
+  nichosTravados = false,
+}: Readonly<{
+  signedIn: boolean;
+  canExport: boolean;
+  canSave: boolean;
+  /** Colaborador: os nichos são definidos pela Administração. */
+  nichosTravados?: boolean;
+}>) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const params = useMemo(() => new URLSearchParams(searchParams.toString()), [searchParams]);
@@ -141,11 +148,23 @@ export function RadarApp({
       ) : null}
       {state === 'niche_required' ? (
         <section className="ui-panel">
-          <h2>Escolha seus nichos para usar o Radar</h2>
-          <p>Selecione de um a três nichos. Eles definem o que aparece na sua busca.</p>
-          <Link className="ui-btn" href="/onboarding">
-            Escolher meus nichos
-          </Link>
+          {nichosTravados ? (
+            <>
+              <h2>Seus nichos ainda não foram liberados</h2>
+              <p>
+                Os nichos do Radar para a sua conta são definidos pela Administração. Peça a
+                liberação para começar a buscar.
+              </p>
+            </>
+          ) : (
+            <>
+              <h2>Escolha seus nichos para usar o Radar</h2>
+              <p>Selecione de um a três nichos. Eles definem o que aparece na sua busca.</p>
+              <Link className="ui-btn" href="/onboarding">
+                Escolher meus nichos
+              </Link>
+            </>
+          )}
         </section>
       ) : null}
       {state === 'error' ? (

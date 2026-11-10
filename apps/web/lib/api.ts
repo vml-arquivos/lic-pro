@@ -15,6 +15,7 @@ const MESSAGES: Record<string, string> = {
   email_in_use: 'Este e-mail já tem conta.',
   class_not_found: 'Turma não encontrada ou encerrada.',
   mentor_not_found: 'Mentor não encontrado.',
+  niches_locked: 'Os nichos da sua conta são definidos pela Administração.',
   invitation_not_found: 'Convite não encontrado ou já usado.',
   cannot_change_self: 'Você não pode desativar a própria conta.',
   invalid_token: 'Link inválido ou expirado. Use o link do e-mail mais recente.',

@@ -10,7 +10,7 @@ export const metadata = {
 };
 
 export default async function PrecosPage() {
-  await requireArea('empresa', 'aluno', 'administracao');
+  await requireArea('empresa', 'aluno', 'administracao', 'colaborador');
   return (
     <main className="ui-page">
       <PageHeader

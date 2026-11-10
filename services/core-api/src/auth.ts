@@ -8,12 +8,21 @@ import { z } from 'zod';
  * - `operador`: reservado para equipe de empresa; hoje tem as mesmas permissões de `admin`
  *   sobre a própria conta.
  * - `mentor` e `aluno`: curso e mentoria, vivem na conta da plataforma.
+ * - `colaborador`: equipe de operação do Licite Comigo (busca e acompanha licitações pela
+ *   própria empresa). Vive na conta da plataforma, com nichos definidos pela Administração.
  */
-export const userRoleSchema = z.enum(['plataforma', 'admin', 'operador', 'mentor', 'aluno']);
+export const userRoleSchema = z.enum([
+  'plataforma',
+  'admin',
+  'operador',
+  'mentor',
+  'aluno',
+  'colaborador',
+]);
 export const journeyProfileSchema = z.enum(['iniciante', 'mentorado', 'profissional']);
 
 /** Áreas do produto. É o que o usuário enxerga; o papel é o que o banco guarda. */
-export const areaSchema = z.enum(['administracao', 'empresa', 'aluno', 'mentor']);
+export const areaSchema = z.enum(['administracao', 'empresa', 'aluno', 'mentor', 'colaborador']);
 
 export const authClaimsSchema = z.object({
   sub: z.string().uuid(),
@@ -52,6 +61,8 @@ export function areaForRole(role: UserRole): Area {
       return 'aluno';
     case 'mentor':
       return 'mentor';
+    case 'colaborador':
+      return 'colaborador';
   }
 }
 
@@ -75,9 +86,16 @@ export function activeArea(role: UserRole, viewAs?: string | null): Area {
  * poderes de `admin`; o que a diferencia (leitura entre contas) é uma sessão explícita
  * (`app.platform`), ligada só pelas rotas /platform e /admin depois de conferir o papel.
  */
-export function databaseRole(role: UserRole): Exclude<UserRole, 'plataforma'> {
-  return role === 'plataforma' ? 'admin' : role;
+export function databaseRole(role: UserRole): Exclude<UserRole, 'plataforma' | 'colaborador'> {
+  if (role === 'plataforma') return 'admin';
+  // O colaborador trabalha como `operador` dentro da conta da plataforma: as mesmas policies
+  // de busca, oportunidades e alertas valem para ele, sem ganhar o que é de `admin`.
+  if (role === 'colaborador') return 'operador';
+  return role;
 }
+
+/** Quem usa as ferramentas de busca e acompanhamento (radar, buscas, alertas, oportunidades). */
+export const OPERATION_ROLES = ['plataforma', 'admin', 'operador', 'colaborador'] as const;
 
 /** Quem precisa ficar dentro dos nichos escolhidos: todos, exceto a equipe da plataforma. */
 export function isNicheRestricted(role: UserRole): boolean {

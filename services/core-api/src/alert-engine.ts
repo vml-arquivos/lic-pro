@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { nextDelivery, type Frequency } from './alert-schedule.js';
-import type { UserRole } from './auth.js';
+import { areaForRole, type Area, type UserRole } from './auth.js';
 import { runReminderCycle } from './reminders.js';
 import { panelBaseUrl, type RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
@@ -69,7 +69,7 @@ type Candidate = {
 
 type Delivery = {
   edital: Candidate;
-  tipo: 'novo' | 'alteracao' | 'prazo';
+  tipo: 'novo' | 'alteracao' | 'prazo' | 'sessao';
   key: string;
   extra: Record<string, unknown>;
   message: string;
@@ -303,6 +303,48 @@ async function collectDeliveries(
       });
     }
   }
+  if (tipos.has('sessao')) {
+    // Sessão ao vivo: a disputa começa quando as propostas se encerram. Avisa 1 hora antes, 15
+    // minutos antes e quando começa, uma vez por marco, para os editais da busca.
+    const rows = await candidates(
+      client,
+      rule,
+      owner,
+      `editais.data_encerramento_proposta > {0}::timestamptz - interval '30 minutes'
+       AND editais.data_encerramento_proposta <= {0}::timestamptz + interval '60 minutes'
+       AND NOT EXISTS (SELECT 1 FROM alerta_entregas aq
+                        WHERE aq.alerta_regra_id = {1}::uuid AND aq.edital_id = editais.id
+                          AND aq.tipo = 'sessao'
+                          AND aq.payload->>'marco' =
+                              CASE WHEN editais.data_encerramento_proposta <= {0}::timestamptz THEN 'sessao0'
+                                   WHEN editais.data_encerramento_proposta <= {0}::timestamptz + interval '15 minutes' THEN 'sessao15'
+                                   ELSE 'sessao60' END)`,
+      [now.toISOString(), rule.id],
+    );
+    for (const edital of rows) {
+      if (!edital.data_encerramento_proposta) continue;
+      const start = new Date(edital.data_encerramento_proposta);
+      const minutes = (start.getTime() - now.getTime()) / 60_000;
+      const marco = minutes <= 0 ? 'sessao0' : minutes <= 15 ? 'sessao15' : 'sessao60';
+      const hour = start.toLocaleTimeString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      out.push({
+        edital,
+        tipo: 'sessao',
+        key: `${rule.id}:${edital.id}:${marco}`,
+        extra: { marco, inicio_sessao: start.toISOString() },
+        message:
+          marco === 'sessao0'
+            ? `A sessão de disputa começou às ${hour}. Acompanhe no portal oficial.`
+            : marco === 'sessao15'
+              ? `A sessão de disputa começa em menos de 15 minutos (às ${hour}). Entre no portal e confira a sala.`
+              : `A sessão de disputa começa em cerca de 1 hora (às ${hour}).`,
+      });
+    }
+  }
   return out;
 }
 
@@ -354,7 +396,9 @@ async function processRule(
             if (channel === 'in_app' && !recipient.em_app) continue;
             if (channel === 'email' && !(deps.emailEnabled && recipient.email_ativo)) continue;
             if (channel !== 'in_app' && channel !== 'email') continue;
-            const immediateInApp = channel === 'in_app' && rule.frequencia === 'imediata';
+            // Aviso de sessão ao vivo nunca espera o resumo: só vale na hora.
+            const instant = rule.frequencia === 'imediata' || delivery.tipo === 'sessao';
+            const immediateInApp = channel === 'in_app' && instant;
             const payload = {
               busca_id: rule.busca_id,
               busca_nome: rule.busca_nome,
@@ -382,13 +426,7 @@ async function processRule(
                 channel,
                 immediateInApp ? 'pendente' : 'agendada',
                 delivery.tipo,
-                immediateInApp
-                  ? now
-                  : channel === 'email'
-                    ? rule.frequencia === 'imediata'
-                      ? now
-                      : when
-                    : when,
+                immediateInApp ? now : channel === 'email' ? (instant ? now : when) : when,
                 `${delivery.key}:${recipient.id}:${channel}`,
                 JSON.stringify(payload),
               ],
@@ -463,6 +501,7 @@ const TIPO_TEXT: Record<string, { singular: string; plural: string }> = {
   novo: { singular: 'novo edital', plural: 'novos editais' },
   alteracao: { singular: 'edital alterado', plural: 'editais alterados' },
   prazo: { singular: 'edital com prazo chegando', plural: 'editais com prazo chegando' },
+  sessao: { singular: 'sessão ao vivo', plural: 'sessões ao vivo' },
 };
 
 async function notify(client: PoolClient, tenantId: string, rows: Released[]): Promise<void> {
@@ -529,11 +568,14 @@ async function sendDueEmails(
       byUser.set(row.usuario_id, [...(byUser.get(row.usuario_id) ?? []), row]);
     let sent = 0;
     for (const [recipientId, rows] of byUser) {
-      const user = await client.query<{ email: string; nome: string }>(
-        'SELECT email, nome FROM usuarios WHERE tenant_id = $1 AND id = $2 AND ativo',
+      const user = await client.query<{ email: string; nome: string; papel: UserRole }>(
+        'SELECT email, nome, papel::text AS papel FROM usuarios WHERE tenant_id = $1 AND id = $2 AND ativo',
         [tenantId, recipientId],
       );
-      const person = user.rows[0];
+      const found = user.rows[0];
+      const person = found
+        ? { email: found.email, nome: found.nome, area: areaForRole(found.papel) }
+        : undefined;
       const ids = rows.map((row) => row.id);
       if (!person) {
         await client.query(
@@ -576,11 +618,12 @@ export function buildDigest(
   config: RuntimeConfig,
   tenantId: string,
   userId: string,
-  person: { email: string; nome: string },
+  person: { email: string; nome: string; area?: Area },
   rows: readonly { tipo: string; payload: Record<string, unknown> }[],
 ): EmailMessage {
-  const app = panelBaseUrl(config, 'empresa');
-  const unsubscribe = `${app}/cancelar-alertas?token=${encodeURIComponent(unsubscribeToken(config.jwtSecret, tenantId, userId))}`;
+  const app = panelBaseUrl(config, person.area ?? 'empresa');
+  // A página de cancelar fica no painel da Empresa e abre sem entrar na conta.
+  const unsubscribe = `${panelBaseUrl(config, 'empresa')}/cancelar-alertas?token=${encodeURIComponent(unsubscribeToken(config.jwtSecret, tenantId, userId))}`;
   const lines = rows.slice(0, 30).map((row) => {
     const p = row.payload;
     const parts = [String(p.titulo ?? 'Edital'), String(p.mensagem ?? '')];

@@ -13,6 +13,7 @@ import {
   type SearchContext,
 } from './search.js';
 import { buildCsv, buildXlsx, type SheetCell } from './xlsx.js';
+import { OPERATION_ROLES } from './auth.js';
 
 type Deps = { pool: Pool | undefined };
 
@@ -188,7 +189,7 @@ export function registerRadarRoutes(app: FastifyInstance, { pool }: Deps): void 
   });
 
   app.get('/editais/export', async (request, reply) => {
-    if (!requireRoles(reply, request, ['plataforma', 'admin', 'operador'])) return reply;
+    if (!requireRoles(reply, request, OPERATION_ROLES)) return reply;
     if (!pool) return sendDatabaseUnavailable(reply);
     const { formato } = exportQuery.parse(request.query);
     const result = await withTenant(pool, authContext(request), async (client) => {

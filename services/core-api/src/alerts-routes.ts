@@ -12,16 +12,17 @@ import {
   sendDatabaseUnavailable,
   withPlatform,
 } from './request-context.js';
+import { OPERATION_ROLES, databaseRole } from './auth.js';
 
 type Deps = { pool: Pool | undefined; config: RuntimeConfig };
 
 const uuid = z.string().uuid();
 const idParams = z.object({ id: uuid });
-const CREATORS = ['plataforma', 'admin', 'operador'] as const;
+const CREATORS = OPERATION_ROLES;
 
 const listQuery = z.object({
   apenas_nao_lidas: z.preprocess((v) => v === 'true' || v === true, z.boolean()).default(false),
-  tipo: z.enum(['novo', 'alteracao', 'prazo']).optional(),
+  tipo: z.enum(['novo', 'alteracao', 'prazo', 'sessao']).optional(),
   page: z.coerce.number().int().min(1).default(1),
   page_size: z.coerce.number().int().min(1).max(100).default(20),
 });
@@ -33,7 +34,7 @@ const ruleBody = z
     horario_diario: z.union([z.literal(7), z.literal(12), z.literal(18)]),
     dia_semana: z.number().int().min(1).max(7),
     canais: z.array(z.enum(['in_app', 'email'])).min(1),
-    tipos: z.array(z.enum(['novos', 'alteracao', 'prazo'])).min(1),
+    tipos: z.array(z.enum(['novos', 'alteracao', 'prazo', 'sessao'])).min(1),
     destinatarios: z.array(uuid).max(20),
   })
   .partial();
@@ -118,7 +119,7 @@ export function registerAlertRoutes(app: FastifyInstance, { pool, config }: Deps
     const people = await withTenant(pool, authContext(request), async (client) =>
       client.query(
         `SELECT id, nome, email FROM usuarios
-          WHERE tenant_id = $1 AND ativo AND papel IN ('admin', 'operador', 'plataforma')
+          WHERE tenant_id = $1 AND ativo AND papel IN ('admin', 'operador', 'plataforma', 'colaborador')
           ORDER BY nome LIMIT 100`,
         [request.user.tenantId],
       ),
@@ -158,11 +159,7 @@ export function registerAlertRoutes(app: FastifyInstance, { pool, config }: Deps
            JOIN buscas_salvas bs ON bs.id = ar.busca_id AND bs.tenant_id = ar.tenant_id
           WHERE ar.tenant_id = $1 AND (ar.usuario_id = $2 OR $3::text IN ('admin', 'operador'))
           ORDER BY bs.nome`,
-        [
-          request.user.tenantId,
-          request.user.sub,
-          request.user.role === 'plataforma' ? 'admin' : request.user.role,
-        ],
+        [request.user.tenantId, request.user.sub, databaseRole(request.user.role)],
       ),
     );
     return reply.send({ data: rows.rows });
@@ -184,7 +181,7 @@ export function registerAlertRoutes(app: FastifyInstance, { pool, config }: Deps
         const valid = await client.query<{ total: number }>(
           `SELECT count(*)::int AS total FROM usuarios
             WHERE tenant_id = $1 AND ativo AND id = ANY($2::uuid[])
-              AND papel IN ('admin', 'operador', 'plataforma')`,
+              AND papel IN ('admin', 'operador', 'plataforma', 'colaborador')`,
           [request.user.tenantId, body.destinatarios],
         );
         if (valid.rows[0]?.total !== new Set(body.destinatarios).size)
@@ -214,7 +211,7 @@ export function registerAlertRoutes(app: FastifyInstance, { pool, config }: Deps
           body.tipos ?? null,
           body.destinatarios ?? null,
           request.user.sub,
-          request.user.role === 'plataforma' ? 'admin' : request.user.role,
+          databaseRole(request.user.role),
         ],
       );
       if (updated.rows[0]) await audit(client, request, 'alert_rule.updated', 'alerta_regra', id);

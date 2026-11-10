@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { Alert } from '../components/ui';
 
 type Preview = {
-  tipo: 'aluno' | 'mentor' | 'empresa';
+  tipo: 'aluno' | 'mentor' | 'empresa' | 'colaborador';
   nome: string;
   email: string;
   empresa_nome: string | null;
@@ -14,6 +14,7 @@ type Preview = {
 const WHO = {
   aluno: 'aluno do curso',
   mentor: 'mentor',
+  colaborador: 'colaborador da operação',
   empresa: 'conta da empresa',
 } as const;
 

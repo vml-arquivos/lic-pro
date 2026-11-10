@@ -19,6 +19,7 @@ const ENV_KEYS: Record<Area, string> = {
   empresa: 'PANEL_URL_EMPRESA',
   aluno: 'PANEL_URL_ALUNO',
   mentor: 'PANEL_URL_MENTOR',
+  colaborador: 'PANEL_URL_COLABORADOR',
 };
 
 export function normalizeHost(value: string | null | undefined): string {
@@ -56,9 +57,13 @@ export function panelForHost(panels: PanelMap, host: string | null | undefined):
   return null;
 }
 
-/** Áreas que um painel abre. Sem endereço de Mentor, o mentor usa o painel do Aluno. */
+/**
+ * Áreas que um painel abre. Sem endereço de Mentor, o mentor usa o painel do Aluno; sem
+ * endereço de Colaborador, o colaborador usa o painel da Administração.
+ */
 export function areasForPanel(panels: PanelMap, panel: Area): readonly Area[] {
   if (panel === 'aluno' && !panels.mentor) return ['aluno', 'mentor'];
+  if (panel === 'administracao' && !panels.colaborador) return ['administracao', 'colaborador'];
   return [panel];
 }
 
@@ -72,6 +77,8 @@ export function areaOfRole(role: string): Area {
       return 'empresa';
     case 'mentor':
       return 'mentor';
+    case 'colaborador':
+      return 'colaborador';
     default:
       return 'aluno';
   }
@@ -90,6 +97,7 @@ export function roleAllowedOnPanel(panels: PanelMap, panel: Area, role: string):
 /** Endereço do painel de uma área, quando configurado. */
 export function panelUrl(panels: PanelMap, area: Area): string | null {
   if (area === 'mentor' && !panels.mentor) return panels.aluno?.url ?? null;
+  if (area === 'colaborador' && !panels.colaborador) return panels.administracao?.url ?? null;
   return panels[area]?.url ?? null;
 }
 
@@ -177,4 +185,5 @@ export const PANEL_COPY: Record<Area, { title: string }> = {
   empresa: { title: 'Empresas' },
   aluno: { title: 'Alunos' },
   mentor: { title: 'Mentores' },
+  colaborador: { title: 'Colaboradores' },
 };

@@ -16,11 +16,17 @@ describe('áreas e papéis', () => {
     expect(areaForRole('operador')).toBe('empresa');
     expect(areaForRole('aluno')).toBe('aluno');
     expect(areaForRole('mentor')).toBe('mentor');
+    expect(areaForRole('colaborador')).toBe('colaborador');
+  });
+
+  it('o colaborador usa as regras de banco do operador e tem nichos travados', () => {
+    expect(databaseRole('colaborador')).toBe('operador');
+    expect(isNicheRestricted('colaborador')).toBe(true);
   });
 
   it('só a plataforma abre todas as áreas', () => {
     expect(allowedAreas('plataforma')).toEqual(ALL_AREAS);
-    for (const role of ['admin', 'operador', 'aluno', 'mentor'] as const) {
+    for (const role of ['admin', 'operador', 'colaborador', 'aluno', 'mentor'] as const) {
       expect(allowedAreas(role)).toEqual([areaForRole(role)]);
     }
   });
@@ -41,12 +47,19 @@ describe('áreas e papéis', () => {
 
   it('só a plataforma fica fora do escopo de nichos', () => {
     expect(isNicheRestricted('plataforma')).toBe(false);
-    for (const role of ['admin', 'operador', 'aluno', 'mentor'] as const) {
+    for (const role of ['admin', 'operador', 'colaborador', 'aluno', 'mentor'] as const) {
       expect(isNicheRestricted(role)).toBe(true);
     }
   });
 
   it('aceita exatamente os papéis conhecidos', () => {
-    expect(userRoleSchema.options).toEqual(['plataforma', 'admin', 'operador', 'mentor', 'aluno']);
+    expect(userRoleSchema.options).toEqual([
+      'plataforma',
+      'admin',
+      'operador',
+      'mentor',
+      'aluno',
+      'colaborador',
+    ]);
   });
 });

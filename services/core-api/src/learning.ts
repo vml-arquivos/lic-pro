@@ -292,8 +292,19 @@ export function registerLearningRoutes(app: FastifyInstance, { pool }: Deps): vo
     return reply.send(result);
   });
 
+  // A Academia é aberta a todas as áreas; quem não é aluno só recebe o progresso vazio.
   app.get('/aluno/progresso', async (request, reply) => {
-    if (!requireRoles(reply, request, STUDENT_VIEW)) return reply;
+    if (
+      !requireRoles(reply, request, [
+        'plataforma',
+        'admin',
+        'operador',
+        'colaborador',
+        'mentor',
+        'aluno',
+      ])
+    )
+      return reply;
     if (!pool) return sendDatabaseUnavailable(reply);
     const { tenantId, sub: userId } = request.user;
     const result = await withTenant(pool, authContext(request), async (client) => {

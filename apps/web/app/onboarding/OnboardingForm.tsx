@@ -25,6 +25,7 @@ const PROFILES_BY_AREA: Record<Area, readonly Profile[]> = {
   empresa: ['iniciante', 'profissional'],
   aluno: ['iniciante', 'mentorado'],
   mentor: ['iniciante', 'mentorado', 'profissional'],
+  colaborador: ['iniciante', 'profissional'],
 };
 
 export function OnboardingForm({

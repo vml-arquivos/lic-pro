@@ -12,19 +12,23 @@ exige mudar a outra.
 | Empresa       | `admin` (e `operador`)           | Cliente que busca e filtra licitações |
 | Aluno         | `aluno`                          | Aluno do curso / mentoria             |
 | Mentor        | `mentor`                         | Quem acompanha os alunos              |
+| Colaborador   | `colaborador`                    | Equipe de operação do Licite Comigo   |
 
 - A área é calculada no servidor a partir do papel do token. Nenhuma tela ou preferência do
   usuário muda a área.
 - Hoje cada empresa tem **um usuário**. A tabela `empresa_usuarios` fica pronta para equipes
   no futuro.
 - Só a Administração define o tipo de conta. Não existe "mudar público" para o usuário.
-- Aluno só entra por matrícula feita pela Administração (convite). Empresa e mentor também
-  entram por convite. O cadastro aberto continua desligado (`SIGNUP_ENABLED=false`).
+- O colaborador vive na conta da plataforma, mas **não** é Administração: não vê financeiro,
+  leads, cobrança, outras contas nem o curso. Usa as mesmas políticas de banco do operador e
+  tem os nichos travados pela Administração (Administração → Colaboradores).
+- Aluno só entra por matrícula feita pela Administração (convite). Empresa, mentor e
+  colaborador também entram por convite. O cadastro aberto continua desligado (`SIGNUP_ENABLED=false`).
 
 ## Endereços por painel
 
 Cada painel pode ter o seu próprio endereço (`PANEL_URL_ADMIN`, `PANEL_URL_EMPRESA`,
-`PANEL_URL_ALUNO` e, opcionalmente, `PANEL_URL_MENTOR`). É o mesmo aplicativo, mas em cada
+`PANEL_URL_ALUNO` e, opcionalmente, `PANEL_URL_MENTOR` e `PANEL_URL_COLABORADOR`). É o mesmo aplicativo, mas em cada
 endereço só existe o painel dele. Sem essas variáveis nada muda e o sistema segue com um
 endereço só.
 
@@ -42,6 +46,8 @@ endereço só.
 - **Links enviados**: convites, e-mails de confirmação, recuperação de senha e alertas apontam
   para o painel de quem recebe. Mentor sem endereço próprio usa o do Aluno.
 - **Mentor**: faz parte do lado do curso. Sem `PANEL_URL_MENTOR`, entra pelo endereço do Aluno.
+- **Colaborador**: sem `PANEL_URL_COLABORADOR`, entra pelo endereço da Administração e vê só o
+  painel dele (menu de Operação), nunca as páginas de Administração.
 - **Endereço antigo**: um endereço que não esteja em `PANEL_URL_*` continua funcionando como
   antes (todas as áreas). Depois de configurar os novos, retire o antigo do web.
 
@@ -65,55 +71,69 @@ continua isolado por conta.
 ## Radar e nichos
 
 Empresa e aluno usam o Radar limitado a 1–3 nichos (aluno somente leitura). A Administração
-não tem esse limite.
+não tem esse limite. O colaborador só enxerga os nichos que a Administração liberou para ele
+(a tela Minha conta mostra os nichos sem permitir troca; a API responde `niches_locked`).
+
+## Alertas e sessão ao vivo
+
+- Tipos de aviso: `novos` (aberturas), `alteracao` (mudanças no edital), `prazo` (prazos
+  chegando) e `sessao` (sessão de disputa). Empresa e colaborador escolhem, por nicho, o que
+  querer em Alertas → "Avisos por nicho" (cria a busca do nicho e a regra de alerta).
+- `sessao` avisa 1 hora antes, 15 minutos antes e no começo da sessão, usando a data de
+  abertura da disputa do edital. É sempre imediato e não repete. Os lances e o chat ao vivo do
+  pregoeiro não são lidos: isso depende de integração com o portal da disputa.
+- O motor roda a cada 5 minutos por padrão (`ALERT_ENGINE_INTERVAL_SECONDS`).
 
 ## Páginas por área
 
-| Página                                                                                | Administração | Empresa | Aluno | Mentor |
-| ------------------------------------------------------------------------------------- | :-----------: | :-----: | :---: | :----: |
-| `/admin`, `/admin/*`, `/leads`                                                        |      sim      |   não   |  não  |  não   |
-| `/painel`, `/conta`, `/ana`, `/onboarding`                                            |      sim      |   sim   |  sim  |  sim   |
-| `/radar`, `/pregoes`                                                                  |      sim      |   sim   |  sim  |  não   |
-| `/oportunidades`, `/agenda`, `/documentos`, `/buscas-salvas`, `/alertas`, `/empresas` |      sim      |   sim   |  não  |  não   |
-| `/academia`                                                                           |      sim      |   sim   |  sim  |  sim   |
-| `/mentor`, `/academia/mentor`                                                         |      sim      |   não   |  não  |  sim   |
-| `/diagnostico`, `/encontros`                                                          |      sim      |   não   |  sim  |  não   |
-| `/materiais`                                                                          |      sim      |   não   |  sim  |  sim   |
-| `/admin/materiais`                                                                    |      sim      |   não   |  não  |  não   |
-| `/mentor/encontros`                                                                   |      sim      |   não   |  não  |  sim   |
+| Página                                                                                | Administração | Empresa | Aluno | Mentor | Colaborador |
+| ------------------------------------------------------------------------------------- | :-----------: | :-----: | :---: | :----: | :---------: |
+| `/admin`, `/admin/*`, `/leads`                                                        |      sim      |   não   |  não  |  não   |     não     |
+| `/painel`, `/conta`, `/ana`, `/onboarding`                                            |      sim      |   sim   |  sim  |  sim   |     sim     |
+| `/radar`, `/pregoes`                                                                  |      sim      |   sim   |  sim  |  não   |     sim     |
+| `/oportunidades`, `/agenda`, `/documentos`, `/buscas-salvas`, `/alertas`, `/empresas` |      sim      |   sim   |  não  |  não   |     sim     |
+| `/academia`                                                                           |      sim      |   sim   |  sim  |  sim   |     sim     |
+| `/mentor`, `/academia/mentor`                                                         |      sim      |   não   |  não  |  sim   |     não     |
+| `/diagnostico`, `/encontros`                                                          |      sim      |   não   |  sim  |  não   |     não     |
+| `/materiais`                                                                          |      sim      |   não   |  sim  |  sim   |     não     |
+| `/admin/materiais`                                                                    |      sim      |   não   |  não  |  não   |     não     |
+| `/admin/colaboradores`                                                                |      sim      |   não   |  não  |  não   |     não     |
+| `/mentor/encontros`                                                                   |      sim      |   não   |  não  |  sim   |     não     |
 
 Regras e menus ficam em `packages/shared/src/areas.ts`, com testes. As páginas conferem a
 área no servidor; a API confere de novo.
 
 ## Rotas da API (papel × rota)
 
-| Rota                                                                                                                      | plataforma | admin | operador | mentor | aluno |
-| ------------------------------------------------------------------------------------------------------------------------- | :--------: | :---: | :------: | :----: | :---: |
-| `GET /admin/leads`                                                                                                        |     ✔      |       |          |        |       |
-| `GET /admin/users/audit`                                                                                                  |     ✔      |       |          |        |       |
-| `GET /operations/ingest`                                                                                                  |     ✔      |       |          |        |       |
-| `GET /admin/coleta/status`, `POST /admin/coleta/run` (coleta nativa do PNCP)                                              |     ✔      |       |          |        |       |
-| `GET /users`                                                                                                              |     ✔      |       |          |   ✔    |       |
-| `GET /mentor/companies`, `GET /mentor/dashboard`                                                                          |     ✔      |       |          |   ✔    |       |
-| `GET /mentorado/dashboard`                                                                                                |     ✔      |       |          |        |   ✔   |
-| `GET /professional/dashboard`                                                                                             |     ✔      |   ✔   |    ✔     |        |       |
-| `GET/POST /opportunities`, `GET/PATCH/DELETE /opportunities/:id`                                                          |     ✔      |   ✔   |    ✔     |        |       |
-| `GET /checklist-models`, `POST /opportunities/:id/checklists`, `/checklists/*`, `/checklist-items/*`                      |     ✔      |   ✔   |    ✔     |        |       |
-| `GET /agenda`, `/agenda/prazos*`, `/tasks*`                                                                               |     ✔      |   ✔   |    ✔     |        |       |
-| `GET/POST/PATCH/DELETE /empresa/documentos*`, `GET /empresa/inicio`                                                       |     ✔      |   ✔   |    ✔     |        |       |
-| `DELETE /mentor/concessions/:id`                                                                                          |     ✔      |       |          |        |       |
-| `PATCH /me/view-as`                                                                                                       |     ✔      |       |          |        |       |
-| `GET /platform/overview, /companies, /students, /mentors, /classes, /invitations`                                         |     ✔      |       |          |        |       |
-| `POST /platform/invitations` (+ `/:id/revoke`, `/:id/reissue`)                                                            |     ✔      |       |          |        |       |
-| `POST /platform/classes`, `PATCH /platform/classes/:id`                                                                   |     ✔      |       |          |        |       |
-| `PATCH /platform/users/:id/active`                                                                                        |     ✔      |       |          |        |       |
-| `GET /admin/planos`, `PUT /admin/planos`, `GET /admin/financeiro`, `POST /admin/cobrancas/:id/liberar-manual`             |     ✔      |       |          |        |       |
-| `GET /admin/assinantes`, `POST /admin/assinaturas/:id/ajustar`, `GET/PUT /admin/cupons`, `POST /admin/integracoes/testar` |     ✔      |       |          |        |       |
-| `POST /billing/teste-gratis`                                                                                              |            |   ✔   |          |        |       |
-| `GET /billing/minha-assinatura`                                                                                           |            |   ✔   |    ✔     |        |       |
-| `POST /billing/assinar`, `POST /billing/cancelar`                                                                         |            |   ✔   |          |        |       |
-| `GET /precos/referencia` (preço de referência, Compras.gov.br)                                                            |     ✔      |   ✔   |    ✔     |   ✔    |   ✔   |
-| `POST /editais/:id/detalhes/atualizar` (itens e documentos do PNCP)                                                       |     ✔      |   ✔   |    ✔     |   ✔    |   ✔   |
+| Rota                                                                                                                      | plataforma | admin | operador | colaborador | mentor | aluno |
+| ------------------------------------------------------------------------------------------------------------------------- | :--------: | :---: | :------: | :---------: | :----: | :---: |
+| `GET /admin/leads`                                                                                                        |     ✔      |       |          |             |        |       |
+| `GET /admin/users/audit`                                                                                                  |     ✔      |       |          |             |        |       |
+| `GET /operations/ingest`                                                                                                  |     ✔      |       |          |             |        |       |
+| `GET /admin/coleta/status`, `POST /admin/coleta/run` (coleta nativa do PNCP)                                              |     ✔      |       |          |             |        |       |
+| `GET /users`                                                                                                              |     ✔      |       |          |             |   ✔    |       |
+| `GET /mentor/companies`, `GET /mentor/dashboard`                                                                          |     ✔      |       |          |             |   ✔    |       |
+| `GET /mentorado/dashboard`                                                                                                |     ✔      |       |          |             |        |   ✔   |
+| `GET /professional/dashboard`                                                                                             |     ✔      |   ✔   |    ✔     |      ✔      |        |       |
+| `GET/POST /opportunities`, `GET/PATCH/DELETE /opportunities/:id`                                                          |     ✔      |   ✔   |    ✔     |      ✔      |        |       |
+| `GET /checklist-models`, `POST /opportunities/:id/checklists`, `/checklists/*`, `/checklist-items/*`                      |     ✔      |   ✔   |    ✔     |      ✔      |        |       |
+| `GET /agenda`, `/agenda/prazos*`, `/tasks*`                                                                               |     ✔      |   ✔   |    ✔     |      ✔      |        |       |
+| `GET/POST/PATCH/DELETE /empresa/documentos*`, `GET /empresa/inicio`                                                       |     ✔      |   ✔   |    ✔     |      ✔      |        |       |
+| `DELETE /mentor/concessions/:id`                                                                                          |     ✔      |       |          |             |        |       |
+| `PATCH /me/view-as`                                                                                                       |     ✔      |       |          |             |        |       |
+| `GET /platform/overview, /companies, /students, /mentors, /classes, /invitations`                                         |     ✔      |       |          |             |        |       |
+| `POST /platform/invitations` (+ `/:id/revoke`, `/:id/reissue`)                                                            |     ✔      |       |          |             |        |       |
+| `POST /platform/classes`, `PATCH /platform/classes/:id`                                                                   |     ✔      |       |          |             |        |       |
+| `PATCH /platform/users/:id/active`                                                                                        |     ✔      |       |          |             |        |       |
+| `GET /admin/planos`, `PUT /admin/planos`, `GET /admin/financeiro`, `POST /admin/cobrancas/:id/liberar-manual`             |     ✔      |       |          |             |        |       |
+| `GET /admin/assinantes`, `POST /admin/assinaturas/:id/ajustar`, `GET/PUT /admin/cupons`, `POST /admin/integracoes/testar` |     ✔      |       |          |             |        |       |
+| `GET /aluno/progresso` (Academia, para qualquer área)                                                                     |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
+| `GET /platform/colaboradores`, `PUT /platform/colaboradores/:id/nichos`                                                   |     ✔      |       |          |             |        |       |
+| `POST /billing/teste-gratis`                                                                                              |            |   ✔   |          |             |        |       |
+| `GET /billing/minha-assinatura`                                                                                           |            |   ✔   |    ✔     |             |        |       |
+| `POST /billing/assinar`, `POST /billing/cancelar`                                                                         |            |   ✔   |          |             |        |       |
+| `GET /precos/referencia` (preço de referência, Compras.gov.br)                                                            |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
+| `POST /editais/:id/detalhes/atualizar` (itens e documentos do PNCP)                                                       |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
 
 Rotas públicas da venda: `GET /public/planos`, `POST /public/checkout/curso` (limite por IP),
 `POST /public/compra` (acompanha pelo código da compra), `POST /public/cupom/validar` (limite por IP) e `POST /webhooks/asaas` (confere o

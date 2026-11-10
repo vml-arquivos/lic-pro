@@ -22,6 +22,7 @@ import {
   authClaimsSchema,
   databaseRole,
   hasRole,
+  OPERATION_ROLES,
   journeyProfileSchema,
   type UserRole,
 } from './auth.js';
@@ -216,6 +217,7 @@ const JOURNEY_BY_ROLE: Record<UserRole, readonly string[]> = {
   plataforma: ['iniciante', 'mentorado', 'profissional'],
   admin: ['iniciante', 'profissional'],
   operador: ['iniciante', 'profissional'],
+  colaborador: ['iniciante', 'profissional'],
   aluno: ['iniciante', 'mentorado'],
   mentor: ['iniciante', 'mentorado', 'profissional'],
 };
@@ -241,6 +243,20 @@ function rejectForbiddenProfileChange(
     });
   }
   return forbidden;
+}
+
+/** Os nichos do colaborador são travados pela Administração; ele não os altera sozinho. */
+function rejectNicheChangeByCollaborator(
+  reply: FastifyReply,
+  request: FastifyRequest,
+  body: { nichos?: readonly string[] | undefined },
+): boolean {
+  if (request.user.role !== 'colaborador' || body.nichos === undefined) return false;
+  reply.code(403).send({
+    error: 'niches_locked',
+    message: 'Os nichos da sua conta são definidos pela Administração.',
+  });
+  return true;
 }
 
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
@@ -851,6 +867,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.patch('/me', async (request, reply) => {
     const body = accountProfileSchema.parse(request.body);
     if (rejectForbiddenProfileChange(reply, request, body)) return;
+    if (rejectNicheChangeByCollaborator(reply, request, body)) return;
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
       const updated = await client.query(
@@ -889,6 +906,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.patch('/me/diagnostico', async (request, reply) => {
     const body = diagnosisSchema.parse(request.body);
     if (rejectForbiddenProfileChange(reply, request, body)) return;
+    if (rejectNicheChangeByCollaborator(reply, request, body)) return;
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
       const updated = await client.query(
@@ -935,7 +953,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.post('/companies', async (request, reply) => {
-    if (!requireRoles(reply, request, ['plataforma', 'admin', 'operador'])) return;
+    if (!requireRoles(reply, request, OPERATION_ROLES)) return;
     const body = companySchema.parse(request.body);
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
@@ -967,7 +985,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.patch('/companies/:companyId', async (request, reply) => {
-    if (!requireRoles(reply, request, ['plataforma', 'admin', 'operador'])) return;
+    if (!requireRoles(reply, request, OPERATION_ROLES)) return;
     const { companyId } = companyPathSchema.parse(request.params);
     const body = companyUpdateSchema.parse(request.body);
     if (!pool) return sendDatabaseUnavailable(reply);
@@ -1245,6 +1263,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.post('/me/onboarding', async (request, reply) => {
     const body = onboardingSchema.parse(request.body);
     if (rejectForbiddenProfileChange(reply, request, body)) return;
+    if (rejectNicheChangeByCollaborator(reply, request, body)) return;
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
       const updated = await client.query(
@@ -1351,7 +1370,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.get('/saved-searches', async (request, reply) => {
-    if (!requireRoles(reply, request, ['plataforma', 'admin', 'operador'])) return reply;
+    if (!requireRoles(reply, request, OPERATION_ROLES)) return reply;
     if (!pool) return sendDatabaseUnavailable(reply);
     const filters = savedSearchQuerySchema.parse(request.query);
     const result = await withTenant(pool, authContext(request), async (client) =>
@@ -1374,7 +1393,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.post('/saved-searches', async (request, reply) => {
-    if (!requireRoles(reply, request, ['plataforma', 'admin', 'operador'])) return reply;
+    if (!requireRoles(reply, request, OPERATION_ROLES)) return reply;
     const body = savedSearchSchema.parse(request.body);
     const empresaId = body.empresa_id ?? request.user.empresaId;
     if (!pool) return sendDatabaseUnavailable(reply);
@@ -1440,7 +1459,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.patch('/saved-searches/:savedSearchId', async (request, reply) => {
-    if (!requireRoles(reply, request, ['plataforma', 'admin', 'operador'])) return reply;
+    if (!requireRoles(reply, request, OPERATION_ROLES)) return reply;
     const { savedSearchId } = savedSearchPathSchema.parse(request.params);
     const body = savedSearchPatchSchema.parse(request.body);
     if (!pool) return sendDatabaseUnavailable(reply);
@@ -1491,7 +1510,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.delete('/saved-searches/:savedSearchId', async (request, reply) => {
-    if (!requireRoles(reply, request, ['plataforma', 'admin', 'operador'])) return reply;
+    if (!requireRoles(reply, request, OPERATION_ROLES)) return reply;
     const { savedSearchId } = savedSearchPathSchema.parse(request.params);
     if (!pool) return sendDatabaseUnavailable(reply);
     const removed = await withTenant(pool, authContext(request), async (client) => {
@@ -1948,7 +1967,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   app.get('/professional/dashboard', async (request, reply) => {
-    if (!requireRoles(reply, request, ['plataforma', 'admin', 'operador'])) return;
+    if (!requireRoles(reply, request, OPERATION_ROLES)) return;
     if (!pool) return sendDatabaseUnavailable(reply);
     const result = await withTenant(pool, authContext(request), async (client) => {
       const profile = await client.query<{ id: string }>(

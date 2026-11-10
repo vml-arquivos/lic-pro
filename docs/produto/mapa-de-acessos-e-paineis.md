@@ -1,19 +1,20 @@
 # Mapa de acessos e painéis
 
-Quatro áreas separadas. Cada pessoa vê só a sua. Com endereços por painel (veja
+Cinco áreas separadas. Cada pessoa vê só a sua. Com endereços por painel (veja
 `docs/permissoes.md`, "Endereços por painel"), cada área tem a sua porta:
 
-| Painel           | Endereço sugerido  | Quem entra                 |
-| ---------------- | ------------------ | -------------------------- |
-| Administração    | `admin.seudominio` | Equipe do Licite Comigo    |
-| Empresa          | `app.seudominio`   | Empresas assinantes        |
-| Aluno (e Mentor) | `aluno.seudominio` | Alunos do curso e mentores |
+| Painel           | Endereço sugerido                           | Quem entra                          |
+| ---------------- | ------------------------------------------- | ----------------------------------- |
+| Administração    | `admin.seudominio`                          | Equipe do Licite Comigo             |
+| Empresa          | `app.seudominio`                            | Empresas assinantes                 |
+| Aluno (e Mentor) | `aluno.seudominio`                          | Alunos do curso e mentores          |
+| Colaborador      | `equipe.seudominio` (ou o da Administração) | Equipe de operação do Licite Comigo |
 
 Sem esses endereços, a equipe pode "ver como" cada área no mesmo endereço.
 
 ## Administração (equipe do Licite Comigo)
 
-Menu: Visão geral · Leads · Empresas clientes · Alunos e turmas · Mentores · Fontes de dados · Financeiro · Planos e preços · Assinantes · Cupons · Auditoria.
+Menu: Visão geral · Leads · Empresas clientes · Alunos e turmas · Mentores · Colaboradores · Fontes de dados · Financeiro · Planos e preços · Assinantes · Cupons · Auditoria.
 Também acessa Radar, Academia, Ana e a própria conta.
 
 - **Visão geral**: empresas clientes, alunos e mentores ativos, convites pendentes, leads,
@@ -68,9 +69,28 @@ Ana · Minha conta.
 O painel mostra os alunos vinculados, quem está sem estudar há 7 dias e o progresso.
 Em Encontros ao vivo o mentor marca o encontro (para uma turma ou todas); os alunos são avisados.
 
+## Colaborador (equipe de operação do Licite Comigo)
+
+Menu: Início · Explorar licitações · Buscas salvas · Alertas · Oportunidades · Agenda ·
+Documentos · Pregões publicados · Preços de referência · Dados da empresa · Academia · Ana ·
+Minha conta.
+
+O Licite Comigo também atua com licitações: o colaborador busca, consulta e acompanha editais
+em nome da operação, dentro da conta da plataforma, sem ver financeiro, leads, cobrança, outras
+contas nem o curso.
+
+- **Nichos travados**: a Administração libera os nichos de cada colaborador em Administração →
+  Colaboradores. O Radar, os Pregões e as buscas só mostram esses nichos; ele não os troca.
+- **Avisos por nicho**: em Alertas, marca por nicho o que quer receber (aberturas, mudanças no
+  edital, prazos chegando e sessão ao vivo). Empresas clientes têm a mesma tela.
+- **Sessão ao vivo**: aviso 1 hora antes, 15 minutos antes e no começo da sessão de disputa.
+  Lances e chat do pregoeiro em tempo real dependem de integração com o portal (fase futura).
+- **Primeiro uso**: cadastrar o CNPJ do Licite Comigo em Dados da empresa; sem ele não há onde
+  salvar oportunidades, agenda e documentos.
+
 ## Como a pessoa entra
 
-1. A Administração cria a turma e gera o convite (empresa, aluno ou mentor).
+1. A Administração cria a turma e gera o convite (empresa, aluno, mentor ou colaborador).
 2. O link vale 7 dias, é de uso único e aparece só na criação. Funciona sem e-mail configurado;
    quando o e-mail estiver ativo, o convite também é enviado.
 3. A pessoa abre o link, aceita os termos, cria a senha e entra na própria área.

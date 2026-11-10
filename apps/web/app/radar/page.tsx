@@ -11,10 +11,15 @@ export const metadata = {
 export default async function RadarPage() {
   const session = await getSession();
   const area = session?.area;
-  const canWork = area === 'empresa' || area === 'administracao';
+  const canWork = area === 'empresa' || area === 'administracao' || area === 'colaborador';
   return (
     <Suspense fallback={<p className="ui-loading">Carregando o Radar…</p>}>
-      <RadarApp signedIn={Boolean(session)} canExport={canWork} canSave={canWork} />
+      <RadarApp
+        signedIn={Boolean(session)}
+        canExport={canWork}
+        canSave={canWork}
+        nichosTravados={area === 'colaborador'}
+      />
     </Suspense>
   );
 }

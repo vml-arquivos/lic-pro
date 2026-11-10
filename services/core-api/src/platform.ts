@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
+import { NICHE_CODES } from '@licitecomigo/shared';
 import { z } from 'zod';
 import { createOpaqueToken, hashOpaqueToken, PublicRateLimiter } from './auth-public.js';
 import { panelBaseUrl, type RuntimeConfig } from './config.js';
@@ -31,7 +32,7 @@ const classPatch = classBody
 
 const invitationBody = z
   .object({
-    tipo: z.enum(['aluno', 'mentor', 'empresa']),
+    tipo: z.enum(['aluno', 'mentor', 'empresa', 'colaborador']),
     nome: z.string().trim().min(2).max(160),
     email: z.string().trim().toLowerCase().email().max(200),
     empresa_nome: z.string().trim().min(2).max(200).optional(),
@@ -62,11 +63,11 @@ const acceptBody = tokenBody.extend({
   privacidade_aceita: z.literal(true),
 });
 
-/** O convite abre no painel de quem foi convidado: empresa, aluno ou mentor. */
+/** O convite abre no painel de quem foi convidado: empresa, aluno, mentor ou colaborador. */
 export function invitationLink(
   config: RuntimeConfig,
   token: string,
-  tipo: 'empresa' | 'aluno' | 'mentor' = 'aluno',
+  tipo: 'empresa' | 'aluno' | 'mentor' | 'colaborador' = 'aluno',
 ): string {
   return `${panelBaseUrl(config, tipo)}/convite?token=${token}`;
 }
@@ -267,6 +268,60 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
         ),
       );
       return { data: result.rows };
+    });
+
+    platform.get('/platform/colaboradores', async (request) => {
+      const tenantId = request.user.tenantId;
+      const result = await withPlatform(pool!, request, 'platform.colaboradores.listed', (client) =>
+        client.query(
+          `SELECT u.id, u.nome, u.email, u.ativo, u.created_at, u.nicho_preferencias AS nichos,
+                  (SELECT count(*) FROM buscas_salvas b
+                    WHERE b.tenant_id = u.tenant_id AND b.usuario_id = u.id AND b.ativa)::int AS buscas_ativas,
+                  (SELECT count(*) FROM oportunidades_salvas o
+                    WHERE o.tenant_id = u.tenant_id AND o.usuario_id = u.id)::int AS oportunidades
+             FROM usuarios u
+            WHERE u.tenant_id = $1 AND u.papel = 'colaborador'
+            ORDER BY u.nome`,
+          [tenantId],
+        ),
+      );
+      return { data: result.rows };
+    });
+
+    // A Administração trava os nichos de cada colaborador: ele só enxerga o que está neles.
+    platform.put('/platform/colaboradores/:userId/nichos', async (request, reply) => {
+      const { userId } = userParams.parse(request.params);
+      const { nichos } = z
+        .object({
+          nichos: z
+            .array(z.string().trim().min(1).max(80))
+            .min(1)
+            .max(NICHE_CODES.length)
+            .refine(
+              (values) =>
+                new Set(values).size === values.length &&
+                values.every((code) => NICHE_CODES.includes(code)),
+              'Escolha nichos do catálogo, sem repetir.',
+            ),
+        })
+        .parse(request.body);
+      const result = await withPlatform(
+        pool!,
+        request,
+        'platform.colaborador.niches_changed',
+        async (client) => {
+          const updated = await client.query(
+            `UPDATE usuarios SET nicho_preferencias = $3::jsonb, updated_at = now()
+              WHERE tenant_id = $1 AND id = $2 AND papel = 'colaborador'
+              RETURNING id, nome, nicho_preferencias AS nichos`,
+            [request.user.tenantId, userId, JSON.stringify(nichos)],
+          );
+          return updated.rows[0] ?? null;
+        },
+        { usuario_id: userId, nichos },
+      );
+      if (!result) return reply.code(404).send({ error: 'user_not_found' });
+      return result;
     });
 
     platform.get('/platform/classes', async (request) => {
@@ -486,7 +541,7 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
           const result = await client.query<{
             email: string;
             nome: string;
-            tipo: 'empresa' | 'aluno' | 'mentor';
+            tipo: 'empresa' | 'aluno' | 'mentor' | 'colaborador';
             expira_em: Date;
           }>(
             `UPDATE convites
@@ -544,7 +599,7 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
       const found = await client.query<{
         id: string;
         tenant_id: string;
-        tipo: 'aluno' | 'mentor' | 'empresa';
+        tipo: 'aluno' | 'mentor' | 'empresa' | 'colaborador';
         email: string;
         nome: string;
         empresa_nome: string | null;
@@ -571,7 +626,7 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
           slugify(invite.empresa_nome ?? invite.nome, tenantId.slice(0, 8)),
         ]);
       } else {
-        // Aluno e mentor entram na conta da plataforma. O fluxo é do sistema: grava com o
+        // Aluno, mentor e colaborador entram na conta da plataforma. O fluxo é do sistema: grava com o
         // papel administrativo da própria conta, como as policies exigem.
         await client.query("SELECT set_config('app.tenant_id', $1, true)", [tenantId]);
         await client.query("SELECT set_config('app.role', 'admin', true)");
@@ -592,11 +647,11 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
           role,
           invite.tipo === 'aluno'
             ? 'mentorado'
-            : invite.tipo === 'mentor'
+            : invite.tipo === 'mentor' || invite.tipo === 'colaborador'
               ? 'profissional'
               : 'iniciante',
           passwordHash,
-          invite.tipo === 'empresa' ? 'empresa' : 'mentoria',
+          invite.tipo === 'empresa' || invite.tipo === 'colaborador' ? 'empresa' : 'mentoria',
           config.termsVersion,
           config.privacyVersion,
         ],
@@ -690,7 +745,7 @@ async function assertMentor(
 
 async function assertEmailFree(
   client: Parameters<Parameters<typeof withTenant>[2]>[0],
-  tipo: 'aluno' | 'mentor' | 'empresa',
+  tipo: 'aluno' | 'mentor' | 'empresa' | 'colaborador',
   tenantId: string,
   email: string,
 ): Promise<void> {

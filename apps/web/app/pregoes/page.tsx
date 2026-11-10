@@ -25,7 +25,10 @@ export default async function PregoesPage() {
           </p>
         </div>
       </header>
-      <PregoesResults signedIn={Boolean(session)} />
+      <PregoesResults
+        signedIn={Boolean(session)}
+        nichosTravados={session?.area === 'colaborador'}
+      />
       <p>
         <Link href="/radar?codigo_modalidade=6&situacao_prazo=abertas">
           Ajustar filtros no Radar

@@ -22,6 +22,8 @@ type Deps = { pool: Pool | undefined };
 const uuid = z.string().uuid();
 const STUDENT_VIEW = ['plataforma', 'aluno'] as const;
 const TEACHING = ['plataforma', 'mentor'] as const;
+/** A biblioteca também é lida pelo mentor, que acompanha o que o aluno recebe. */
+const LIBRARY_VIEW = ['plataforma', 'aluno', 'mentor'] as const;
 const PLATFORM_ONLY = ['plataforma'] as const;
 
 export const ETAPAS = [
@@ -322,7 +324,7 @@ export function registerStudentSupportRoutes(app: FastifyInstance, { pool }: Dep
   }
 
   app.get('/aluno/materiais', async (request, reply) => {
-    if (!requireRoles(reply, request, STUDENT_VIEW)) return reply;
+    if (!requireRoles(reply, request, LIBRARY_VIEW)) return reply;
     if (!pool) return sendDatabaseUnavailable(reply);
     const query = z.object({ todos: z.enum(['1']).optional() }).parse(request.query ?? {});
     const result = await withTenant(pool, authContext(request), async (client) => {
@@ -346,7 +348,7 @@ export function registerStudentSupportRoutes(app: FastifyInstance, { pool }: Dep
   });
 
   app.get('/aluno/materiais/:id', async (request, reply) => {
-    if (!requireRoles(reply, request, STUDENT_VIEW)) return reply;
+    if (!requireRoles(reply, request, LIBRARY_VIEW)) return reply;
     if (!pool) return sendDatabaseUnavailable(reply);
     const { id } = z.object({ id: uuid }).parse(request.params);
     const result = await withTenant(pool, authContext(request), async (client) => {
@@ -388,9 +390,7 @@ export function registerStudentSupportRoutes(app: FastifyInstance, { pool }: Dep
       grupo_url: mentoriaFechada ? null : result.access.grupo_url,
       mentoria_ativa: result.access.mentoria_ativa,
       mentoria_ate: result.access.mentoria_ate,
-      data: mentoriaFechada
-        ? result.rows.map(({ link: _link, ...rest }) => ({ ...rest, link: null }))
-        : result.rows,
+      data: mentoriaFechada ? result.rows.map((row) => ({ ...row, link: null })) : result.rows,
     });
   });
 

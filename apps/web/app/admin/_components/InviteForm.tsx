@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Alert } from '../../components/ui';
 import { errorText, send } from '../../../lib/api';
 
-export type InviteKind = 'aluno' | 'mentor' | 'empresa';
+export type InviteKind = 'aluno' | 'mentor' | 'empresa' | 'colaborador';
 type Option = { id: string; nome: string };
 type Created = { id: string; expira_em: string; link: string; email_enviado: boolean };
 
@@ -12,6 +12,7 @@ const LABELS: Record<InviteKind, { title: string; cta: string }> = {
   aluno: { title: 'Matricular aluno', cta: 'Gerar convite do aluno' },
   mentor: { title: 'Convidar mentor', cta: 'Gerar convite do mentor' },
   empresa: { title: 'Convidar empresa', cta: 'Gerar convite da empresa' },
+  colaborador: { title: 'Convidar colaborador', cta: 'Gerar convite do colaborador' },
 };
 
 export function InviteLink({ created }: Readonly<{ created: Created }>) {

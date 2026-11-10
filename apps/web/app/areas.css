@@ -280,6 +280,10 @@
   display: block;
   margin-top: 0.15rem;
 }
+.ui-list li > .ui-table-actions {
+  align-items: flex-start;
+  align-self: flex-start;
+}
 .ui-form label.ui-choice {
   align-items: flex-start;
   background: var(--workspace-surface, #fff);
@@ -1152,4 +1156,38 @@
 .ui-dl dd {
   margin: 0;
   white-space: pre-wrap;
+}
+
+/* Avisos por nicho e edição de nichos do colaborador */
+.al-nichos {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+.al-nicho {
+  border: 1px solid var(--workspace-line);
+  border-radius: 12px;
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.7rem 0.9rem 0.8rem;
+}
+.al-nicho legend {
+  font-weight: 700;
+  padding: 0 0.3rem;
+}
+.ui-details summary {
+  cursor: pointer;
+}
+.ui-details .ui-form {
+  margin-top: 0.6rem;
+}
+.ui-details fieldset {
+  border: 1px solid var(--workspace-line);
+  border-radius: 12px;
+  display: grid;
+  gap: 0.3rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  margin: 0;
+  padding: 0.6rem 0.8rem;
 }

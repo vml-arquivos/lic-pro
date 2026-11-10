@@ -2,10 +2,10 @@
  * Áreas do produto e regras de navegação.
  *
  * Fonte única para o menu e para a guarda de páginas. O papel (`plataforma`, `admin`,
- * `aluno`, `mentor`) é gravado no banco; a área é o que o usuário enxerga. Quem pode abrir
+ * `aluno`, `mentor`, `colaborador`) é gravado no banco; a área é o que o usuário enxerga. Quem pode abrir
  * cada área é decidido no servidor (core-api); aqui só se descreve o que cada área mostra.
  */
-export const AREAS = ['administracao', 'empresa', 'aluno', 'mentor'] as const;
+export const AREAS = ['administracao', 'empresa', 'aluno', 'mentor', 'colaborador'] as const;
 export type Area = (typeof AREAS)[number];
 
 export const AREA_LABELS: Record<Area, string> = {
@@ -13,6 +13,7 @@ export const AREA_LABELS: Record<Area, string> = {
   empresa: 'Empresa',
   aluno: 'Aluno',
   mentor: 'Mentor',
+  colaborador: 'Colaborador',
 };
 
 /** `icon` é o nome de um ícone do app web (components/Icon.tsx). */
@@ -38,6 +39,7 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
         { label: 'Empresas clientes', href: '/admin/empresas', icon: 'building' },
         { label: 'Alunos e turmas', href: '/admin/alunos', icon: 'users' },
         { label: 'Mentores', href: '/admin/mentores', icon: 'award' },
+        { label: 'Colaboradores', href: '/admin/colaboradores', icon: 'users' },
         { label: 'Materiais', href: '/admin/materiais', icon: 'file' },
         { label: 'Fontes de dados', href: '/admin/fontes', icon: 'sync' },
         { label: 'Financeiro', href: '/admin/financeiro', icon: 'chart' },
@@ -106,13 +108,34 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
     },
     { label: 'Conta', items: [account] },
   ],
+  colaborador: [
+    {
+      label: 'Operação',
+      items: [
+        { label: 'Início', href: '/painel', icon: 'home' },
+        radar,
+        { label: 'Buscas salvas', href: '/buscas-salvas', icon: 'target' },
+        { label: 'Alertas', href: '/alertas', icon: 'bell' },
+        { label: 'Oportunidades', href: '/oportunidades', icon: 'columns' },
+        { label: 'Agenda', href: '/agenda', icon: 'calendar' },
+        { label: 'Documentos', href: '/documentos', icon: 'file' },
+        published,
+        prices,
+        { label: 'Dados da empresa', href: '/empresas', icon: 'building' },
+      ],
+    },
+    { label: 'Apoio', items: [academy, ana] },
+    { label: 'Conta', items: [account] },
+  ],
 };
 
 export type PageRule = { prefix: string; areas: readonly Area[] };
 
 const ALL: readonly Area[] = AREAS;
-const WORK: readonly Area[] = ['administracao', 'empresa', 'aluno'];
+const WORK: readonly Area[] = ['administracao', 'empresa', 'aluno', 'colaborador'];
 const COMPANY: readonly Area[] = ['administracao', 'empresa'];
+/** Ferramentas de busca e acompanhamento: empresa cliente e colaborador da operação. */
+const OPERATION: readonly Area[] = ['administracao', 'empresa', 'colaborador'];
 const TEACHING: readonly Area[] = ['administracao', 'mentor'];
 const STUDENT: readonly Area[] = ['administracao', 'aluno'];
 
@@ -137,12 +160,12 @@ export const PAGE_RULES: readonly PageRule[] = [
   { prefix: '/pregoes', areas: WORK },
   { prefix: '/precos', areas: WORK },
   { prefix: '/assinatura', areas: COMPANY },
-  { prefix: '/oportunidades', areas: COMPANY },
-  { prefix: '/agenda', areas: COMPANY },
-  { prefix: '/documentos', areas: COMPANY },
-  { prefix: '/buscas-salvas', areas: COMPANY },
-  { prefix: '/alertas', areas: COMPANY },
-  { prefix: '/empresas', areas: COMPANY },
+  { prefix: '/oportunidades', areas: OPERATION },
+  { prefix: '/agenda', areas: OPERATION },
+  { prefix: '/documentos', areas: OPERATION },
+  { prefix: '/buscas-salvas', areas: OPERATION },
+  { prefix: '/alertas', areas: OPERATION },
+  { prefix: '/empresas', areas: OPERATION },
   { prefix: '/painel', areas: ALL },
   { prefix: '/ana', areas: ALL },
   { prefix: '/conta', areas: ALL },

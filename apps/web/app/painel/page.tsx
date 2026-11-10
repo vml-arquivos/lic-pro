@@ -11,7 +11,7 @@ export const metadata = {
 };
 
 export default async function PainelPage() {
-  const session = await requireArea('administracao', 'empresa', 'aluno', 'mentor');
+  const session = await requireArea('administracao', 'empresa', 'aluno', 'mentor', 'colaborador');
   if (session.area === 'administracao') redirect('/admin');
   switch (session.area) {
     case 'aluno':
@@ -25,6 +25,15 @@ export default async function PainelPage() {
       );
     case 'mentor':
       return <MentorDashboard nome={session.nome} hub={<AreaHub area="mentor" />} />;
+    case 'colaborador':
+      return (
+        <EmpresaInicio
+          nome={session.nome}
+          nichos={session.nicho_preferencias ?? []}
+          hub={<AreaHub area="colaborador" />}
+          operacao
+        />
+      );
     default:
       return (
         <EmpresaInicio

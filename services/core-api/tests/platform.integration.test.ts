@@ -297,7 +297,13 @@ suite('áreas, plataforma e convites (PostgreSQL real)', () => {
     const platform = token(platformUser, platformTenant, 'plataforma');
     const initial = (await get('/me', platform)).json();
     expect(initial).toMatchObject({ area: 'administracao', plataforma: true });
-    expect(initial.areas_permitidas).toEqual(['administracao', 'empresa', 'aluno', 'mentor']);
+    expect(initial.areas_permitidas).toEqual([
+      'administracao',
+      'empresa',
+      'aluno',
+      'mentor',
+      'colaborador',
+    ]);
 
     const switched = await app.inject({
       method: 'PATCH',

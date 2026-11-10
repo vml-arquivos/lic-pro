@@ -42,6 +42,7 @@ const TIPOS: ReadonlyArray<readonly [string, string]> = [
   ['novos', 'Oportunidades novas'],
   ['alteracao', 'Alterações no edital'],
   ['prazo', 'Prazos chegando'],
+  ['sessao', 'Sessão ao vivo (1 h e 15 min antes e no começo)'],
 ];
 
 function radarHref(filtros: Record<string, unknown>): string {

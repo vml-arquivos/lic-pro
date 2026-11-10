@@ -2,18 +2,26 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { UserRole } from '../src/auth.js';
 import { buildApp } from '../src/server.js';
 
-const ROLES: readonly UserRole[] = ['plataforma', 'admin', 'operador', 'mentor', 'aluno'];
+const ROLES: readonly UserRole[] = [
+  'plataforma',
+  'admin',
+  'operador',
+  'colaborador',
+  'mentor',
+  'aluno',
+];
 const ID = '00000000-0000-4000-8000-000000000001';
 
 type Entry = {
-  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   url: string;
   allowed: readonly UserRole[];
   payload?: unknown;
 };
 
 const ONLY_PLATFORM = ['plataforma'] as const;
-const COMPANY = ['plataforma', 'admin', 'operador'] as const;
+const COMPANY = ['plataforma', 'admin', 'operador', 'colaborador'] as const;
+const EVERY_AREA = ['plataforma', 'admin', 'operador', 'colaborador', 'mentor', 'aluno'] as const;
 const STUDENT_VIEW = ['plataforma', 'aluno'] as const;
 const STUDENT_ONLY = ['aluno'] as const;
 const TEACHING = ['plataforma', 'mentor'] as const;
@@ -37,7 +45,7 @@ const MATRIX: readonly Entry[] = [
   { method: 'GET', url: '/alert-options', allowed: COMPANY },
   { method: 'PATCH', url: `/alert-rules/${ID}`, allowed: COMPANY, payload: {} },
   { method: 'GET', url: '/aluno/inicio', allowed: STUDENT_VIEW },
-  { method: 'GET', url: '/aluno/progresso', allowed: STUDENT_VIEW },
+  { method: 'GET', url: '/aluno/progresso', allowed: EVERY_AREA },
   { method: 'GET', url: '/aluno/plano', allowed: STUDENT_VIEW },
   { method: 'POST', url: '/aluno/plano/gerar', allowed: STUDENT_ONLY, payload: {} },
   { method: 'PATCH', url: '/aluno/plano/dias/1', allowed: STUDENT_ONLY, payload: { feito: true } },
@@ -118,7 +126,7 @@ const MATRIX: readonly Entry[] = [
   { method: 'GET', url: '/mentor/companies', allowed: ['plataforma', 'mentor'] },
   { method: 'GET', url: '/mentor/dashboard', allowed: ['plataforma', 'mentor'] },
   { method: 'GET', url: '/mentorado/dashboard', allowed: ['plataforma', 'aluno'] },
-  { method: 'GET', url: '/professional/dashboard', allowed: ['plataforma', 'admin', 'operador'] },
+  { method: 'GET', url: '/professional/dashboard', allowed: COMPANY },
   { method: 'DELETE', url: `/mentor/concessions/${ID}`, allowed: ONLY_PLATFORM },
   { method: 'PATCH', url: '/me/view-as', allowed: ONLY_PLATFORM, payload: { area: 'aluno' } },
   { method: 'GET', url: '/platform/overview', allowed: ONLY_PLATFORM },
@@ -126,6 +134,13 @@ const MATRIX: readonly Entry[] = [
   { method: 'GET', url: '/platform/students', allowed: ONLY_PLATFORM },
   { method: 'GET', url: '/platform/mentors', allowed: ONLY_PLATFORM },
   { method: 'GET', url: '/platform/classes', allowed: ONLY_PLATFORM },
+  { method: 'GET', url: '/platform/colaboradores', allowed: ONLY_PLATFORM },
+  {
+    method: 'PUT',
+    url: `/platform/colaboradores/${ID}/nichos`,
+    allowed: ONLY_PLATFORM,
+    payload: { nichos: ['comercio-bens'] },
+  },
   { method: 'GET', url: '/platform/invitations', allowed: ONLY_PLATFORM },
   {
     method: 'POST',
