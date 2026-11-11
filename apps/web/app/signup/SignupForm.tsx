@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { NICHE_CATALOG } from '@licitecomigo/shared';
+import { NICHE_CATALOG, PASSWORD_HINT, PASSWORD_MIN_LENGTH } from '@licitecomigo/shared';
 
 export function SignupForm() {
   const [message, setMessage] = useState('');
@@ -73,14 +73,15 @@ export function SignupForm() {
         <input required type="email" name="email" autoComplete="email" />
       </label>
       <label>
-        Senha forte
+        Senha
         <input
           required
           type="password"
           name="password"
           autoComplete="new-password"
-          minLength={12}
+          minLength={PASSWORD_MIN_LENGTH}
         />
+        <small>{PASSWORD_HINT}</small>
       </label>
       <label className="check-label">
         <input required type="checkbox" name="termos" /> Aceito os{' '}

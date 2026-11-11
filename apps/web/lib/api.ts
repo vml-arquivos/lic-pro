@@ -37,6 +37,10 @@ const MESSAGES: Record<string, string> = {
   material_not_found: 'Material não encontrado.',
   missing_answers: 'Responda as perguntas marcadas com *.',
   encontro_not_found: 'Encontro não encontrado.',
+  user_not_found: 'Usuário não encontrado.',
+  user_inactive: 'Esta conta está desativada. Reative antes de gerar o link de senha.',
+  user_has_no_credentials: 'Esta conta ainda não tem acesso criado. Gere um link de cadastro.',
+  company_name_only_for_company: 'O nome da empresa só pode ser editado em conta de empresa.',
   core_api_unavailable: 'O serviço não respondeu. Tente novamente em instantes.',
   database_unavailable: 'O banco de dados não respondeu. Tente novamente em instantes.',
 };

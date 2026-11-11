@@ -110,6 +110,7 @@ não tem esse limite. O colaborador só enxerga os nichos que a Administração 
 | `/materiais`                                                                          |      sim      |   não   |  sim  |  sim   |     não     |
 | `/admin/materiais`                                                                    |      sim      |   não   |  não  |  não   |     não     |
 | `/admin/colaboradores`                                                                |      sim      |   não   |  não  |  não   |     não     |
+| `/admin/equipe`, `/admin/usuarios/:id` (ficha do usuário)                             |      sim      |   não   |  não  |  não   |     não     |
 | `/mentor/encontros`                                                                   |      sim      |   não   |  não  |  sim   |     não     |
 
 Regras e menus ficam em `packages/shared/src/areas.ts`, com testes. As páginas conferem a
@@ -117,38 +118,39 @@ Regras e menus ficam em `packages/shared/src/areas.ts`, com testes. As páginas 
 
 ## Rotas da API (papel × rota)
 
-| Rota                                                                                                                      | plataforma | admin | operador | colaborador | mentor | aluno |
-| ------------------------------------------------------------------------------------------------------------------------- | :--------: | :---: | :------: | :---------: | :----: | :---: |
-| `GET /admin/leads`                                                                                                        |     ✔      |       |          |             |        |       |
-| `GET /admin/users/audit`                                                                                                  |     ✔      |       |          |             |        |       |
-| `GET /operations/ingest`                                                                                                  |     ✔      |       |          |             |        |       |
-| `GET /admin/coleta/status`, `POST /admin/coleta/run` (coleta nativa do PNCP)                                              |     ✔      |       |          |             |        |       |
-| `GET /users`                                                                                                              |     ✔      |       |          |             |   ✔    |       |
-| `GET /mentor/companies`, `GET /mentor/dashboard`                                                                          |     ✔      |       |          |             |   ✔    |       |
-| `GET /mentorado/dashboard`                                                                                                |     ✔      |       |          |             |        |   ✔   |
-| `GET /professional/dashboard`                                                                                             |     ✔      |   ✔   |    ✔     |      ✔      |        |       |
-| `GET/POST /opportunities`, `GET/PATCH/DELETE /opportunities/:id`                                                          |     ✔      |   ✔   |    ✔     |      ✔      |        |       |
-| `GET /checklist-models`, `POST /opportunities/:id/checklists`, `/checklists/*`, `/checklist-items/*`                      |     ✔      |   ✔   |    ✔     |      ✔      |        |       |
-| `GET /agenda`, `/agenda/prazos*`, `/tasks*`                                                                               |     ✔      |   ✔   |    ✔     |      ✔      |        |       |
-| `GET/POST/PATCH/DELETE /empresa/documentos*`, `GET /empresa/inicio`                                                       |     ✔      |   ✔   |    ✔     |      ✔      |        |       |
-| `DELETE /mentor/concessions/:id`                                                                                          |     ✔      |       |          |             |        |       |
-| `PATCH /me/view-as`                                                                                                       |     ✔      |       |          |             |        |       |
-| `GET /platform/overview, /companies, /students, /mentors, /classes, /invitations`                                         |     ✔      |       |          |             |        |       |
-| `POST /platform/invitations` (+ `/:id/revoke`, `/:id/reissue`)                                                            |     ✔      |       |          |             |        |       |
-| `POST /platform/classes`, `PATCH /platform/classes/:id`                                                                   |     ✔      |       |          |             |        |       |
-| `PATCH /platform/users/:id/active`                                                                                        |     ✔      |       |          |             |        |       |
-| `GET /admin/planos`, `PUT /admin/planos`, `GET /admin/financeiro`, `POST /admin/cobrancas/:id/liberar-manual`             |     ✔      |       |          |             |        |       |
-| `GET /admin/assinantes`, `POST /admin/assinaturas/:id/ajustar`, `GET/PUT /admin/cupons`, `POST /admin/integracoes/testar` |     ✔      |       |          |             |        |       |
-| `GET /aluno/progresso` (Academia, para qualquer área)                                                                     |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
-| `GET /platform/colaboradores`, `PUT /platform/colaboradores/:id/nichos`                                                   |     ✔      |       |          |             |        |       |
-| `POST /billing/teste-gratis`                                                                                              |            |   ✔   |          |             |        |       |
-| `GET /billing/minha-assinatura`                                                                                           |            |   ✔   |    ✔     |             |        |       |
-| `POST /billing/assinar`, `POST /billing/cancelar`                                                                         |            |   ✔   |          |             |        |       |
-| `GET /precos/referencia` (preço de referência, Compras.gov.br)                                                            |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
-| `GET /precos/itens` (itens do nicho com valor típico)                                                                     |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
-| `GET /precos/fechados` (pregões fechados: estimado × homologado)                                                          |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
-| `GET /editais/:id/resultados` (valor fechado e vencedor por item, PNCP)                                                   |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
-| `POST /editais/:id/detalhes/atualizar` (itens e documentos do PNCP)                                                       |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
+| Rota                                                                                                                               | plataforma | admin | operador | colaborador | mentor | aluno |
+| ---------------------------------------------------------------------------------------------------------------------------------- | :--------: | :---: | :------: | :---------: | :----: | :---: |
+| `GET /admin/leads`                                                                                                                 |     ✔      |       |          |             |        |       |
+| `GET /admin/users/audit`                                                                                                           |     ✔      |       |          |             |        |       |
+| `GET /operations/ingest`                                                                                                           |     ✔      |       |          |             |        |       |
+| `GET /admin/coleta/status`, `POST /admin/coleta/run` (coleta nativa do PNCP)                                                       |     ✔      |       |          |             |        |       |
+| `GET /users`                                                                                                                       |     ✔      |       |          |             |   ✔    |       |
+| `GET /mentor/companies`, `GET /mentor/dashboard`                                                                                   |     ✔      |       |          |             |   ✔    |       |
+| `GET /mentorado/dashboard`                                                                                                         |     ✔      |       |          |             |        |   ✔   |
+| `GET /professional/dashboard`                                                                                                      |     ✔      |   ✔   |    ✔     |      ✔      |        |       |
+| `GET/POST /opportunities`, `GET/PATCH/DELETE /opportunities/:id`                                                                   |     ✔      |   ✔   |    ✔     |      ✔      |        |       |
+| `GET /checklist-models`, `POST /opportunities/:id/checklists`, `/checklists/*`, `/checklist-items/*`                               |     ✔      |   ✔   |    ✔     |      ✔      |        |       |
+| `GET /agenda`, `/agenda/prazos*`, `/tasks*`                                                                                        |     ✔      |   ✔   |    ✔     |      ✔      |        |       |
+| `GET/POST/PATCH/DELETE /empresa/documentos*`, `GET /empresa/inicio`                                                                |     ✔      |   ✔   |    ✔     |      ✔      |        |       |
+| `DELETE /mentor/concessions/:id`                                                                                                   |     ✔      |       |          |             |        |       |
+| `PATCH /me/view-as`                                                                                                                |     ✔      |       |          |             |        |       |
+| `GET /platform/overview, /companies, /students, /mentors, /classes, /invitations`                                                  |     ✔      |       |          |             |        |       |
+| `POST /platform/invitations` (+ `/:id/revoke`, `/:id/reissue`)                                                                     |     ✔      |       |          |             |        |       |
+| `POST /platform/classes`, `PATCH /platform/classes/:id`                                                                            |     ✔      |       |          |             |        |       |
+| `PATCH /platform/users/:id/active`                                                                                                 |     ✔      |       |          |             |        |       |
+| `GET /admin/planos`, `PUT /admin/planos`, `GET /admin/financeiro`, `POST /admin/cobrancas/:id/liberar-manual`                      |     ✔      |       |          |             |        |       |
+| `GET /admin/assinantes`, `POST /admin/assinaturas/:id/ajustar`, `GET/PUT /admin/cupons`, `POST /admin/integracoes/testar`          |     ✔      |       |          |             |        |       |
+| `GET /aluno/progresso` (Academia, para qualquer área)                                                                              |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
+| `GET /platform/colaboradores`, `PUT /platform/colaboradores/:id/nichos`                                                            |     ✔      |       |          |             |        |       |
+| `GET /platform/team`, `GET /platform/users/:id/ficha`, `PATCH /platform/users/:id`, `POST /platform/users/:id/password-reset-link` |     ✔      |       |          |             |        |       |
+| `POST /billing/teste-gratis`                                                                                                       |            |   ✔   |          |             |        |       |
+| `GET /billing/minha-assinatura`                                                                                                    |            |   ✔   |    ✔     |             |        |       |
+| `POST /billing/assinar`, `POST /billing/cancelar`                                                                                  |            |   ✔   |          |             |        |       |
+| `GET /precos/referencia` (preço de referência, Compras.gov.br)                                                                     |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
+| `GET /precos/itens` (itens do nicho com valor típico)                                                                              |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
+| `GET /precos/fechados` (pregões fechados: estimado × homologado)                                                                   |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
+| `GET /editais/:id/resultados` (valor fechado e vencedor por item, PNCP)                                                            |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
+| `POST /editais/:id/detalhes/atualizar` (itens e documentos do PNCP)                                                                |     ✔      |   ✔   |    ✔     |      ✔      |   ✔    |   ✔   |
 
 Rotas públicas da venda: `GET /public/planos`, `POST /public/checkout/curso` (limite por IP),
 `POST /public/compra` (acompanha pelo código da compra), `POST /public/cupom/validar` (limite por IP) e `POST /webhooks/asaas` (confere o
@@ -157,6 +159,31 @@ conta que tem assinatura registrada: contas antigas continuam sem limite.
 
 Rotas públicas do convite: `POST /auth/invitations/preview` e `POST /auth/invitations/accept`
 (limite de tentativas por IP; resposta genérica para convite inválido).
+
+## Usuários, ficha e senha (Administração)
+
+- Cada tipo de usuário tem a sua página: Empresas clientes, Alunos e turmas, Mentores,
+  Colaboradores e Equipe administrativa (grupo "Usuários" do menu). Em todas: **Ver ficha**,
+  **Editar** (nome, e-mail de acesso e, para empresa, o nome da empresa), **Link de senha**,
+  **Desativar/Reativar** e os convites de cadastro (**Novo link**, **Revogar**).
+- **Link de senha**: `POST /platform/users/:id/password-reset-link` gera um link de uso único,
+  válido por 48 horas, que abre `/password-reset` no painel da pessoa. O link só aparece na
+  resposta (e vai por e-mail se o SMTP estiver ligado). Um novo link invalida o anterior. Conta
+  desativada não recebe link. Fica registrado na auditoria da conta da pessoa.
+- **Editar**: `PATCH /platform/users/:id`. A gravação roda dentro da conta da pessoa (como nos
+  fluxos de autenticação); o e-mail novo precisa estar livre em todo o sistema e passa a ser o
+  login. A senha não muda.
+- **Ficha** (`GET /platform/users/:id/ficha`): dados, último acesso, uso por área nos últimos 30
+  dias, nichos, buscas salvas e últimas buscas, oportunidades, alertas, conversas com a Ana
+  (só contagem, nunca o conteúdo) e histórico. Para empresa, a ficha soma todos os usuários da
+  conta.
+- **Registro de uso** (migration 0029): `atividade_usuario` (entradas e uso por área e por dia) e
+  `atividade_buscas` (termo e filtros das buscas do Radar e de Preços pagos). Não guarda
+  documentos, mensagens da Ana nem senhas. Cada usuário só enxerga o próprio; a Administração lê
+  tudo. Chamadas de fundo (sessão, avisos) não contam.
+- **Senha**: mínimo de 8 caracteres, sem exigência de símbolos e sem limite prático (teto
+  técnico de 1024 só para proteger o servidor). A regra vem de `packages/shared` e vale para
+  cadastro, convite, redefinição e "Minha conta".
 
 ## Pontos de atenção
 

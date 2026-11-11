@@ -3,7 +3,15 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { AREA_LABELS, NICHE_CATALOG, flatMenu, type Area } from '@licitecomigo/shared';
+import {
+  AREA_LABELS,
+  NICHE_CATALOG,
+  PASSWORD_HINT,
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_WEAK_MESSAGE,
+  flatMenu,
+  type Area,
+} from '@licitecomigo/shared';
 
 type Account = {
   id: string;
@@ -48,6 +56,7 @@ const panelDescriptions: Record<string, string> = {
   '/admin/alunos': 'Matrículas, turmas e convites do curso.',
   '/admin/mentores': 'Mentores e seus alunos.',
   '/admin/colaboradores': 'Equipe da operação e nichos liberados.',
+  '/admin/equipe': 'Administradores do sistema.',
   '/admin/fontes': 'Situação da coleta de editais.',
   '/admin/auditoria': 'Registro das ações administrativas.',
   '/painel': 'Resumo da sua área.',
@@ -87,7 +96,7 @@ function errorMessage(code: string) {
     {
       current_password_invalid: 'A senha atual não confere.',
       password_must_change: 'A nova senha precisa ser diferente da senha atual.',
-      weak_password: 'Use pelo menos 12 caracteres, com maiúscula, minúscula, número e símbolo.',
+      weak_password: PASSWORD_WEAK_MESSAGE,
       validation_error: 'Confira os campos informados.',
     }[code] ?? 'Não foi possível concluir esta ação agora.'
   );
@@ -433,10 +442,7 @@ export function AccountSettings() {
               <h2>Alterar senha</h2>
             </div>
           </div>
-          <p className="form-hint">
-            A senha atual é necessária. A nova senha deve ter 12 caracteres, maiúscula, minúscula,
-            número e símbolo.
-          </p>
+          <p className="form-hint">A senha atual é necessária. {PASSWORD_HINT}</p>
           <form className="account-form" onSubmit={(event) => void changePassword(event)}>
             <label>
               Senha atual
@@ -455,7 +461,7 @@ export function AccountSettings() {
                 onChange={(event) => setNewPassword(event.target.value)}
                 type="password"
                 autoComplete="new-password"
-                minLength={12}
+                minLength={PASSWORD_MIN_LENGTH}
                 required
               />
             </label>

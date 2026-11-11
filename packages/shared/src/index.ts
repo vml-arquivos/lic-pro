@@ -63,3 +63,11 @@ export {
   roleAllowedOnPanel,
 } from './panels.js';
 export type { PanelEntry, PanelMap } from './panels.js';
+
+export {
+  PASSWORD_HINT,
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_TECHNICAL_MAX,
+  PASSWORD_WEAK_MESSAGE,
+  isAcceptablePassword,
+} from './password.js';

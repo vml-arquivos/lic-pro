@@ -77,5 +77,12 @@ cria a conta da equipe direto.
 - O colaborador usa as mesmas políticas de linha (RLS) do operador, dentro da conta da
   plataforma. Os nichos dele ficam em `usuarios.nicho_preferencias` e só a Administração altera.
 
-Todas rodam em ordem pelo `migrate.sh`, cada uma na sua transação. O CI confere que as 28
+## Usuários e registro de uso (0029)
+
+- O convite aceita o tipo `equipe` (administrador do sistema, papel `plataforma` na conta da
+  plataforma).
+- `atividade_usuario` e `atividade_buscas`: o que cada usuário usou e buscou, para a ficha da
+  Administração. Isolamento por conta (RLS) e leitura liberada à sessão da plataforma.
+
+Todas rodam em ordem pelo `migrate.sh`, cada uma na sua transação. O CI confere que as 29
 foram aplicadas. Migration já aplicada nunca é editada: mudança vira arquivo novo.

@@ -36,10 +36,6 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
       items: [
         { label: 'Visão geral', href: '/admin', icon: 'home' },
         { label: 'Leads', href: '/leads', icon: 'inbox' },
-        { label: 'Empresas clientes', href: '/admin/empresas', icon: 'building' },
-        { label: 'Alunos e turmas', href: '/admin/alunos', icon: 'users' },
-        { label: 'Mentores', href: '/admin/mentores', icon: 'award' },
-        { label: 'Colaboradores', href: '/admin/colaboradores', icon: 'users' },
         { label: 'Materiais', href: '/admin/materiais', icon: 'file' },
         { label: 'Fontes de dados', href: '/admin/fontes', icon: 'sync' },
         { label: 'Financeiro', href: '/admin/financeiro', icon: 'chart' },
@@ -47,6 +43,16 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
         { label: 'Cupons', href: '/admin/cupons', icon: 'award' },
         { label: 'Planos e preços', href: '/admin/planos', icon: 'clipboard' },
         { label: 'Auditoria', href: '/admin/auditoria', icon: 'list' },
+      ],
+    },
+    {
+      label: 'Usuários',
+      items: [
+        { label: 'Empresas clientes', href: '/admin/empresas', icon: 'building' },
+        { label: 'Alunos e turmas', href: '/admin/alunos', icon: 'users' },
+        { label: 'Mentores', href: '/admin/mentores', icon: 'award' },
+        { label: 'Colaboradores', href: '/admin/colaboradores', icon: 'users' },
+        { label: 'Equipe administrativa', href: '/admin/equipe', icon: 'shield' },
       ],
     },
     { label: 'Ferramentas', items: [radar, academy, ana] },

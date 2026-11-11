@@ -13,8 +13,14 @@ import {
   formatDate,
   useResource,
 } from '../../components/ui';
-import { ActiveToggle } from '../_components/ActiveToggle';
+import { InvitationsPanel } from '../_components/InvitationsPanel';
 import { InviteForm } from '../_components/InviteForm';
+import {
+  ResetLinkBox,
+  UserRowActions,
+  lastAccessText,
+  type ResetLink,
+} from '../_components/UserActions';
 
 type Colaborador = {
   id: string;
@@ -22,6 +28,7 @@ type Colaborador = {
   email: string;
   ativo: boolean;
   created_at: string;
+  ultimo_acesso: string | null;
   nichos: string[] | null;
   buscas_ativas: number;
   oportunidades: number;
@@ -101,25 +108,42 @@ function NichosEditor({
 export function ColaboradoresAdmin() {
   const [people, reload] = useResource<{ data: Colaborador[] }>('/platform/colaboradores');
   const [error, setError] = useState('');
+  const [link, setLink] = useState<ResetLink | null>(null);
+  const [invitesKey, setInvitesKey] = useState(0);
   return (
     <>
       <Panel
         title="Convidar colaborador"
         description="A pessoa recebe um link, cria a senha e entra na área de Colaborador. Depois do convite, libere os nichos dela abaixo."
       >
-        <InviteForm kind="colaborador" onCreated={reload} />
+        <InviteForm
+          kind="colaborador"
+          onCreated={() => {
+            reload();
+            setInvitesKey((key) => key + 1);
+          }}
+        />
       </Panel>
       <Panel
         title="Colaboradores cadastrados"
         description="Para salvar oportunidades e agenda, cadastre os dados da empresa do Licite Comigo em Dados da empresa (área de Colaborador)."
       >
         {error ? <Alert kind="error">{error}</Alert> : null}
+        {link ? <ResetLinkBox link={link} onClose={() => setLink(null)} /> : null}
         <Resource value={people}>
           {({ data }) =>
             data.length ? (
               <Table
                 label="Colaboradores"
-                head={['Colaborador', 'Nichos liberados', 'Buscas', 'Situação', 'Desde', '']}
+                head={[
+                  'Colaborador',
+                  'Nichos liberados',
+                  'Buscas',
+                  'Último acesso',
+                  'Situação',
+                  'Desde',
+                  'Ações',
+                ]}
               >
                 {data.map((person) => (
                   <tr key={person.id}>
@@ -139,18 +163,17 @@ export function ColaboradoresAdmin() {
                       />
                     </td>
                     <td>{person.buscas_ativas}</td>
+                    <td>{lastAccessText(person.ultimo_acesso)}</td>
                     <td>
                       <Badge>{person.ativo ? 'Ativo' : 'Inativo'}</Badge>
                     </td>
                     <td>{formatDate(person.created_at)}</td>
                     <td>
-                      <ActiveToggle
+                      <UserRowActions
                         userId={person.id}
                         ativo={person.ativo}
-                        onDone={() => {
-                          setError('');
-                          reload();
-                        }}
+                        onGenerated={setLink}
+                        onChanged={reload}
                         onError={setError}
                       />
                     </td>
@@ -163,6 +186,7 @@ export function ColaboradoresAdmin() {
           }
         </Resource>
       </Panel>
+      <InvitationsPanel tipos={['colaborador']} refreshKey={invitesKey} />
     </>
   );
 }

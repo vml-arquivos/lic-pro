@@ -11,8 +11,14 @@ import {
   formatDate,
   useResource,
 } from '../../components/ui';
-import { ActiveToggle } from '../_components/ActiveToggle';
+import { InvitationsPanel } from '../_components/InvitationsPanel';
 import { InviteForm } from '../_components/InviteForm';
+import {
+  ResetLinkBox,
+  UserRowActions,
+  lastAccessText,
+  type ResetLink,
+} from '../_components/UserActions';
 
 type Mentor = {
   id: string;
@@ -20,6 +26,7 @@ type Mentor = {
   email: string;
   ativo: boolean;
   created_at: string;
+  ultimo_acesso: string | null;
   alunos_ativos: number;
   concessoes_ativas: number;
 };
@@ -27,20 +34,35 @@ type Mentor = {
 export function MentorsAdmin() {
   const [mentors, reload] = useResource<{ data: Mentor[] }>('/platform/mentors');
   const [error, setError] = useState('');
+  const [link, setLink] = useState<ResetLink | null>(null);
+  const [invitesKey, setInvitesKey] = useState(0);
   return (
     <>
       <Panel
         title="Convidar mentor"
         description="O mentor recebe um link, cria a senha e já entra na área de Mentor."
       >
-        <InviteForm kind="mentor" onCreated={reload} />
+        <InviteForm
+          kind="mentor"
+          onCreated={() => {
+            reload();
+            setInvitesKey((key) => key + 1);
+          }}
+        />
       </Panel>
-      <Panel title="Mentores cadastrados">
+      <Panel
+        title="Mentores cadastrados"
+        description="Ficha, edição e link para o mentor definir uma nova senha."
+      >
         {error ? <Alert kind="error">{error}</Alert> : null}
+        {link ? <ResetLinkBox link={link} onClose={() => setLink(null)} /> : null}
         <Resource value={mentors}>
           {({ data }) =>
             data.length ? (
-              <Table label="Mentores" head={['Mentor', 'Alunos ativos', 'Situação', 'Desde', '']}>
+              <Table
+                label="Mentores"
+                head={['Mentor', 'Alunos ativos', 'Último acesso', 'Situação', 'Desde', 'Ações']}
+              >
                 {data.map((mentor) => (
                   <tr key={mentor.id}>
                     <td>
@@ -48,18 +70,17 @@ export function MentorsAdmin() {
                       <small>{mentor.email}</small>
                     </td>
                     <td>{mentor.alunos_ativos}</td>
+                    <td>{lastAccessText(mentor.ultimo_acesso)}</td>
                     <td>
                       <Badge>{mentor.ativo ? 'Ativo' : 'Inativo'}</Badge>
                     </td>
                     <td>{formatDate(mentor.created_at)}</td>
                     <td>
-                      <ActiveToggle
+                      <UserRowActions
                         userId={mentor.id}
                         ativo={mentor.ativo}
-                        onDone={() => {
-                          setError('');
-                          reload();
-                        }}
+                        onGenerated={setLink}
+                        onChanged={reload}
                         onError={setError}
                       />
                     </td>
@@ -72,6 +93,7 @@ export function MentorsAdmin() {
           }
         </Resource>
       </Panel>
+      <InvitationsPanel tipos={['mentor']} refreshKey={invitesKey} />
     </>
   );
 }

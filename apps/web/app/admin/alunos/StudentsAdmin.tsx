@@ -12,8 +12,13 @@ import {
   useResource,
 } from '../../components/ui';
 import { errorText, send } from '../../../lib/api';
-import { ActiveToggle } from '../_components/ActiveToggle';
 import { InviteForm, InviteLink } from '../_components/InviteForm';
+import {
+  ResetLinkBox,
+  UserRowActions,
+  lastAccessText,
+  type ResetLink,
+} from '../_components/UserActions';
 
 type Student = {
   id: string;
@@ -30,6 +35,7 @@ type Student = {
   praticas_enviadas: number;
   praticas_devolvidas: number;
   certificados: number;
+  ultimo_acesso: string | null;
 };
 type ClassRow = {
   id: string;
@@ -47,7 +53,7 @@ type ClassRow = {
 type Mentor = { id: string; nome: string; ativo: boolean };
 type Invitation = {
   id: string;
-  tipo: 'aluno' | 'mentor' | 'empresa';
+  tipo: 'aluno' | 'mentor' | 'empresa' | 'colaborador' | 'equipe';
   nome: string;
   email: string;
   turma_nome: string | null;
@@ -64,7 +70,13 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number][0];
 
-const TIPOS = { aluno: 'Aluno', mentor: 'Mentor', empresa: 'Empresa' } as const;
+const TIPOS = {
+  aluno: 'Aluno',
+  mentor: 'Mentor',
+  empresa: 'Empresa',
+  colaborador: 'Colaborador',
+  equipe: 'Administrador',
+} as const;
 
 export function StudentsAdmin() {
   const [tab, setTab] = useState<Tab>('alunos');
@@ -75,6 +87,7 @@ export function StudentsAdmin() {
     '/platform/invitations',
   );
   const [error, setError] = useState('');
+  const [link, setLink] = useState<ResetLink | null>(null);
 
   const activeClasses =
     classes.state === 'ready' ? classes.data.data.filter((c) => c.status === 'ativa') : [];
@@ -116,7 +129,11 @@ export function StudentsAdmin() {
               onCreated={reloadAll}
             />
           </Panel>
-          <Panel title="Alunos matriculados">
+          <Panel
+            title="Alunos matriculados"
+            description="Abra a ficha para ver o que o aluno já acessou e o andamento no curso. “Link de senha” gera um link para ele definir uma nova senha."
+          >
+            {link ? <ResetLinkBox link={link} onClose={() => setLink(null)} /> : null}
             <Resource value={students}>
               {({ data }) =>
                 data.length ? (
@@ -130,9 +147,9 @@ export function StudentsAdmin() {
                       'Plano de 30 dias',
                       'Práticas (devolvidas/enviadas)',
                       'Certificados',
-                      'Último acesso ao curso',
+                      'Último acesso',
                       'Situação',
-                      '',
+                      'Ações',
                     ]}
                   >
                     {data.map((student) => (
@@ -153,18 +170,19 @@ export function StudentsAdmin() {
                           {student.praticas_devolvidas}/{student.praticas_enviadas}
                         </td>
                         <td>{student.certificados}</td>
-                        <td>{formatDate(student.ultimo_progresso)}</td>
+                        <td>
+                          {lastAccessText(student.ultimo_acesso)}
+                          <small>Última aula: {formatDate(student.ultimo_progresso)}</small>
+                        </td>
                         <td>
                           <Badge>{student.ativo ? 'Ativo' : 'Inativo'}</Badge>
                         </td>
                         <td>
-                          <ActiveToggle
+                          <UserRowActions
                             userId={student.id}
                             ativo={student.ativo}
-                            onDone={() => {
-                              setError('');
-                              reloadStudents();
-                            }}
+                            onGenerated={setLink}
+                            onChanged={reloadStudents}
                             onError={setError}
                           />
                         </td>

@@ -12,8 +12,14 @@ import {
   formatDate,
   useResource,
 } from '../../components/ui';
-import { ActiveToggle } from '../_components/ActiveToggle';
+import { InvitationsPanel } from '../_components/InvitationsPanel';
 import { InviteForm } from '../_components/InviteForm';
+import {
+  ResetLinkBox,
+  UserRowActions,
+  lastAccessText,
+  type ResetLink,
+} from '../_components/UserActions';
 
 type Company = {
   tenant_id: string;
@@ -29,6 +35,9 @@ type Company = {
   cnpj: string | null;
   buscas_ativas: number;
   oportunidades: number;
+  ultimo_acesso: string | null;
+  plano: string | null;
+  plano_status: string | null;
 };
 
 const nicheLabel = (code: string) => NICHE_CATALOG.find((n) => n.code === code)?.label ?? code;
@@ -36,28 +45,49 @@ const nicheLabel = (code: string) => NICHE_CATALOG.find((n) => n.code === code)?
 export function CompaniesAdmin() {
   const [companies, reload] = useResource<{ data: Company[] }>('/platform/companies');
   const [error, setError] = useState('');
+  const [link, setLink] = useState<ResetLink | null>(null);
+  const [invitesKey, setInvitesKey] = useState(0);
   return (
     <>
       <Panel
         title="Convidar empresa"
         description="Gera um link de cadastro. A empresa cria a própria senha e entra com um usuário."
       >
-        <InviteForm kind="empresa" onCreated={reload} />
+        <InviteForm
+          kind="empresa"
+          onCreated={() => {
+            reload();
+            setInvitesKey((key) => key + 1);
+          }}
+        />
       </Panel>
-      <Panel title="Empresas cadastradas">
+      <Panel
+        title="Empresas cadastradas"
+        description="Abra a ficha para ver o que cada empresa já acessou, buscou e está procurando. Em “Editar” você corrige nome, e-mail e empresa; “Link de senha” gera um novo link para a empresa definir a senha."
+      >
         {error ? <Alert kind="error">{error}</Alert> : null}
+        {link ? <ResetLinkBox link={link} onClose={() => setLink(null)} /> : null}
         <Resource value={companies}>
           {({ data }) =>
             data.length ? (
               <Table
                 label="Empresas clientes"
-                head={['Empresa', 'Responsável', 'Nichos do Radar', 'Uso', 'Situação', 'Desde', '']}
+                head={[
+                  'Empresa',
+                  'Responsável',
+                  'O que procura',
+                  'O que já fez',
+                  'Plano',
+                  'Situação',
+                  'Ações',
+                ]}
               >
                 {data.map((company) => (
                   <tr key={company.tenant_id}>
                     <td>
                       <strong>{company.razao_social ?? company.nome}</strong>
                       <small>{company.cnpj ?? 'CNPJ não informado'}</small>
+                      <small>Cliente desde {formatDate(company.created_at)}</small>
                     </td>
                     <td>
                       {company.responsavel ?? '—'}
@@ -71,22 +101,26 @@ export function CompaniesAdmin() {
                           : '—'}
                     </td>
                     <td>
-                      {company.buscas_ativas} busca(s)
-                      <small>{company.oportunidades} oportunidade(s) salva(s)</small>
+                      Último acesso: {lastAccessText(company.ultimo_acesso)}
+                      <small>
+                        {company.buscas_ativas} busca(s) salva(s) · {company.oportunidades}{' '}
+                        oportunidade(s)
+                      </small>
+                    </td>
+                    <td>
+                      {company.plano ?? 'Sem plano'}
+                      {company.plano_status ? <small>{company.plano_status}</small> : null}
                     </td>
                     <td>
                       <Badge>{company.ativo === false ? 'Inativo' : 'Ativo'}</Badge>
                     </td>
-                    <td>{formatDate(company.created_at)}</td>
                     <td>
                       {company.usuario_id ? (
-                        <ActiveToggle
+                        <UserRowActions
                           userId={company.usuario_id}
                           ativo={company.ativo !== false}
-                          onDone={() => {
-                            setError('');
-                            reload();
-                          }}
+                          onGenerated={setLink}
+                          onChanged={reload}
                           onError={setError}
                         />
                       ) : null}
@@ -100,6 +134,7 @@ export function CompaniesAdmin() {
           }
         </Resource>
       </Panel>
+      <InvitationsPanel tipos={['empresa']} refreshKey={invitesKey} />
     </>
   );
 }

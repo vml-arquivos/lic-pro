@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { PASSWORD_HINT, PASSWORD_MIN_LENGTH, PASSWORD_WEAK_MESSAGE } from '@licitecomigo/shared';
 import { Alert } from '../components/ui';
 
 type Preview = {
-  tipo: 'aluno' | 'mentor' | 'empresa' | 'colaborador';
+  tipo: 'aluno' | 'mentor' | 'empresa' | 'colaborador' | 'equipe';
   nome: string;
   email: string;
   empresa_nome: string | null;
@@ -15,6 +16,7 @@ const WHO = {
   aluno: 'aluno do curso',
   mentor: 'mentor',
   colaborador: 'colaborador da operação',
+  equipe: 'administrador do sistema',
   empresa: 'conta da empresa',
 } as const;
 
@@ -82,7 +84,7 @@ export function InviteAccept() {
       const payload = (await response.json().catch(() => ({}))) as { error?: string };
       setError(
         payload.error === 'weak_password'
-          ? 'Use pelo menos 12 caracteres, com maiúscula, minúscula, número e símbolo.'
+          ? PASSWORD_WEAK_MESSAGE
           : payload.error === 'invalid_or_expired_invitation'
             ? 'Este convite não vale mais. Peça um novo link à equipe.'
             : response.status === 429
@@ -145,7 +147,7 @@ export function InviteAccept() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               autoComplete="new-password"
-              minLength={12}
+              minLength={PASSWORD_MIN_LENGTH}
               required
             />
           </label>
@@ -156,11 +158,11 @@ export function InviteAccept() {
               value={confirm}
               onChange={(event) => setConfirm(event.target.value)}
               autoComplete="new-password"
-              minLength={12}
+              minLength={PASSWORD_MIN_LENGTH}
               required
             />
           </label>
-          <small>Mínimo de 12 caracteres, com maiúscula, minúscula, número e símbolo.</small>
+          <small>{PASSWORD_HINT}</small>
           <label className="invite-check">
             <input
               type="checkbox"

@@ -90,10 +90,12 @@ contas nem o curso.
 
 ## Como a pessoa entra
 
-1. A Administração cria a turma e gera o convite (empresa, aluno, mentor ou colaborador).
+1. A Administração cria a turma e gera o convite (empresa, aluno, mentor, colaborador ou administrador).
 2. O link vale 7 dias, é de uso único e aparece só na criação. Funciona sem e-mail configurado;
    quando o e-mail estiver ativo, o convite também é enviado.
-3. A pessoa abre o link, aceita os termos, cria a senha e entra na própria área.
+3. A pessoa abre o link, aceita os termos, cria a senha (mínimo de 8 caracteres) e entra na própria área.
+4. Quem esqueceu ou perdeu o acesso recebe da Administração um link de nova senha, pela ficha ou
+   pela lista do seu tipo de usuário.
 
 ## Fica para as próximas fases
 
