@@ -14,7 +14,8 @@ export function loginErrorText(status: number, code?: string): string {
     return 'Muitas tentativas seguidas. Aguarde um minuto e tente de novo.';
   }
   if (status === 400) return 'Confira o e-mail digitado.';
-  return 'Não foi possível falar com o servidor. Isso não é erro de senha: tente de novo em instantes ou avise a equipe técnica.';
+  const detail = status ? ` (código ${status}${code ? `: ${code}` : ''})` : '';
+  return `Não foi possível falar com o servidor. Isso não é erro de senha: tente de novo em instantes ou avise a equipe técnica.${detail}`;
 }
 
 /** Volta para a página que o usuário queria abrir, só se for um caminho interno. */

@@ -425,13 +425,22 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       }
       await client.query("SELECT set_config('app.tenant_id', $1, true)", [user.tenant_id]);
       await client.query("SELECT set_config('app.user_id', $1, true)", [user.id]);
-      await client.query(
-        `INSERT INTO atividade_usuario (tenant_id, usuario_id, dia, recurso)
-         VALUES ($1, $2, (now() AT TIME ZONE 'America/Sao_Paulo')::date, 'login')
-         ON CONFLICT (tenant_id, usuario_id, dia, recurso)
-         DO UPDATE SET total = atividade_usuario.total + 1, ultimo_em = now()`,
-        [user.tenant_id, user.id],
-      );
+      // O registro de entrada é um extra: se falhar (tabela ainda não migrada, por exemplo), o
+      // login segue normalmente. SAVEPOINT evita que o erro derrube a transação inteira.
+      await client.query('SAVEPOINT registro_entrada');
+      try {
+        await client.query(
+          `INSERT INTO atividade_usuario (tenant_id, usuario_id, dia, recurso)
+           VALUES ($1, $2, (now() AT TIME ZONE 'America/Sao_Paulo')::date, 'login')
+           ON CONFLICT (tenant_id, usuario_id, dia, recurso)
+           DO UPDATE SET total = atividade_usuario.total + 1, ultimo_em = now()`,
+          [user.tenant_id, user.id],
+        );
+        await client.query('RELEASE SAVEPOINT registro_entrada');
+      } catch (error) {
+        await client.query('ROLLBACK TO SAVEPOINT registro_entrada');
+        request.log.warn({ err: error }, 'login_activity_failed');
+      }
       const company = await client.query<{ empresa_id: string }>(
         `SELECT empresa_id FROM empresa_usuarios
           WHERE tenant_id = $1 AND usuario_id = $2 AND ativo = true
