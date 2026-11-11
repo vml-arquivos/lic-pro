@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { errorText, send } from '../../lib/api';
 import { Alert, Badge, Empty, Panel, Resource, formatDate, useResource } from '../components/ui';
+import { Paginado } from '../components/Pager';
 
 type Regra = {
   id: string;
@@ -90,61 +91,65 @@ export function BuscasApp() {
               {({ data: rules }) => (
                 <Resource value={opcoes}>
                   {(options) => (
-                    <>
-                      {data.map((busca) => {
-                        const regra = rules.find((item) => item.busca_id === busca.id);
-                        return (
-                          <Panel
-                            key={busca.id}
-                            title={busca.nome}
-                            description={`Atualizada em ${formatDate(busca.updated_at, true)}`}
-                            actions={
-                              <div className="ui-table-actions">
-                                <Link
-                                  className="ui-btn ui-btn-small"
-                                  href={radarHref(busca.filtros)}
-                                >
-                                  Abrir no Radar
-                                </Link>
-                                <button
-                                  type="button"
-                                  className="ui-btn ui-btn-danger ui-btn-small"
-                                  onClick={() => {
-                                    if (
-                                      window.confirm(
-                                        `Excluir a busca “${busca.nome}” e os avisos dela?`,
-                                      )
-                                    )
-                                      void run(
-                                        () => send('DELETE', `/saved-searches/${busca.id}`),
-                                        'Busca excluída.',
-                                      );
-                                  }}
-                                >
-                                  Excluir
-                                </button>
-                              </div>
-                            }
-                          >
-                            {regra ? (
-                              <RegraForm
-                                key={`${regra.id}-${JSON.stringify(regra)}`}
-                                regra={regra}
-                                options={options}
-                                onSave={(body) =>
-                                  run(
-                                    () => send('PATCH', `/alert-rules/${regra.id}`, body),
-                                    'Avisos atualizados.',
-                                  )
+                    <Paginado itens={data} tamanho={5}>
+                      {(visiveis) => (
+                        <>
+                          {visiveis.map((busca) => {
+                            const regra = rules.find((item) => item.busca_id === busca.id);
+                            return (
+                              <Panel
+                                key={busca.id}
+                                title={busca.nome}
+                                description={`Atualizada em ${formatDate(busca.updated_at, true)}`}
+                                actions={
+                                  <div className="ui-table-actions">
+                                    <Link
+                                      className="ui-btn ui-btn-small"
+                                      href={radarHref(busca.filtros)}
+                                    >
+                                      Abrir no Radar
+                                    </Link>
+                                    <button
+                                      type="button"
+                                      className="ui-btn ui-btn-danger ui-btn-small"
+                                      onClick={() => {
+                                        if (
+                                          window.confirm(
+                                            `Excluir a busca “${busca.nome}” e os avisos dela?`,
+                                          )
+                                        )
+                                          void run(
+                                            () => send('DELETE', `/saved-searches/${busca.id}`),
+                                            'Busca excluída.',
+                                          );
+                                      }}
+                                    >
+                                      Excluir
+                                    </button>
+                                  </div>
                                 }
-                              />
-                            ) : (
-                              <Empty>Esta busca ainda não tem avisos configurados.</Empty>
-                            )}
-                          </Panel>
-                        );
-                      })}
-                    </>
+                              >
+                                {regra ? (
+                                  <RegraForm
+                                    key={`${regra.id}-${JSON.stringify(regra)}`}
+                                    regra={regra}
+                                    options={options}
+                                    onSave={(body) =>
+                                      run(
+                                        () => send('PATCH', `/alert-rules/${regra.id}`, body),
+                                        'Avisos atualizados.',
+                                      )
+                                    }
+                                  />
+                                ) : (
+                                  <Empty>Esta busca ainda não tem avisos configurados.</Empty>
+                                )}
+                              </Panel>
+                            );
+                          })}
+                        </>
+                      )}
+                    </Paginado>
                   )}
                 </Resource>
               )}

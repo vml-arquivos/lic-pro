@@ -210,7 +210,8 @@ suite('Análise de oportunidades: ranking, comparação e simulador (PostgreSQL 
     const { meus } = await ranking('limite=100');
     const a = meus.find((item) => item.titulo.includes(' a '))!;
     const c = meus.find((item) => item.titulo.includes(' c '))!;
-    const margem = (item: Linha) => item.analise.componentes.find((x) => x.chave === 'margem')!.pontos;
+    const margem = (item: Linha) =>
+      item.analise.componentes.find((x) => x.chave === 'margem')!.pontos;
     // A: órgão fecha 20% abaixo (100 − 50 = 50) + estimado 25% acima da mediana (+15) = 65
     expect(margem(a)).toBe(65);
     // C: sem histórico e sem itens: neutro
@@ -224,7 +225,9 @@ suite('Análise de oportunidades: ranking, comparação e simulador (PostgreSQL 
     expect(lucrativas[0]!.titulo).toContain(' b '); // 400 mil × 0,9 × 15%
 
     const faceis = (await ranking('limite=100&foco=faceis')).meus;
-    const fac = faceis.map((item) => item.analise.componentes.find((x) => x.chave === 'facilidade')!.pontos);
+    const fac = faceis.map(
+      (item) => item.analise.componentes.find((x) => x.chave === 'facilidade')!.pontos,
+    );
     expect(fac).toEqual([...fac].sort((x, y) => y - x));
     expect(faceis[0]!.titulo).toContain(' c '); // dispensa pequena
   });
@@ -234,6 +237,58 @@ suite('Análise de oportunidades: ranking, comparação e simulador (PostgreSQL 
     expect(sp.map((item) => item.titulo.includes(' b '))).toEqual([true]);
     const pequenos = (await ranking('limite=100&valor_max=30000')).meus;
     expect(pequenos.every((item) => item.titulo.includes(' c '))).toBe(true);
+  });
+
+  it('o perfil do Radar vale sozinho no ranking e pode ser desligado', async () => {
+    const outro = randomUUID();
+    await insertUser(outro, tenantA, 'admin', 'Admin Perfil');
+    const headers = as(outro, tenantA, 'admin');
+    const salvo = await app.inject({
+      method: 'PUT',
+      url: '/radar/perfil',
+      headers,
+      payload: {
+        ufs: ['SP'],
+        palavras_interesse: [],
+        valor_min: null,
+        valor_max: null,
+        modalidades: [],
+      },
+    });
+    expect(salvo.statusCode, salvo.body).toBe(200);
+
+    const comPerfil = await app.inject({
+      method: 'GET',
+      url: '/analise/ranking?limite=100',
+      headers,
+    });
+    const corpo = comPerfil.json() as {
+      itens: Linha[];
+      perfil_aplicado: { usado: boolean; ufs: string[] };
+      nichos: string[];
+    };
+    const meus = corpo.itens.filter((item) => item.titulo.includes(suffix));
+    expect(corpo.perfil_aplicado).toMatchObject({ usado: true, ufs: ['SP'] });
+    expect(corpo.nichos.length).toBeGreaterThan(0);
+    expect(meus.map((item) => item.titulo.includes(' b '))).toEqual([true]);
+
+    const semPerfil = await app.inject({
+      method: 'GET',
+      url: '/analise/ranking?limite=100&usar_perfil=false',
+      headers,
+    });
+    const aberto = semPerfil.json() as { itens: Linha[]; perfil_aplicado: { usado: boolean } };
+    expect(aberto.perfil_aplicado.usado).toBe(false);
+    expect(aberto.itens.filter((item) => item.titulo.includes(suffix)).length).toBeGreaterThan(1);
+
+    // O filtro escolhido à mão vale mais que o perfil.
+    const mao = await app.inject({
+      method: 'GET',
+      url: '/analise/ranking?limite=100&valor_max=30000',
+      headers,
+    });
+    const manual = mao.json() as { perfil_aplicado: { ufs: string[]; valor_max: number | null } };
+    expect(manual.perfil_aplicado.valor_max).toBeNull();
   });
 
   it('compara de 2 a 4 editais e respeita os limites', async () => {
@@ -256,7 +311,11 @@ suite('Análise de oportunidades: ranking, comparação e simulador (PostgreSQL 
     expect(body.editais[0]!.preco_vs_mediana?.razao).toBe(1.25);
     expect(body.editais[0]!.itens_amostra).toHaveLength(1);
 
-    const one = await app.inject({ method: 'GET', url: `/analise/comparar?ids=${ids.a}`, headers: ADMIN() });
+    const one = await app.inject({
+      method: 'GET',
+      url: `/analise/comparar?ids=${ids.a}`,
+      headers: ADMIN(),
+    });
     expect(one.statusCode).toBeGreaterThanOrEqual(400);
     const five = await app.inject({
       method: 'GET',
@@ -301,7 +360,11 @@ suite('Análise de oportunidades: ranking, comparação e simulador (PostgreSQL 
       },
     });
     expect(res.statusCode, res.body).toBe(200);
-    const json = res.json() as { custo_total: number; preco_minimo: number; desconto_maximo_pct: number };
+    const json = res.json() as {
+      custo_total: number;
+      preco_minimo: number;
+      desconto_maximo_pct: number;
+    };
     expect(json.custo_total).toBe(6_000);
     expect(json.preco_minimo).toBe(75);
     expect(json.desconto_maximo_pct).toBe(25);

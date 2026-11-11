@@ -6,6 +6,7 @@ import { UFS } from '@licitecomigo/shared';
 import { api, errorText } from '../../lib/api';
 import { reais } from '../../lib/money';
 import { Alert, Empty, Kpi, Panel, Table, formatDate, formatNumber } from '../components/ui';
+import { Paginado } from '../components/Pager';
 
 type Stats = {
   amostras: number;
@@ -308,24 +309,28 @@ export function PrecosApp({ nichos }: Readonly<{ nichos: readonly NichoOption[] 
               title={result.descricao ?? chosen?.descricao ?? `CATMAT ${result.catmat}`}
               description={`${result.extremos_removidos ? `${result.extremos_removidos} valor(es) muito fora da curva foram desconsiderados no resumo. ` : ''}Faixa comum (25% a 75%): ${reais(stats.p25)} a ${reais(stats.p75)}.`}
             >
-              <Table
-                label="Preços praticados"
-                head={['Data', 'Preço unitário', 'Qtd.', 'Órgão (UASG)', 'UF', 'Fornecedor']}
-              >
-                {result.itens.map((item, index) => (
-                  <tr key={`${item.data}-${index}`}>
-                    <td>{formatDate(item.data)}</td>
-                    <td>
-                      <strong>{reais(item.preco)}</strong>
-                      {item.unidade ? <small>{item.unidade}</small> : null}
-                    </td>
-                    <td>{formatNumber(item.quantidade)}</td>
-                    <td>{item.uasg ?? '—'}</td>
-                    <td>{item.uf ?? '—'}</td>
-                    <td>{item.fornecedor ?? '—'}</td>
-                  </tr>
-                ))}
-              </Table>
+              <Paginado itens={result.itens}>
+                {(visiveis) => (
+                  <Table
+                    label="Preços praticados"
+                    head={['Data', 'Preço unitário', 'Qtd.', 'Órgão (UASG)', 'UF', 'Fornecedor']}
+                  >
+                    {visiveis.map((item, index) => (
+                      <tr key={`${item.data}-${index}`}>
+                        <td>{formatDate(item.data)}</td>
+                        <td>
+                          <strong>{reais(item.preco)}</strong>
+                          {item.unidade ? <small>{item.unidade}</small> : null}
+                        </td>
+                        <td>{formatNumber(item.quantidade)}</td>
+                        <td>{item.uasg ?? '—'}</td>
+                        <td>{item.uf ?? '—'}</td>
+                        <td>{item.fornecedor ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </Table>
+                )}
+              </Paginado>
               <p className="plan-note">
                 Fonte: {result.fonte.nome}, consultada em{' '}
                 {formatDate(result.fonte.consultado_em, true)}. São dados de apoio: o preço de
@@ -364,26 +369,30 @@ export function PrecosApp({ nichos }: Readonly<{ nichos: readonly NichoOption[] 
                   tone="ok"
                 />
               </section>
-              <Table
-                label="Pregões fechados"
-                head={['Licitação', 'Órgão', 'UF', 'Estimado', 'Fechou em', 'Economia']}
-              >
-                {fechados.data.itens.map((item) => (
-                  <tr key={item.id}>
-                    <td>
-                      <Link href={`/radar/${item.id}`}>{item.titulo ?? 'Sem título'}</Link>
-                      <small>{formatDate(item.data_publicacao)}</small>
-                    </td>
-                    <td>{item.orgao ?? '—'}</td>
-                    <td>{item.uf ?? '—'}</td>
-                    <td>{reais(item.valor_estimado)}</td>
-                    <td>
-                      <strong>{reais(item.valor_homologado)}</strong>
-                    </td>
-                    <td>{pct(item.economia_pct)}</td>
-                  </tr>
-                ))}
-              </Table>
+              <Paginado itens={fechados.data.itens}>
+                {(visiveis) => (
+                  <Table
+                    label="Pregões fechados"
+                    head={['Licitação', 'Órgão', 'UF', 'Estimado', 'Fechou em', 'Economia']}
+                  >
+                    {visiveis.map((item) => (
+                      <tr key={item.id}>
+                        <td>
+                          <Link href={`/radar/${item.id}`}>{item.titulo ?? 'Sem título'}</Link>
+                          <small>{formatDate(item.data_publicacao)}</small>
+                        </td>
+                        <td>{item.orgao ?? '—'}</td>
+                        <td>{item.uf ?? '—'}</td>
+                        <td>{reais(item.valor_estimado)}</td>
+                        <td>
+                          <strong>{reais(item.valor_homologado)}</strong>
+                        </td>
+                        <td>{pct(item.economia_pct)}</td>
+                      </tr>
+                    ))}
+                  </Table>
+                )}
+              </Paginado>
             </>
           ) : (
             <Empty>

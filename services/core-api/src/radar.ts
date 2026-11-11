@@ -84,7 +84,10 @@ async function loadProfile(
   };
 }
 
-export async function searchContext(client: PoolClient, request: FastifyRequest): Promise<SearchContext> {
+export async function searchContext(
+  client: PoolClient,
+  request: FastifyRequest,
+): Promise<SearchContext> {
   return { userId: request.user.sub, profile: await loadProfile(client, request) };
 }
 

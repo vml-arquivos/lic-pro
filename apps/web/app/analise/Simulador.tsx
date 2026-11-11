@@ -19,12 +19,22 @@ function Campo({
   onChange,
   ajuda,
   sufixo,
-}: Readonly<{ rotulo: string; valor: string; onChange: (value: string) => void; ajuda?: string; sufixo?: string }>) {
+}: Readonly<{
+  rotulo: string;
+  valor: string;
+  onChange: (value: string) => void;
+  ajuda?: string;
+  sufixo?: string;
+}>) {
   return (
     <label>
       {rotulo}
       <span className="an-campo">
-        <input inputMode="decimal" value={valor} onChange={(event) => onChange(event.target.value.replace(/[^\d.,]/g, ''))} />
+        <input
+          inputMode="decimal"
+          value={valor}
+          onChange={(event) => onChange(event.target.value.replace(/[^\d.,]/g, ''))}
+        />
         {sufixo ? <em>{sufixo}</em> : null}
       </span>
       {ajuda ? <small>{ajuda}</small> : null}
@@ -75,8 +85,9 @@ export function Simulador({ inicial }: Readonly<{ inicial: SimulacaoInicial | nu
     <>
       {inicial ? (
         <Alert kind="info">
-          Simulando o edital inteiro “{inicial.titulo}”: quantidade 1 e o valor estimado total como referência. Coloque no custo
-          o total que você gastaria para entregar tudo. Para um item só, mude a quantidade e o preço unitário.
+          Simulando o edital inteiro “{inicial.titulo}”: quantidade 1 e o valor estimado total como
+          referência. Coloque no custo o total que você gastaria para entregar tudo. Para um item
+          só, mude a quantidade e o preço unitário.
         </Alert>
       ) : null}
       <div className="an-sim">
@@ -84,25 +95,68 @@ export function Simulador({ inicial }: Readonly<{ inicial: SimulacaoInicial | nu
           <h2>Seus números</h2>
           <div className="an-sim-grid">
             <Campo rotulo="Quantidade" valor={quantidade} onChange={setQuantidade} />
-            <Campo rotulo="Seu custo por unidade (R$)" valor={custo} onChange={setCusto} ajuda="Compra, produção ou serviço, sem imposto de venda." />
+            <Campo
+              rotulo="Seu custo por unidade (R$)"
+              valor={custo}
+              onChange={setCusto}
+              ajuda="Compra, produção ou serviço, sem imposto de venda."
+            />
             <Campo rotulo="Frete total (R$)" valor={frete} onChange={setFrete} />
-            <Campo rotulo="Outros custos totais (R$)" valor={outros} onChange={setOutros} ajuda="Embalagem, garantia, mão de obra." />
-            <Campo rotulo="Impostos sobre a venda" valor={impostos} onChange={setImpostos} sufixo="%" ajuda="Confirme com seu contador (Simples, Presumido…)." />
-            <Campo rotulo="Comissão / intermediação" valor={comissao} onChange={setComissao} sufixo="%" />
-            <Campo rotulo="Margem mínima que você aceita" valor={margemMin} onChange={setMargemMin} sufixo="%" ajuda="Lucro sobre o valor vendido." />
-            <Campo rotulo="Preço de referência do edital (R$ por unidade)" valor={referencia} onChange={setReferencia} ajuda="O valor estimado pelo órgão, que é o teto." />
-            <Campo rotulo="Preço de mercado (R$ por unidade)" valor={mercado} onChange={setMercado} ajuda="Opcional. Ex.: a mediana em Preços pagos." />
+            <Campo
+              rotulo="Outros custos totais (R$)"
+              valor={outros}
+              onChange={setOutros}
+              ajuda="Embalagem, garantia, mão de obra."
+            />
+            <Campo
+              rotulo="Impostos sobre a venda"
+              valor={impostos}
+              onChange={setImpostos}
+              sufixo="%"
+              ajuda="Confirme com seu contador (Simples, Presumido…)."
+            />
+            <Campo
+              rotulo="Comissão / intermediação"
+              valor={comissao}
+              onChange={setComissao}
+              sufixo="%"
+            />
+            <Campo
+              rotulo="Margem mínima que você aceita"
+              valor={margemMin}
+              onChange={setMargemMin}
+              sufixo="%"
+              ajuda="Lucro sobre o valor vendido."
+            />
+            <Campo
+              rotulo="Preço de referência do edital (R$ por unidade)"
+              valor={referencia}
+              onChange={setReferencia}
+              ajuda="O valor estimado pelo órgão, que é o teto."
+            />
+            <Campo
+              rotulo="Preço de mercado (R$ por unidade)"
+              valor={mercado}
+              onChange={setMercado}
+              ajuda="Opcional. Ex.: a mediana em Preços pagos."
+            />
           </div>
         </section>
 
         <section className="an-sim-resultado" aria-live="polite">
           {!preenchido ? (
-            <Alert kind="info">Informe o seu custo por unidade para ver o preço mínimo e os cenários.</Alert>
+            <Alert kind="info">
+              Informe o seu custo por unidade para ver o preço mínimo e os cenários.
+            </Alert>
           ) : (
             <>
               <div className="ui-kpis an-kpis">
                 <Kpi label="Custo total" value={moeda2(resultado.custo_total)} />
-                <Kpi label="Ponto de equilíbrio" value={moeda2(resultado.preco_equilibrio)} hint="preço por unidade sem lucro" />
+                <Kpi
+                  label="Ponto de equilíbrio"
+                  value={moeda2(resultado.preco_equilibrio)}
+                  hint="preço por unidade sem lucro"
+                />
                 <Kpi
                   label="Preço mínimo com margem"
                   value={moeda2(resultado.preco_minimo)}
@@ -111,12 +165,18 @@ export function Simulador({ inicial }: Readonly<{ inicial: SimulacaoInicial | nu
                 />
                 <Kpi
                   label="Desconto máximo no lance"
-                  value={resultado.desconto_maximo_pct === null ? '—' : `${resultado.desconto_maximo_pct.toLocaleString('pt-BR')}%`}
+                  value={
+                    resultado.desconto_maximo_pct === null
+                      ? '—'
+                      : `${resultado.desconto_maximo_pct.toLocaleString('pt-BR')}%`
+                  }
                   hint="sobre o preço de referência"
                 />
               </div>
               {resultado.leitura_mercado ? (
-                <Alert kind={resultado.leitura_mercado.diferenca_pct <= 0 ? 'success' : 'info'}>{resultado.leitura_mercado.texto}</Alert>
+                <Alert kind={resultado.leitura_mercado.diferenca_pct <= 0 ? 'success' : 'info'}>
+                  {resultado.leitura_mercado.texto}
+                </Alert>
               ) : null}
               {resultado.avisos.map((aviso) => (
                 <Alert key={aviso} kind="info">
@@ -138,7 +198,10 @@ export function Simulador({ inicial }: Readonly<{ inicial: SimulacaoInicial | nu
                     </thead>
                     <tbody>
                       {resultado.cenarios.map((cenario) => (
-                        <tr key={cenario.desconto_pct} className={cenario.atinge_margem_minima ? '' : 'an-sim-ruim'}>
+                        <tr
+                          key={cenario.desconto_pct}
+                          className={cenario.atinge_margem_minima ? '' : 'an-sim-ruim'}
+                        >
                           <td>{cenario.desconto_pct}%</td>
                           <td>{moeda2(cenario.preco_unitario)}</td>
                           <td>{moeda2(cenario.receita)}</td>
@@ -155,7 +218,8 @@ export function Simulador({ inicial }: Readonly<{ inicial: SimulacaoInicial | nu
                 </div>
               ) : null}
               <p className="an-aviso">
-                Simulação de apoio com os números que você informou. Confira tributos, garantias e regras do edital antes de dar o lance.
+                Simulação de apoio com os números que você informou. Confira tributos, garantias e
+                regras do edital antes de dar o lance.
               </p>
             </>
           )}

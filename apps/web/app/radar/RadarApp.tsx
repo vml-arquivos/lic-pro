@@ -7,8 +7,9 @@ import { api, errorText, send } from '../../lib/api';
 import { Alert, Empty, PageHeader } from '../components/ui';
 import { RadarFilters } from './RadarFilters';
 import { RadarPainel } from './RadarPainel';
-import { RadarPerfil } from './RadarPerfil';
+import { PerfilRadar } from './PerfilRadar';
 import { FacetPanel, ResultList } from './RadarResults';
+import { SEM_PERFIL, comPerfil, usePerfil } from './perfil-lib';
 import { ORDENS, activeFilterCount, type ListResponse } from './radar-lib';
 
 type LoadState = 'loading' | 'ready' | 'anonymous' | 'niche_required' | 'error';
@@ -28,6 +29,13 @@ export function RadarApp({
   const router = useRouter();
   const searchParams = useSearchParams();
   const params = useMemo(() => new URLSearchParams(searchParams.toString()), [searchParams]);
+  const { dados: perfilDados, recarregar: recarregarPerfil } = usePerfil();
+  const usandoPerfil = params.get(SEM_PERFIL) !== '1';
+  const efetivos = useMemo(() => {
+    const final = comPerfil(params, usandoPerfil && perfilDados ? perfilDados.perfil : null);
+    if (!final.get('page_size')) final.set('page_size', '10');
+    return final;
+  }, [params, usandoPerfil, perfilDados]);
   const [result, setResult] = useState<ListResponse | null>(null);
   const [state, setState] = useState<LoadState>('loading');
   const [hasProfile, setHasProfile] = useState(false);
@@ -46,14 +54,16 @@ export function RadarApp({
   );
 
   const pick = useCallback(
-    (filters: Record<string, string>) => apply(new URLSearchParams(filters)),
+    (filters: Record<string, string>) =>
+      apply(new URLSearchParams({ ...filters, [SEM_PERFIL]: '1' })),
     [apply],
   );
 
   useEffect(() => {
     const controller = new AbortController();
     setState('loading');
-    const query = params.toString();
+    if (signedIn && !perfilDados) return () => controller.abort();
+    const query = efetivos.toString();
     void fetch(`/api/core/editais${query ? `?${query}` : ''}`, {
       cache: 'no-store',
       signal: controller.signal,
@@ -73,7 +83,7 @@ export function RadarApp({
         setState('error');
       });
     return () => controller.abort();
-  }, [params, profileVersion]);
+  }, [efetivos, profileVersion, signedIn, perfilDados]);
 
   useEffect(() => {
     void api<{ modalidade?: string[] }>('/catalog/filters')
@@ -88,7 +98,7 @@ export function RadarApp({
   }
 
   function exportHref(format: 'xlsx' | 'csv') {
-    const next = new URLSearchParams(params);
+    const next = new URLSearchParams(efetivos);
     next.delete('page');
     next.delete('page_size');
     next.set('formato', format);
@@ -99,7 +109,7 @@ export function RadarApp({
     const name = saveName.trim();
     if (!name) return setNotice({ kind: 'error', text: 'Dê um nome para a busca.' });
     const filtros: Record<string, unknown> = {};
-    params.forEach((value, key) => {
+    efetivos.forEach((value, key) => {
       if (['page', 'page_size', 'facetas'].includes(key)) return;
       if (key === 'nicho')
         filtros.nicho = [...((filtros.nicho as string[] | undefined) ?? []), value];
@@ -117,7 +127,9 @@ export function RadarApp({
     }
   }
 
-  const filterCount = activeFilterCount(params);
+  const filterCount = activeFilterCount(
+    new URLSearchParams([...params].filter(([key]) => key !== SEM_PERFIL)),
+  );
 
   return (
     <div className="ui-page rd-page">
@@ -129,10 +141,23 @@ export function RadarApp({
       {signedIn ? (
         <RadarPainel onPick={pick} refreshKey={profileVersion} onProfile={setHasProfile} />
       ) : null}
-      {signedIn ? (
-        <RadarPerfil
+      {signedIn && perfilDados ? (
+        <PerfilRadar
+          key={JSON.stringify(perfilDados)}
+          dados={perfilDados}
           modalidades={modalidades}
-          onSaved={() => setProfileVersion((value) => value + 1)}
+          nichosTravados={nichosTravados}
+          usando={usandoPerfil}
+          onUsar={(usar) => {
+            const next = new URLSearchParams(params);
+            if (usar) next.delete(SEM_PERFIL);
+            else next.set(SEM_PERFIL, '1');
+            apply(next);
+          }}
+          onSaved={() => {
+            recarregarPerfil();
+            setProfileVersion((value) => value + 1);
+          }}
         />
       ) : null}
       <RadarFilters params={params} onApply={apply} signedIn={signedIn} hasProfile={hasProfile} />
@@ -159,10 +184,10 @@ export function RadarApp({
           ) : (
             <>
               <h2>Escolha seus nichos para usar o Radar</h2>
-              <p>Selecione de um a três nichos. Eles definem o que aparece na sua busca.</p>
-              <Link className="ui-btn" href="/onboarding">
-                Escolher meus nichos
-              </Link>
+              <p>
+                Preencha o perfil acima com de um a três nichos. Eles definem o que aparece na sua
+                busca.
+              </p>
             </>
           )}
         </section>
@@ -241,8 +266,9 @@ export function RadarApp({
             ) : null}
             {result.data.length === 0 ? (
               <Empty>
-                Nenhum edital encontrado com esses filtros. Tire algum filtro ou amplie o prazo. O
-                Radar não inventa resultados sem fonte oficial.
+                Nenhum edital encontrado com esses filtros. Desmarque “Filtrar pelo meu perfil”,
+                tire algum filtro ou amplie o prazo. O Radar não inventa resultados sem fonte
+                oficial.
               </Empty>
             ) : (
               <ResultList key={params.toString()} items={result.data} signedIn={signedIn} />

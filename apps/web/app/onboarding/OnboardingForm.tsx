@@ -3,14 +3,6 @@
 import { useState } from 'react';
 import { NICHE_CATALOG, type Area } from '@licitecomigo/shared';
 
-const questions = [
-  'Você já participou de uma licitação?',
-  'Como prefere aprender um assunto novo?',
-  'Qual é seu objetivo principal agora?',
-  'Como está sua familiaridade com termos de compras públicas?',
-  'Você quer receber orientação passo a passo?',
-] as const;
-
 const profiles = [
   { value: 'iniciante', label: 'Iniciante — quero começar com explicações simples' },
   { value: 'mentorado', label: 'Mentorado — quero estudar com acompanhamento' },
@@ -42,7 +34,6 @@ export function OnboardingForm({
   );
   const options = profiles.filter((item) => PROFILES_BY_AREA[area].includes(item.value));
   const [niches, setNiches] = useState(['', '', '']);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -55,7 +46,7 @@ export function OnboardingForm({
     const response = await fetch('/api/core/me/onboarding', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ perfil_jornada: profile, nichos: selectedNiches, respostas: answers }),
+      body: JSON.stringify({ perfil_jornada: profile, nichos: selectedNiches, respostas: {} }),
     });
     setMessage(
       response.ok
@@ -102,28 +93,6 @@ export function OnboardingForm({
         </small>
       </fieldset>
 
-      {questions.map((question, index) => (
-        <label key={question} className="question-card">
-          <span>
-            {index + 1}. {question}
-          </span>
-          <select
-            defaultValue=""
-            onChange={(event) =>
-              setAnswers((current) => ({ ...current, [String(index + 1)]: event.target.value }))
-            }
-            required
-          >
-            <option value="" disabled>
-              Selecione uma resposta
-            </option>
-            <option>Ainda estou começando</option>
-            <option>Já tenho alguma experiência</option>
-            <option>Quero explorar</option>
-            <option>Quero acelerar uma rotina profissional</option>
-          </select>
-        </label>
-      ))}
       <label className="question-card">
         <span>Como você prefere as explicações</span>
         <select value={profile} onChange={(event) => setProfile(event.target.value as Profile)}>
@@ -134,7 +103,7 @@ export function OnboardingForm({
           ))}
         </select>
       </label>
-      <button type="submit">Salvar minha jornada</button>
+      <button type="submit">Salvar e continuar</button>
       {message ? (
         <p className="success-message" role="status">
           {message}

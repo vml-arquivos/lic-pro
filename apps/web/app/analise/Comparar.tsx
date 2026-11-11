@@ -23,7 +23,10 @@ function melhor(valores: (number | null)[], modo: 'max' | 'min' = 'max'): number
     .map((valor, indice) => ({ valor, indice }))
     .filter((item): item is { valor: number; indice: number } => item.valor !== null);
   if (presentes.length < 2) return -1;
-  const alvo = modo === 'max' ? Math.max(...presentes.map((item) => item.valor)) : Math.min(...presentes.map((item) => item.valor));
+  const alvo =
+    modo === 'max'
+      ? Math.max(...presentes.map((item) => item.valor))
+      : Math.min(...presentes.map((item) => item.valor));
   const vencedores = presentes.filter((item) => item.valor === alvo);
   return vencedores.length === 1 ? vencedores[0]!.indice : -1;
 }
@@ -43,7 +46,10 @@ export function Comparar({
 }>) {
   const ids = useMemo(() => selecionados.map((item) => item.id).join(','), [selecionados]);
   const [estado, setEstado] = useState<
-    { state: 'idle' } | { state: 'loading' } | { state: 'error'; message: string } | { state: 'ready'; data: Resposta }
+    | { state: 'idle' }
+    | { state: 'loading' }
+    | { state: 'error'; message: string }
+    | { state: 'ready'; data: Resposta }
   >({ state: 'idle' });
 
   useEffect(() => {
@@ -65,7 +71,8 @@ export function Comparar({
     return (
       <div className="an-vazio">
         <Empty>
-          Escolha de 2 a 4 editais no Ranking (marque “Comparar” em cada um) para ver os dois lados juntos.
+          Escolha de 2 a 4 editais no Ranking (marque “Comparar” em cada um) para ver os dois lados
+          juntos.
         </Empty>
         <button type="button" className="ui-btn" onClick={onVoltar}>
           Ir para o Ranking
@@ -73,17 +80,21 @@ export function Comparar({
       </div>
     );
   }
-  if (estado.state === 'loading' || estado.state === 'idle') return <p className="ui-loading">Comparando…</p>;
+  if (estado.state === 'loading' || estado.state === 'idle')
+    return <p className="ui-loading">Comparando…</p>;
   if (estado.state === 'error') return <Alert kind="error">{estado.message}</Alert>;
 
   const editais = estado.data.editais;
-  if (editais.length === 0) return <Empty>Não encontramos esses editais. Volte ao Ranking e escolha de novo.</Empty>;
+  if (editais.length === 0)
+    return <Empty>Não encontramos esses editais. Volte ao Ranking e escolha de novo.</Empty>;
   const col = `repeat(${editais.length}, minmax(13rem, 1fr))`;
 
   const nota = editais.map((edital) => edital.analise.nota);
   const lucro = editais.map((edital) => edital.analise.lucro_estimado);
   const valor = editais.map((edital) => numero(edital.valor_estimado));
-  const facil = editais.map((edital) => edital.analise.componentes.find((c) => c.chave === 'facilidade')?.pontos ?? null);
+  const facil = editais.map(
+    (edital) => edital.analise.componentes.find((c) => c.chave === 'facilidade')?.pontos ?? null,
+  );
   const iNota = melhor(nota);
   const iLucro = melhor(lucro);
   const iFacil = melhor(facil);
@@ -98,7 +109,9 @@ export function Comparar({
     { titulo: 'Modalidade', celulas: editais.map((edital) => edital.modalidade ?? '—') },
     {
       titulo: 'Local',
-      celulas: editais.map((edital) => [edital.municipio_nome, edital.uf].filter(Boolean).join('/') || '—'),
+      celulas: editais.map(
+        (edital) => [edital.municipio_nome, edital.uf].filter(Boolean).join('/') || '—',
+      ),
     },
     {
       titulo: 'Valor estimado',
@@ -107,7 +120,8 @@ export function Comparar({
     },
     {
       titulo: 'Valor provável de fechamento',
-      ajuda: 'Valor estimado menos o desconto que o órgão costuma dar (ou 10%, quando não há histórico).',
+      ajuda:
+        'Valor estimado menos o desconto que o órgão costuma dar (ou 10%, quando não há histórico).',
       celulas: editais.map((edital) => moeda(edital.analise.valor_provavel)),
     },
     {
@@ -117,7 +131,8 @@ export function Comparar({
     },
     {
       titulo: 'Desconto típico do órgão',
-      ajuda: 'Quanto este órgão costuma fechar abaixo do estimado, nos pregões com valor final conhecido.',
+      ajuda:
+        'Quanto este órgão costuma fechar abaixo do estimado, nos pregões com valor final conhecido.',
       celulas: editais.map((edital) => {
         const historico = edital.historico_orgao;
         if (!historico || historico.economia === null) return 'Sem histórico';
@@ -127,7 +142,8 @@ export function Comparar({
     },
     {
       titulo: 'Estimado frente à mediana do catálogo',
-      ajuda: 'Compara o preço que o edital estima com a mediana dos mesmos itens em outros editais. Acima de 100% é bom para quem vende.',
+      ajuda:
+        'Compara o preço que o edital estima com a mediana dos mesmos itens em outros editais. Acima de 100% é bom para quem vende.',
       celulas: editais.map((edital) => {
         const preco = edital.preco_vs_mediana;
         if (!preco || preco.razao === null) return 'Sem itens comparáveis';
@@ -136,7 +152,9 @@ export function Comparar({
     },
     {
       titulo: 'Itens no edital',
-      celulas: editais.map((edital) => (edital.itens_total === null ? '—' : String(edital.itens_total))),
+      celulas: editais.map((edital) =>
+        edital.itens_total === null ? '—' : String(edital.itens_total),
+      ),
     },
   ];
 
@@ -145,7 +163,9 @@ export function Comparar({
       <div className="an-resumo">
         <p>
           <strong>Resumo:</strong>{' '}
-          {iNota >= 0 ? `maior nota geral: “${nome(iNota)}” (${nota[iNota]}). ` : 'notas empatadas. '}
+          {iNota >= 0
+            ? `maior nota geral: “${nome(iNota)}” (${nota[iNota]}). `
+            : 'notas empatadas. '}
           {iLucro >= 0 ? `Maior lucro estimado: “${nome(iLucro)}”. ` : ''}
           {iFacil >= 0 ? `Mais fácil de ganhar: “${nome(iFacil)}”.` : ''}
         </p>
@@ -173,7 +193,9 @@ export function Comparar({
           <div className="an-comp-rotulo an-comp-forte">Nota geral</div>
           {editais.map((edital, indice) => (
             <div key={edital.id} className={`an-comp-cel ${indice === iNota ? 'an-melhor' : ''}`}>
-              <span className={`an-nota-mini an-nota-${tomDaNota(edital.analise.nota)}`}>{edital.analise.nota}</span>
+              <span className={`an-nota-mini an-nota-${tomDaNota(edital.analise.nota)}`}>
+                {edital.analise.nota}
+              </span>
               <small>confiança {edital.analise.confianca}</small>
             </div>
           ))}
@@ -183,9 +205,12 @@ export function Comparar({
           ))}
 
           {(['aderencia', 'prazo', 'valor', 'facilidade', 'margem'] as const).map((chave) => {
-            const pontos = editais.map((edital) => edital.analise.componentes.find((c) => c.chave === chave)?.pontos ?? null);
+            const pontos = editais.map(
+              (edital) => edital.analise.componentes.find((c) => c.chave === chave)?.pontos ?? null,
+            );
             const destaque = melhor(pontos);
-            const rotulo = editais[0]?.analise.componentes.find((c) => c.chave === chave)?.rotulo ?? chave;
+            const rotulo =
+              editais[0]?.analise.componentes.find((c) => c.chave === chave)?.rotulo ?? chave;
             return (
               <FragmentoLinha
                 key={chave}
@@ -198,8 +223,15 @@ export function Comparar({
                     if (!componente) return '—';
                     return (
                       <div className="an-comp-criterio">
-                        <div className="an-barra" role="img" aria-label={`${componente.pontos} de 100`}>
-                          <i className={`an-barra-${tomDaNota(componente.pontos)}`} style={{ width: `${componente.pontos}%` }} />
+                        <div
+                          className="an-barra"
+                          role="img"
+                          aria-label={`${componente.pontos} de 100`}
+                        >
+                          <i
+                            className={`an-barra-${tomDaNota(componente.pontos)}`}
+                            style={{ width: `${componente.pontos}%` }}
+                          />
                         </div>
                         <b>{componente.pontos}</b>
                         <small>{componente.detalhe}</small>
@@ -239,7 +271,8 @@ export function Comparar({
                     <li key={item.numero}>
                       <span>{item.descricao}</span>
                       <small>
-                        {item.quantidade ?? '—'} {item.unidade ?? ''} · {moeda2(item.valor_unitario_estimado)}
+                        {item.quantidade ?? '—'} {item.unidade ?? ''} ·{' '}
+                        {moeda2(item.valor_unitario_estimado)}
                       </small>
                     </li>
                   ))}
@@ -250,7 +283,8 @@ export function Comparar({
         </div>
       </div>
       <p className="an-aviso">
-        Comparação de apoio: as notas usam dados públicos e o seu perfil, não preveem vitória. Confirme sempre no edital.
+        Comparação de apoio: as notas usam dados públicos e o seu perfil, não preveem vitória.
+        Confirme sempre no edital.
       </p>
     </>
   );
@@ -258,7 +292,14 @@ export function Comparar({
 
 function FragmentoLinha({
   linha,
-}: Readonly<{ linha: { titulo: string; ajuda?: string | undefined; celulas: React.ReactNode[]; destaque?: number | undefined } }>) {
+}: Readonly<{
+  linha: {
+    titulo: string;
+    ajuda?: string | undefined;
+    celulas: React.ReactNode[];
+    destaque?: number | undefined;
+  };
+}>) {
   return (
     <>
       <div className="an-comp-rotulo" title={linha.ajuda}>

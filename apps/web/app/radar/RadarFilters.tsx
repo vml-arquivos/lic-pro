@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { NICHE_CATALOG, UFS } from '@licitecomigo/shared';
+import { NICHE_CATALOG } from '@licitecomigo/shared';
 import { api } from '../../lib/api';
+import { UfPicker } from '../components/UfPicker';
 import {
   ESTADOS,
   ORDENS,
@@ -82,7 +83,9 @@ export function RadarFilters({
 
   const niches = catalog.nichos ?? NICHE_CATALOG;
   const selectedNiches = params.getAll('nicho');
-  const selectedUfs = new Set((params.get('uf') ?? '').split(',').filter(Boolean));
+  const [ufs, setUfs] = useState<string[]>(() =>
+    (params.get('uf') ?? '').split(',').filter(Boolean),
+  );
   const asOptions = (list: string[] | undefined) =>
     (list ?? []).map((item) => [item, item] as const);
   const nearDefault = params.get('perto_municipio')
@@ -109,21 +112,33 @@ export function RadarFilters({
             maxLength={200}
           />
         </label>
-        <label>
-          Sem estas palavras
-          <input
-            name="excluir"
-            defaultValue={params.get('excluir') ?? ''}
-            placeholder="ex.: locação, obra"
-          />
-        </label>
         <Select
           label="Prazo"
           name="situacao_prazo"
           value={params.get('situacao_prazo') ?? ''}
           options={PRAZOS}
         />
-        <Select label="Região" name="regiao" value={params.get('regiao') ?? ''} options={REGIOES} />
+        <UfPicker value={ufs} onChange={setUfs} name="uf" label="Estados" />
+        <label>
+          Valor mínimo (R$)
+          <input
+            name="valor_min"
+            type="number"
+            min={0}
+            step="any"
+            defaultValue={params.get('valor_min') ?? ''}
+          />
+        </label>
+        <label>
+          Valor máximo (R$)
+          <input
+            name="valor_max"
+            type="number"
+            min={0}
+            step="any"
+            defaultValue={params.get('valor_max') ?? ''}
+          />
+        </label>
         <Select
           label="Ordenar por"
           name="ordem"
@@ -136,6 +151,20 @@ export function RadarFilters({
       <details className="rd-advanced" open={advancedOpen}>
         <summary>Mais filtros</summary>
         <div className="rd-filters-grid">
+          <label>
+            Sem estas palavras
+            <input
+              name="excluir"
+              defaultValue={params.get('excluir') ?? ''}
+              placeholder="ex.: locação, obra"
+            />
+          </label>
+          <Select
+            label="Região"
+            name="regiao"
+            value={params.get('regiao') ?? ''}
+            options={REGIOES}
+          />
           {[0, 1, 2].map((index) => (
             <label key={index}>
               {`Nicho ${index + 1}`}
@@ -167,26 +196,6 @@ export function RadarFilters({
             value={params.get('poder') ?? ''}
             options={asOptions(catalog.poder)}
           />
-          <label>
-            Valor mínimo (R$)
-            <input
-              name="valor_min"
-              type="number"
-              min={0}
-              step="any"
-              defaultValue={params.get('valor_min') ?? ''}
-            />
-          </label>
-          <label>
-            Valor máximo (R$)
-            <input
-              name="valor_max"
-              type="number"
-              min={0}
-              step="any"
-              defaultValue={params.get('valor_max') ?? ''}
-            />
-          </label>
           <Select
             label="Período por"
             name="periodo_tipo"
@@ -248,15 +257,6 @@ export function RadarFilters({
             </label>
           ) : null}
         </div>
-        <fieldset className="rd-ufs">
-          <legend>Estados</legend>
-          {UFS.map((uf) => (
-            <label key={uf} className="rd-chip">
-              <input type="checkbox" name="uf" value={uf} defaultChecked={selectedUfs.has(uf)} />
-              <span>{uf}</span>
-            </label>
-          ))}
-        </fieldset>
         <div className="rd-checks">
           <label>
             <input

@@ -64,6 +64,7 @@
 }
 .rd-filters-main,
 .rd-filters-grid {
+  align-items: start;
   display: grid;
   gap: 0.8rem;
   grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));

@@ -86,9 +86,12 @@ function pontosPrazo(encerraEm: string | null, agora: Date): { pontos: number; d
   if (Number.isNaN(fim)) return { pontos: 40, detalhe: 'Sem data de encerramento informada.' };
   const dias = (fim - agora.getTime()) / 86_400_000;
   if (dias < 0) return { pontos: 0, detalhe: 'Prazo para propostas já encerrado.' };
-  if (dias < 1) return { pontos: 25, detalhe: 'Encerra em menos de 1 dia: pouco tempo para preparar.' };
-  if (dias < 3) return { pontos: 55, detalhe: `Encerra em ${Math.ceil(dias)} dia(s): prazo apertado.` };
-  if (dias <= 14) return { pontos: 100, detalhe: `Encerra em ${Math.ceil(dias)} dias: tempo bom para preparar.` };
+  if (dias < 1)
+    return { pontos: 25, detalhe: 'Encerra em menos de 1 dia: pouco tempo para preparar.' };
+  if (dias < 3)
+    return { pontos: 55, detalhe: `Encerra em ${Math.ceil(dias)} dia(s): prazo apertado.` };
+  if (dias <= 14)
+    return { pontos: 100, detalhe: `Encerra em ${Math.ceil(dias)} dias: tempo bom para preparar.` };
   if (dias <= 30) return { pontos: 80, detalhe: `Encerra em ${Math.ceil(dias)} dias.` };
   return { pontos: 60, detalhe: `Encerra em ${Math.ceil(dias)} dias: ainda longe.` };
 }
@@ -98,7 +101,8 @@ function pontosValor(entrada: EntradaAnalise): { pontos: number; detalhe: string
   if (valor === null || valor <= 0) return { pontos: 30, detalhe: 'Sem valor estimado informado.' };
   const temFaixa = entrada.perfil_valor_min !== null || entrada.perfil_valor_max !== null;
   const min = entrada.perfil_valor_min ?? (temFaixa ? 0 : FAIXA_PADRAO_VALOR.min);
-  const max = entrada.perfil_valor_max ?? (temFaixa ? Number.POSITIVE_INFINITY : FAIXA_PADRAO_VALOR.max);
+  const max =
+    entrada.perfil_valor_max ?? (temFaixa ? Number.POSITIVE_INFINITY : FAIXA_PADRAO_VALOR.max);
   const alvo = temFaixa ? 'da faixa do seu perfil' : 'de uma faixa típica de pequena empresa';
   if (valor >= min && valor <= max) {
     return { pontos: 100, detalhe: `${brl(valor)}, dentro ${alvo}.` };
@@ -114,7 +118,10 @@ function pontosValor(entrada: EntradaAnalise): { pontos: number; detalhe: string
 function pontosFacilidade(entrada: EntradaAnalise): { pontos: number; detalhe: string } {
   const modalidade = (entrada.modalidade ?? '').toLowerCase();
   if (modalidade.includes('inexigibilidade')) {
-    return { pontos: 10, detalhe: 'Inexigibilidade: contratação direta com fornecedor específico.' };
+    return {
+      pontos: 10,
+      detalhe: 'Inexigibilidade: contratação direta com fornecedor específico.',
+    };
   }
   let pontos = 50;
   const motivos: string[] = [];
@@ -143,7 +150,9 @@ function pontosFacilidade(entrada: EntradaAnalise): { pontos: number; detalhe: s
   }
   return {
     pontos: Math.round(clamp(pontos)),
-    detalhe: motivos.length ? `Fatores: ${motivos.join('; ')}.` : 'Sem fatores a favor ou contra nos dados.',
+    detalhe: motivos.length
+      ? `Fatores: ${motivos.join('; ')}.`
+      : 'Sem fatores a favor ou contra nos dados.',
   };
 }
 
@@ -158,10 +167,16 @@ export function descontoTipico(entrada: EntradaAnalise): {
   return { pct: DESCONTO_PADRAO_PCT, base: 'premissa' };
 }
 
-function pontosMargem(entrada: EntradaAnalise): { pontos: number; detalhe: string; sinal: boolean } {
+function pontosMargem(entrada: EntradaAnalise): {
+  pontos: number;
+  detalhe: string;
+  sinal: boolean;
+} {
   const historico = entrada.historico_orgao;
   const comHistorico =
-    historico !== null && historico.economia !== null && historico.amostras >= MIN_AMOSTRAS_HISTORICO;
+    historico !== null &&
+    historico.economia !== null &&
+    historico.amostras >= MIN_AMOSTRAS_HISTORICO;
   let pontos = 50;
   const partes: string[] = [];
   if (comHistorico) {
@@ -177,10 +192,14 @@ function pontosMargem(entrada: EntradaAnalise): { pontos: number; detalhe: strin
   if (preco && preco.razao !== null && preco.itens > 0) {
     if (preco.razao >= 1.1) {
       pontos += 15;
-      partes.push(`o estimado está ${Math.round((preco.razao - 1) * 100)}% acima da mediana do catálogo`);
+      partes.push(
+        `o estimado está ${Math.round((preco.razao - 1) * 100)}% acima da mediana do catálogo`,
+      );
     } else if (preco.razao <= 0.9) {
       pontos -= 15;
-      partes.push(`o estimado está ${Math.round((1 - preco.razao) * 100)}% abaixo da mediana do catálogo`);
+      partes.push(
+        `o estimado está ${Math.round((1 - preco.razao) * 100)}% abaixo da mediana do catálogo`,
+      );
     } else {
       partes.push('estimado próximo da mediana do catálogo');
     }
@@ -195,8 +214,14 @@ function pontosMargem(entrada: EntradaAnalise): { pontos: number; detalhe: strin
 export function analisarOportunidade(entrada: EntradaAnalise): ResultadoAnalise {
   const aderencia =
     entrada.compat === null
-      ? { pontos: 50, detalhe: 'Sem perfil no Radar: defina UFs e palavras para medir a aderência.' }
-      : { pontos: Math.round(clamp(entrada.compat)), detalhe: `Compatibilidade de ${Math.round(entrada.compat)}% com os seus nichos e o perfil do Radar.` };
+      ? {
+          pontos: 50,
+          detalhe: 'Sem perfil no Radar: defina UFs e palavras para medir a aderência.',
+        }
+      : {
+          pontos: Math.round(clamp(entrada.compat)),
+          detalhe: `Compatibilidade de ${Math.round(entrada.compat)}% com os seus nichos e o perfil do Radar.`,
+        };
   const prazo = pontosPrazo(entrada.encerra_em, entrada.agora);
   const valor = pontosValor(entrada);
   const facilidade = pontosFacilidade(entrada);
@@ -222,13 +247,19 @@ export function analisarOportunidade(entrada: EntradaAnalise): ResultadoAnalise 
   const sinais: SinalAnalise[] = [];
   if (prazo.pontos === 0) sinais.push({ tipo: 'atencao', texto: 'Prazo encerrado.' });
   else if (prazo.pontos <= 25) sinais.push({ tipo: 'atencao', texto: prazo.detalhe });
-  if (facilidade.pontos >= 75) sinais.push({ tipo: 'positivo', texto: 'Boa chance de menos concorrência.' });
+  if (facilidade.pontos >= 75)
+    sinais.push({ tipo: 'positivo', texto: 'Boa chance de menos concorrência.' });
   if (facilidade.pontos <= 25) sinais.push({ tipo: 'atencao', texto: facilidade.detalhe });
-  if (margem.pontos >= 75) sinais.push({ tipo: 'positivo', texto: 'Folga de preço acima da média.' });
-  if (margem.pontos <= 30) sinais.push({ tipo: 'atencao', texto: 'Órgão costuma fechar bem abaixo do estimado.' });
-  if (entrada.compat !== null && entrada.compat >= 75) sinais.push({ tipo: 'positivo', texto: 'Combina bem com o seu perfil.' });
-  if (!temValor) sinais.push({ tipo: 'atencao', texto: 'Sem valor estimado: lucro não calculado.' });
-  if (entrada.srp) sinais.push({ tipo: 'positivo', texto: 'Registro de preços: pode gerar vários pedidos.' });
+  if (margem.pontos >= 75)
+    sinais.push({ tipo: 'positivo', texto: 'Folga de preço acima da média.' });
+  if (margem.pontos <= 30)
+    sinais.push({ tipo: 'atencao', texto: 'Órgão costuma fechar bem abaixo do estimado.' });
+  if (entrada.compat !== null && entrada.compat >= 75)
+    sinais.push({ tipo: 'positivo', texto: 'Combina bem com o seu perfil.' });
+  if (!temValor)
+    sinais.push({ tipo: 'atencao', texto: 'Sem valor estimado: lucro não calculado.' });
+  if (entrada.srp)
+    sinais.push({ tipo: 'positivo', texto: 'Registro de preços: pode gerar vários pedidos.' });
 
   const dadosReais =
     (entrada.compat !== null ? 1 : 0) +
@@ -310,7 +341,9 @@ export function simularProposta(entrada: EntradaSimulacao): ResultadoSimulacao {
   const avisos: string[] = [];
   const q = entrada.quantidade;
   const taxa = (entrada.impostos_pct + entrada.comissao_pct) / 100;
-  const custoTotal = money(q * entrada.custo_unitario + entrada.frete_total + entrada.outros_custos_total);
+  const custoTotal = money(
+    q * entrada.custo_unitario + entrada.frete_total + entrada.outros_custos_total,
+  );
   const margemMin = entrada.margem_minima_pct / 100;
 
   if (q <= 0) avisos.push('Informe uma quantidade maior que zero.');
@@ -322,7 +355,9 @@ export function simularProposta(entrada: EntradaSimulacao): ResultadoSimulacao {
     q > 0 && divisorEquilibrio > 0 ? money(custoTotal / divisorEquilibrio) : null;
   const precoMinimo = q > 0 && divisorMinimo > 0 ? money(custoTotal / divisorMinimo) : null;
   if (q > 0 && taxa < 1 && precoMinimo === null) {
-    avisos.push('Com esses impostos, comissão e margem mínima, não existe preço que feche a conta.');
+    avisos.push(
+      'Com esses impostos, comissão e margem mínima, não existe preço que feche a conta.',
+    );
   }
 
   const cenarios: CenarioSimulacao[] = [];
@@ -345,7 +380,9 @@ export function simularProposta(entrada: EntradaSimulacao): ResultadoSimulacao {
       });
     }
   } else {
-    avisos.push('Informe o preço de referência do edital (ou o de mercado) para ver os cenários de desconto.');
+    avisos.push(
+      'Informe o preço de referência do edital (ou o de mercado) para ver os cenários de desconto.',
+    );
   }
 
   const descontoMaximo =

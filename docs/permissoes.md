@@ -9,14 +9,14 @@ exige mudar a outra.
 O produto tem dois módulos, cada um com a sua administração. Dinheiro, leads, cupons e planos de
 um módulo nunca aparecem no outro (veja `docs/produto/modulos-curso-e-profissional.md`).
 
-| Módulo       | Área                      | Papel no banco (`papel_usuario`) | Quem é                                |
-| ------------ | ------------------------- | -------------------------------- | ------------------------------------- |
-| Profissional | Painel admin              | `plataforma`                     | Equipe do Licite Comigo               |
-| Profissional | Empresa                   | `admin` (e `operador`)           | Cliente que busca e filtra licitações |
-| Profissional | Colaborador               | `colaborador`                    | Equipe de operação do Licite Comigo   |
-| Curso        | Painel da mentoria        | `plataforma` (só "ver como")     | Equipe do Licite Comigo               |
-| Curso        | Aluno                     | `aluno`                          | Aluno do curso / mentoria             |
-| Curso        | Mentor                    | `mentor`                         | Quem acompanha os alunos              |
+| Módulo       | Área               | Papel no banco (`papel_usuario`) | Quem é                                |
+| ------------ | ------------------ | -------------------------------- | ------------------------------------- |
+| Profissional | Painel admin       | `plataforma`                     | Equipe do Licite Comigo               |
+| Profissional | Empresa            | `admin` (e `operador`)           | Cliente que busca e filtra licitações |
+| Profissional | Colaborador        | `colaborador`                    | Equipe de operação do Licite Comigo   |
+| Curso        | Painel da mentoria | `plataforma` (só "ver como")     | Equipe do Licite Comigo               |
+| Curso        | Aluno              | `aluno`                          | Aluno do curso / mentoria             |
+| Curso        | Mentor             | `mentor`                         | Quem acompanha os alunos              |
 
 O Painel da mentoria (`curso`) não tem papel próprio no banco: é a mesma equipe
 (`plataforma`) trabalhando no módulo do curso.
@@ -210,7 +210,6 @@ Rotas públicas do convite: `POST /auth/invitations/preview` e `POST /auth/invit
 - Os links de Termos e Privacidade da página de convite apontam para o domínio do app; as
   páginas jurídicas vivem no site. Ajustar quando o texto jurídico estiver revisado.
 
-
 ## Escopo da equipe administrativa (migration 0031)
 
 Cada conta `plataforma` tem um **escopo**: `tudo`, `curso` ou `profissional`.
@@ -231,3 +230,10 @@ lucrativas, mais fáceis, melhor preço), comparação lado a lado de 2 a 4 edit
 proposta. As notas são **estimativas de apoio**, não previsão de vitória: o lucro usa a margem
 informada e o desconto típico do órgão (≥3 pregões homologados; senão premissa de 10%), e o preço
 é comparado à mediana do catálogo de itens (≥3 amostras).
+
+## Meu perfil (Radar, Análise e Pregões)
+
+O perfil (nichos, estados, faixa de valor e palavras de interesse) é preenchido uma vez, no topo
+do Radar, e vira uma linha-resumo. Radar, Análise e Pregões publicados já filtram por ele
+(caixa "Filtrar pelo meu perfil"; o filtro escolhido à mão vale mais que o perfil). Colaborador
+não edita nichos: eles vêm do Painel admin. Listas longas mostram 10 itens por página.

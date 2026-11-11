@@ -59,7 +59,7 @@
 }
 
 .an-filtros {
-  align-items: end;
+  align-items: start;
   background: #fff;
   border: 1px solid var(--lc-line);
   border-radius: 1rem;

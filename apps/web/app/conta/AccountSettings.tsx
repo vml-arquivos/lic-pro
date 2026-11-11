@@ -385,9 +385,7 @@ export function AccountSettings() {
             {account?.papel === 'colaborador' ? (
               <fieldset className="account-fieldset">
                 <legend>Nichos do Radar</legend>
-                <p className="form-hint">
-                  Os nichos da sua conta são definidos pelo Painel admin.
-                </p>
+                <p className="form-hint">Os nichos da sua conta são definidos pelo Painel admin.</p>
                 <p>
                   {(account.nicho_preferencias ?? []).length
                     ? (account.nicho_preferencias ?? [])

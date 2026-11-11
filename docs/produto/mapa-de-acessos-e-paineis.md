@@ -4,11 +4,11 @@ Dois módulos, cada um com a sua administração (veja `modulos-curso-e-profissi
 pessoa vê só a sua área. Com endereços por painel (veja `docs/permissoes.md`, "Endereços por
 painel"), cada área tem a sua porta:
 
-| Módulo       | Painel                                    | Endereço sugerido                           | Quem entra                          |
-| ------------ | ----------------------------------------- | ------------------------------------------- | ----------------------------------- |
-| Profissional | Painel admin                              | `admin.seudominio`                          | Equipe do Licite Comigo             |
-| Profissional | Empresa                                   | `app.seudominio`                            | Empresas assinantes                 |
-| Profissional | Colaborador                               | `equipe.seudominio` (ou o da Administração) | Equipe de operação do Licite Comigo |
+| Módulo       | Painel                             | Endereço sugerido                           | Quem entra                          |
+| ------------ | ---------------------------------- | ------------------------------------------- | ----------------------------------- |
+| Profissional | Painel admin                       | `admin.seudominio`                          | Equipe do Licite Comigo             |
+| Profissional | Empresa                            | `app.seudominio`                            | Empresas assinantes                 |
+| Profissional | Colaborador                        | `equipe.seudominio` (ou o da Administração) | Equipe de operação do Licite Comigo |
 | Curso        | Aluno, Mentor e Painel da mentoria | `mentoria.seudominio`                       | Alunos, mentores e a equipe         |
 
 Sem esses endereços, a equipe pode "ver como" cada área no mesmo endereço.
@@ -122,6 +122,5 @@ contas nem o curso.
 - Equipe dentro da empresa (vários usuários e papéis).
 - Mais limites por plano (hoje só buscas salvas) e nota fiscal.
 - Revogação imediata de sessão.
-
 
 > Acesso por escopo: a equipe pode ser convidada só para o Painel admin, só para o Painel da mentoria, ou para os dois (Equipe administrativa → Acesso). Colaborador e Empresa usam a página Análise (/analise) para ranquear, comparar e simular licitações.

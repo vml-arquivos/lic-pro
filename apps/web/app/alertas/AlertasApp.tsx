@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { send, errorText } from '../../lib/api';
 import { Alert, Badge, Empty, Panel, Resource, formatDate, useResource } from '../components/ui';
+import { Paginado } from '../components/Pager';
 
 type Entrega = {
   id: string;
@@ -131,43 +132,51 @@ export function AlertasApp() {
                 surgir algo novo, ele aparece aqui.
               </Empty>
             ) : (
-              <ul className="ui-list">
-                {data.map((item) => (
-                  <li key={item.id}>
-                    <div>
-                      <strong>
-                        <Link
-                          href={`/radar/${item.edital_id}`}
-                          onClick={() => void markRead(item.id)}
-                        >
-                          {item.titulo}
-                        </Link>
-                      </strong>
-                      <small>
-                        {item.orgao ?? 'Órgão não informado'} ·{' '}
-                        {item.fonte ?? 'fonte não informada'}
-                        {item.busca_nome ? ` · busca “${item.busca_nome}”` : ''}
-                      </small>
-                      <small>
-                        Recebido em {formatDate(item.created_at, true)}
-                        {item.data_encerramento_proposta
-                          ? ` · propostas até ${formatDate(item.data_encerramento_proposta, true)}`
-                          : ''}
-                      </small>
-                    </div>
-                    <div className="ui-table-actions">
-                      <Badge
-                        tone={
-                          item.tipo === 'prazo' ? 'warn' : item.tipo === 'alteracao' ? 'bad' : 'ok'
-                        }
-                      >
-                        {TIPOS[item.tipo] ?? item.tipo}
-                      </Badge>
-                      {item.status === 'pendente' ? <Badge tone="warn">Novo</Badge> : null}
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <Paginado itens={data}>
+                {(visiveis) => (
+                  <ul className="ui-list">
+                    {visiveis.map((item) => (
+                      <li key={item.id}>
+                        <div>
+                          <strong>
+                            <Link
+                              href={`/radar/${item.edital_id}`}
+                              onClick={() => void markRead(item.id)}
+                            >
+                              {item.titulo}
+                            </Link>
+                          </strong>
+                          <small>
+                            {item.orgao ?? 'Órgão não informado'} ·{' '}
+                            {item.fonte ?? 'fonte não informada'}
+                            {item.busca_nome ? ` · busca “${item.busca_nome}”` : ''}
+                          </small>
+                          <small>
+                            Recebido em {formatDate(item.created_at, true)}
+                            {item.data_encerramento_proposta
+                              ? ` · propostas até ${formatDate(item.data_encerramento_proposta, true)}`
+                              : ''}
+                          </small>
+                        </div>
+                        <div className="ui-table-actions">
+                          <Badge
+                            tone={
+                              item.tipo === 'prazo'
+                                ? 'warn'
+                                : item.tipo === 'alteracao'
+                                  ? 'bad'
+                                  : 'ok'
+                            }
+                          >
+                            {TIPOS[item.tipo] ?? item.tipo}
+                          </Badge>
+                          {item.status === 'pendente' ? <Badge tone="warn">Novo</Badge> : null}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Paginado>
             )
           }
         </Resource>

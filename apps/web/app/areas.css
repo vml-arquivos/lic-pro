@@ -1320,3 +1320,137 @@
     grid-column: auto;
   }
 }
+
+/* Seletor de estados compacto */
+.uf-picker {
+  display: grid;
+  gap: 0.35rem;
+}
+.uf-picker > label {
+  color: var(--workspace-ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.uf-picker select {
+  background: #fff;
+  border: 1px solid #c4d1d9;
+  border-radius: 0.5rem;
+  color: var(--workspace-ink);
+  font: inherit;
+  font-weight: 400;
+  padding: 0.55rem 0.65rem;
+}
+.uf-picker-lista {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  list-style: none;
+  margin: 0;
+  min-height: 1.7rem;
+  padding: 0;
+}
+.uf-picker-lista li {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.15rem;
+}
+.uf-chip {
+  background: var(--workspace-navy);
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.15rem 0.2rem 0.15rem 0.6rem;
+}
+.uf-picker-lista li button {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 0 0.35rem;
+}
+.uf-picker-lista .uf-picker-limpar {
+  color: var(--workspace-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: underline;
+}
+.uf-picker-vazio {
+  color: var(--workspace-muted);
+  font-size: 0.8rem;
+}
+
+/* Paginação */
+.ui-pager {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  justify-content: center;
+  margin: 1.2rem 0 0.4rem;
+}
+.ui-pager span {
+  color: var(--workspace-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* Meu perfil (linha-resumo e formulário) */
+.rd-perfil {
+  margin-bottom: 1.2rem;
+}
+.rd-perfil-titulo {
+  font-size: 1.05rem;
+  margin: 0 0 0.2rem;
+}
+.rd-perfil-linha {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem 1.4rem;
+  justify-content: space-between;
+}
+.rd-perfil-itens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0.45rem 0 0;
+  padding: 0;
+}
+.rd-perfil-itens li {
+  background: #eef2f7;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.2rem 0.65rem;
+}
+.rd-perfil-acoes {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+.rd-perfil-acoes .ui-check {
+  align-items: center;
+  display: inline-flex;
+  font-size: 0.82rem;
+  font-weight: 700;
+  gap: 0.4rem;
+}
+.rd-perfil-form {
+  align-items: start;
+}
+.rd-perfil-form .rd-perfil-wide {
+  grid-column: 1 / -1;
+}
+.rd-perfil-form input,
+.rd-perfil-form select,
+.uf-picker select {
+  min-width: 0;
+  width: 100%;
+}

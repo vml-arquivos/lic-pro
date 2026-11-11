@@ -72,8 +72,14 @@ describe('analisarOportunidade', () => {
   });
 
   it('órgão que fecha muito abaixo do estimado reduz a folga de preço', () => {
-    const folgado = analisarOportunidade({ ...base, historico_orgao: { amostras: 9, economia: 0.02 } });
-    const apertado = analisarOportunidade({ ...base, historico_orgao: { amostras: 9, economia: 0.35 } });
+    const folgado = analisarOportunidade({
+      ...base,
+      historico_orgao: { amostras: 9, economia: 0.02 },
+    });
+    const apertado = analisarOportunidade({
+      ...base,
+      historico_orgao: { amostras: 9, economia: 0.35 },
+    });
     const pontos = (r: ReturnType<typeof analisarOportunidade>) =>
       r.componentes.find((c) => c.chave === 'margem')!.pontos;
     expect(pontos(folgado)).toBeGreaterThan(pontos(apertado));
@@ -81,15 +87,27 @@ describe('analisarOportunidade', () => {
 
   it('inexigibilidade é difícil e dispensa é mais fácil que pregão', () => {
     const fac = (modalidade: string) =>
-      analisarOportunidade({ ...base, modalidade, valor_estimado: 500_000, uf_empresa: null })
-        .componentes.find((c) => c.chave === 'facilidade')!.pontos;
+      analisarOportunidade({
+        ...base,
+        modalidade,
+        valor_estimado: 500_000,
+        uf_empresa: null,
+      }).componentes.find((c) => c.chave === 'facilidade')!.pontos;
     expect(fac('Inexigibilidade')).toBeLessThan(fac('Pregão Eletrônico'));
     expect(fac('Dispensa')).toBeGreaterThan(fac('Pregão Eletrônico'));
   });
 
   it('a faixa de valor do perfil manda; fora dela a nota cai', () => {
-    const dentro = analisarOportunidade({ ...base, perfil_valor_min: 50_000, perfil_valor_max: 200_000 });
-    const fora = analisarOportunidade({ ...base, perfil_valor_min: 500_000, perfil_valor_max: 900_000 });
+    const dentro = analisarOportunidade({
+      ...base,
+      perfil_valor_min: 50_000,
+      perfil_valor_max: 200_000,
+    });
+    const fora = analisarOportunidade({
+      ...base,
+      perfil_valor_min: 500_000,
+      perfil_valor_max: 900_000,
+    });
     const valor = (r: ReturnType<typeof analisarOportunidade>) =>
       r.componentes.find((c) => c.chave === 'valor')!.pontos;
     expect(valor(dentro)).toBe(100);
@@ -99,8 +117,12 @@ describe('analisarOportunidade', () => {
   it('a ordem muda conforme o foco', () => {
     const grande = analisarOportunidade({ ...base, valor_estimado: 400_000, compat: 40 });
     const facil = analisarOportunidade({ ...base, valor_estimado: 60_000, compat: 90 });
-    expect(chaveDeOrdem('lucrativas', grande)[0]).toBeGreaterThan(chaveDeOrdem('lucrativas', facil)[0]);
-    expect(chaveDeOrdem('faceis', facil)[0]).toBeGreaterThanOrEqual(chaveDeOrdem('faceis', grande)[0]);
+    expect(chaveDeOrdem('lucrativas', grande)[0]).toBeGreaterThan(
+      chaveDeOrdem('lucrativas', facil)[0],
+    );
+    expect(chaveDeOrdem('faceis', facil)[0]).toBeGreaterThanOrEqual(
+      chaveDeOrdem('faceis', grande)[0],
+    );
   });
 });
 

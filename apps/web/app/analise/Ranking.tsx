@@ -2,9 +2,12 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { FOCOS_ANALISE, FOCO_ROTULOS, UFS, type FocoAnalise } from '@licitecomigo/shared';
+import { FOCOS_ANALISE, FOCO_ROTULOS, type FocoAnalise } from '@licitecomigo/shared';
 import { api, errorText } from '../../lib/api';
 import { Alert, Empty, Kpi } from '../components/ui';
+import { Pager, paginar, totalDePaginas } from '../components/Pager';
+import { UfPicker } from '../components/UfPicker';
+import { faixaDeValor, nomeDoNicho } from '../radar/perfil-lib';
 import { MAX_COMPARAR, type Selecionado } from './AnaliseApp';
 import {
   CRITERIOS_AJUDA,
@@ -43,10 +46,20 @@ function Barras({ item }: Readonly<{ item: ItemRanking }>) {
   return (
     <ul className="an-barras" aria-label="Critérios da nota">
       {item.analise.componentes.map((componente) => (
-        <li key={componente.chave} title={`${CRITERIOS_AJUDA[componente.chave] ?? ''} ${componente.detalhe}`}>
+        <li
+          key={componente.chave}
+          title={`${CRITERIOS_AJUDA[componente.chave] ?? ''} ${componente.detalhe}`}
+        >
           <span>{componente.rotulo}</span>
-          <div className="an-barra" role="img" aria-label={`${componente.rotulo}: ${componente.pontos} de 100`}>
-            <i className={`an-barra-${tomDaNota(componente.pontos)}`} style={{ width: `${componente.pontos}%` }} />
+          <div
+            className="an-barra"
+            role="img"
+            aria-label={`${componente.rotulo}: ${componente.pontos} de 100`}
+          >
+            <i
+              className={`an-barra-${tomDaNota(componente.pontos)}`}
+              style={{ width: `${componente.pontos}%` }}
+            />
           </div>
           <em>{componente.pontos}</em>
         </li>
@@ -72,34 +85,42 @@ export function Ranking({
 }>) {
   const [foco, setFoco] = useState<FocoAnalise>('interessantes');
   const [q, setQ] = useState('');
-  const [uf, setUf] = useState('');
+  const [ufs, setUfs] = useState<string[]>([]);
+  const [usarPerfil, setUsarPerfil] = useState(true);
+  const [pagina, setPagina] = useState(1);
   const [prazo, setPrazo] = useState('abertas');
   const [valorMin, setValorMin] = useState('');
   const [valorMax, setValorMax] = useState('');
   const [estado, setEstado] = useState<
-    { state: 'loading' } | { state: 'error'; message: string } | { state: 'ready'; data: RankingResposta }
+    | { state: 'loading' }
+    | { state: 'error'; message: string }
+    | { state: 'ready'; data: RankingResposta }
   >({ state: 'loading' });
 
   const consulta = useMemo(() => {
-    const query = new URLSearchParams({ foco, situacao_prazo: prazo, limite: '30' });
+    const query = new URLSearchParams({ foco, situacao_prazo: prazo, limite: '50' });
+    if (!usarPerfil) query.set('usar_perfil', 'false');
     const margemNumero = Number(margem.replace(',', '.'));
     if (Number.isFinite(margemNumero) && margem.trim() !== '') {
       query.set('margem_pct', String(Math.min(90, Math.max(0, margemNumero))));
     }
     if (q.trim()) query.set('q', q.trim());
-    if (uf) query.set('uf', uf);
+    if (ufs.length) query.set('uf', ufs.join(','));
     if (valorMin.trim()) query.set('valor_min', valorMin.trim());
     if (valorMax.trim()) query.set('valor_max', valorMax.trim());
     return query.toString();
-  }, [foco, prazo, margem, q, uf, valorMin, valorMax]);
+  }, [foco, prazo, margem, q, ufs, valorMin, valorMax, usarPerfil]);
 
   useEffect(() => {
     let ativo = true;
     setEstado({ state: 'loading' });
+    setPagina(1);
     const timer = setTimeout(() => {
       api<RankingResposta>(`/analise/ranking?${consulta}`)
         .then((data) => ativo && setEstado({ state: 'ready', data }))
-        .catch((cause: unknown) => ativo && setEstado({ state: 'error', message: errorText(cause) }));
+        .catch(
+          (cause: unknown) => ativo && setEstado({ state: 'error', message: errorText(cause) }),
+        );
     }, 350);
     return () => {
       ativo = false;
@@ -109,12 +130,12 @@ export function Ranking({
 
   const limpar = () => {
     setQ('');
-    setUf('');
+    setUfs([]);
     setPrazo('abertas');
     setValorMin('');
     setValorMax('');
   };
-  const filtrado = Boolean(q || uf || valorMin || valorMax || prazo !== 'abertas');
+  const filtrado = Boolean(q || ufs.length || valorMin || valorMax || prazo !== 'abertas');
 
   return (
     <>
@@ -134,26 +155,52 @@ export function Ranking({
         ))}
       </div>
 
+      {estado.state === 'ready' && estado.data.perfil_definido ? (
+        <section className="rd-perfil ui-panel" aria-label="Meu perfil">
+          <div className="rd-perfil-linha">
+            <div>
+              <strong>Meu perfil</strong>
+              <ul className="rd-perfil-itens">
+                {estado.data.nichos.length ? (
+                  <li>{estado.data.nichos.map(nomeDoNicho).join(' · ')}</li>
+                ) : null}
+                <li>
+                  {estado.data.perfil_aplicado.ufs.length
+                    ? estado.data.perfil_aplicado.ufs.join(', ')
+                    : 'Todo o Brasil'}
+                </li>
+                <li>
+                  {faixaDeValor({
+                    ufs: [],
+                    palavras_interesse: [],
+                    modalidades: [],
+                    valor_min: estado.data.perfil_aplicado.valor_min,
+                    valor_max: estado.data.perfil_aplicado.valor_max,
+                  })}
+                </li>
+                {estado.data.perfil_aplicado.palavras.length ? (
+                  <li>{estado.data.perfil_aplicado.palavras.join(', ')}</li>
+                ) : null}
+              </ul>
+            </div>
+            <div className="rd-perfil-acoes">
+              <label className="ui-check">
+                <input
+                  type="checkbox"
+                  checked={usarPerfil}
+                  onChange={(event) => setUsarPerfil(event.target.checked)}
+                />
+                Filtrar pelo meu perfil
+              </label>
+              <Link className="ui-btn ui-btn-ghost ui-btn-small" href="/radar">
+                Editar perfil
+              </Link>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <section className="an-filtros ui-form" aria-label="Filtros do ranking">
-        <label className="an-wide">
-          Palavra-chave
-          <input
-            value={q}
-            onChange={(event) => setQ(event.target.value)}
-            placeholder="Ex.: uniforme, merenda, notebook"
-          />
-        </label>
-        <label>
-          Estado
-          <select value={uf} onChange={(event) => setUf(event.target.value)}>
-            <option value="">Todos</option>
-            {UFS.map((sigla) => (
-              <option key={sigla} value={sigla}>
-                {sigla}
-              </option>
-            ))}
-          </select>
-        </label>
         <label>
           Prazo
           <select value={prazo} onChange={(event) => setPrazo(event.target.value)}>
@@ -164,13 +211,31 @@ export function Ranking({
             ))}
           </select>
         </label>
+        <UfPicker
+          value={ufs}
+          onChange={setUfs}
+          label="Estados"
+          vazio={
+            usarPerfil && estado.state === 'ready' && estado.data.perfil_aplicado.ufs.length
+              ? 'Os do meu perfil'
+              : 'Todo o Brasil'
+          }
+        />
         <label>
           Valor mínimo (R$)
-          <input inputMode="numeric" value={valorMin} onChange={(event) => setValorMin(event.target.value.replace(/\D/g, ''))} />
+          <input
+            inputMode="numeric"
+            value={valorMin}
+            onChange={(event) => setValorMin(event.target.value.replace(/\D/g, ''))}
+          />
         </label>
         <label>
           Valor máximo (R$)
-          <input inputMode="numeric" value={valorMax} onChange={(event) => setValorMax(event.target.value.replace(/\D/g, ''))} />
+          <input
+            inputMode="numeric"
+            value={valorMax}
+            onChange={(event) => setValorMax(event.target.value.replace(/\D/g, ''))}
+          />
         </label>
         <label>
           Sua margem de lucro (%)
@@ -181,6 +246,14 @@ export function Ranking({
             aria-describedby="an-margem-ajuda"
           />
           <small id="an-margem-ajuda">Usada só para estimar o lucro.</small>
+        </label>
+        <label>
+          Palavra-chave (opcional)
+          <input
+            value={q}
+            onChange={(event) => setQ(event.target.value)}
+            placeholder="Ex.: notebook, merenda"
+          />
         </label>
         {filtrado ? (
           <button type="button" className="ui-btn ui-btn-ghost an-limpar" onClick={limpar}>
@@ -194,27 +267,40 @@ export function Ranking({
       {estado.state === 'ready' ? (
         <>
           <div className="ui-kpis an-kpis">
-            <Kpi label="Editais analisados" value={estado.data.total_candidatos} hint={`até ${estado.data.limite_candidatos} por consulta`} />
-            <Kpi label="Mostrando" value={estado.data.itens.length} hint={FOCO_ROTULOS[foco]} />
+            <Kpi
+              label="Editais analisados"
+              value={estado.data.total_candidatos}
+              hint={`até ${estado.data.limite_candidatos} por consulta`}
+            />
+            <Kpi
+              label="No ranking"
+              value={estado.data.itens.length}
+              hint={`${FOCO_ROTULOS[foco]} · 10 por página`}
+            />
             <Kpi
               label="Lucro estimado do topo"
               value={moeda(
-                estado.data.itens.slice(0, 5).reduce((soma, item) => soma + (item.analise.lucro_estimado ?? 0), 0),
+                estado.data.itens
+                  .slice(0, 5)
+                  .reduce((soma, item) => soma + (item.analise.lucro_estimado ?? 0), 0),
               )}
               hint="soma dos 5 primeiros"
             />
           </div>
           {!estado.data.perfil_definido ? (
             <Alert kind="info">
-              Você ainda não definiu o perfil do Radar (estados, palavras e faixa de valor). Com ele, a nota de aderência fica
-              mais precisa. <Link href="/radar">Definir perfil no Radar</Link>
+              Monte seu perfil uma vez (nichos, estados e faixa de valor) e a análise já mostra só o
+              que combina com você. <Link href="/radar">Montar meu perfil</Link>
             </Alert>
           ) : null}
           {estado.data.itens.length === 0 ? (
-            <Empty>Nenhum edital encontrado com esses filtros. Tente ampliar o prazo ou tirar a palavra-chave.</Empty>
+            <Empty>
+              Nenhum edital encontrado com esses filtros. Desmarque “Filtrar pelo meu perfil”,
+              amplie o prazo ou tire a palavra-chave.
+            </Empty>
           ) : (
             <ol className="an-lista">
-              {estado.data.itens.map((item) => {
+              {paginar(estado.data.itens, pagina).map((item) => {
                 const marcado = selecionados.some((existente) => existente.id === item.id);
                 const cheio = !marcado && selecionados.length >= MAX_COMPARAR;
                 const lucro = item.analise.lucro_estimado;
@@ -225,7 +311,11 @@ export function Ranking({
                       <div className="an-card-titulo">
                         <h3>{item.titulo ?? 'Edital sem título'}</h3>
                         <p>
-                          {[item.orgao, [item.municipio_nome, item.uf].filter(Boolean).join('/'), item.modalidade]
+                          {[
+                            item.orgao,
+                            [item.municipio_nome, item.uf].filter(Boolean).join('/'),
+                            item.modalidade,
+                          ]
                             .filter(Boolean)
                             .join(' · ')}
                         </p>
@@ -244,9 +334,17 @@ export function Ranking({
                       </div>
                       <div>
                         <dt>Lucro estimado</dt>
-                        <dd title={item.analise.desconto_base === 'historico_do_orgao' ? 'Com o desconto que o órgão costuma dar' : 'Com desconto assumido de 10% (sem histórico do órgão)'}>
+                        <dd
+                          title={
+                            item.analise.desconto_base === 'historico_do_orgao'
+                              ? 'Com o desconto que o órgão costuma dar'
+                              : 'Com desconto assumido de 10% (sem histórico do órgão)'
+                          }
+                        >
                           {lucro === null ? '—' : moeda(lucro)}
-                          {item.analise.desconto_base === 'premissa' ? <small> premissa</small> : null}
+                          {item.analise.desconto_base === 'premissa' ? (
+                            <small> premissa</small>
+                          ) : null}
                         </dd>
                       </div>
                       <div>
@@ -273,7 +371,9 @@ export function Ranking({
                           type="checkbox"
                           checked={marcado}
                           disabled={cheio}
-                          onChange={() => onAlternar({ id: item.id, titulo: item.titulo ?? 'Edital' })}
+                          onChange={() =>
+                            onAlternar({ id: item.id, titulo: item.titulo ?? 'Edital' })
+                          }
                         />
                         {cheio ? `Máximo de ${MAX_COMPARAR}` : 'Comparar'}
                       </label>
@@ -298,16 +398,33 @@ export function Ranking({
               })}
             </ol>
           )}
+          <Pager
+            page={pagina}
+            totalPages={totalDePaginas(estado.data.itens.length)}
+            onPage={(proxima) => {
+              setPagina(proxima);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
           <p className="an-aviso">{estado.data.aviso}</p>
         </>
       ) : null}
 
       {selecionados.length > 0 ? (
-        <div className="an-barra-comparar" role="region" aria-label="Editais escolhidos para comparar">
+        <div
+          className="an-barra-comparar"
+          role="region"
+          aria-label="Editais escolhidos para comparar"
+        >
           <span>
             {selecionados.length} de {MAX_COMPARAR} escolhidos
           </span>
-          <button type="button" className="ui-btn" disabled={selecionados.length < 2} onClick={onComparar}>
+          <button
+            type="button"
+            className="ui-btn"
+            disabled={selecionados.length < 2}
+            onClick={onComparar}
+          >
             {selecionados.length < 2 ? 'Escolha ao menos 2' : 'Comparar agora'}
           </button>
         </div>

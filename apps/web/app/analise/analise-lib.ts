@@ -25,6 +25,14 @@ export type RankingResposta = {
   total_candidatos: number;
   limite_candidatos: number;
   perfil_definido: boolean;
+  perfil_aplicado: {
+    usado: boolean;
+    ufs: string[];
+    valor_min: number | null;
+    valor_max: number | null;
+    palavras: string[];
+  };
+  nichos: string[];
   itens: ItemRanking[];
   aviso: string;
 };
@@ -48,7 +56,11 @@ export const moeda = (value: string | number | null | undefined): string => {
   if (value === null || value === undefined || value === '') return '—';
   const number = Number(value);
   return Number.isFinite(number)
-    ? number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
+    ? number.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        maximumFractionDigits: 0,
+      })
     : '—';
 };
 

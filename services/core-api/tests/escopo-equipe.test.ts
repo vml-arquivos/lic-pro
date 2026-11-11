@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { alvoPermitido, areasDoEscopo, decidirRota, tiposDeConviteVisiveis } from '../src/escopo-equipe.js';
+import {
+  alvoPermitido,
+  areasDoEscopo,
+  decidirRota,
+  tiposDeConviteVisiveis,
+} from '../src/escopo-equipe.js';
 
 const uuid = '11111111-2222-3333-4444-555555555555';
 
@@ -45,7 +50,12 @@ describe('escopo da equipe (regras por rota)', () => {
   });
 
   it('o escopo profissional nega o que é da mentoria', () => {
-    for (const url of ['/platform/students', '/platform/mentors', '/platform/classes', '/platform/materiais/x']) {
+    for (const url of [
+      '/platform/students',
+      '/platform/mentors',
+      '/platform/classes',
+      '/platform/materiais/x',
+    ]) {
       expect(decidirRota('profissional', 'GET', url).resultado, url).toBe('negado');
     }
     expect(decidirRota('profissional', 'GET', '/platform/companies').resultado).toBe('liberado');
@@ -53,19 +63,36 @@ describe('escopo da equipe (regras por rota)', () => {
   });
 
   it('financeiro, planos, cupons, leads e visão geral exigem o módulo do próprio escopo', () => {
-    for (const base of ['/admin/financeiro', '/admin/planos', '/admin/cupons', '/admin/leads', '/platform/overview']) {
+    for (const base of [
+      '/admin/financeiro',
+      '/admin/planos',
+      '/admin/cupons',
+      '/admin/leads',
+      '/platform/overview',
+    ]) {
       expect(decidirRota('curso', 'GET', `${base}?modulo=curso`).resultado, base).toBe('liberado');
-      expect(decidirRota('curso', 'GET', `${base}?modulo=profissional`).resultado, base).toBe('negado');
+      expect(decidirRota('curso', 'GET', `${base}?modulo=profissional`).resultado, base).toBe(
+        'negado',
+      );
       expect(decidirRota('curso', 'GET', base).resultado, base).toBe('negado');
-      expect(decidirRota('profissional', 'GET', `${base}?modulo=profissional`).resultado, base).toBe('liberado');
-      expect(decidirRota('profissional', 'GET', `${base}?modulo=curso`).resultado, base).toBe('negado');
+      expect(
+        decidirRota('profissional', 'GET', `${base}?modulo=profissional`).resultado,
+        base,
+      ).toBe('liberado');
+      expect(decidirRota('profissional', 'GET', `${base}?modulo=curso`).resultado, base).toBe(
+        'negado',
+      );
     }
   });
 
   it('plano só é salvo com o tipo do módulo e sem sobrescrever plano do outro', () => {
     const url = '/admin/planos?modulo=curso';
-    expect(decidirRota('curso', 'PUT', url, { tipo: 'assinatura', slug: 'x' }).resultado).toBe('negado');
-    expect(decidirRota('curso', 'PUT', url, { tipo: 'curso', slug: 'curso-licite-comigo' })).toEqual({
+    expect(decidirRota('curso', 'PUT', url, { tipo: 'assinatura', slug: 'x' }).resultado).toBe(
+      'negado',
+    );
+    expect(
+      decidirRota('curso', 'PUT', url, { tipo: 'curso', slug: 'curso-licite-comigo' }),
+    ).toEqual({
       resultado: 'verificar',
       alvo: { tipo: 'plano', slug: 'curso-licite-comigo' },
     });
@@ -75,14 +102,23 @@ describe('escopo da equipe (regras por rota)', () => {
   });
 
   it('convites e usuários são conferidos pelo tipo de quem é alvo', () => {
-    expect(decidirRota('curso', 'POST', '/platform/invitations', { tipo: 'mentor' }).resultado).toBe('liberado');
+    expect(
+      decidirRota('curso', 'POST', '/platform/invitations', { tipo: 'mentor' }).resultado,
+    ).toBe('liberado');
     for (const tipo of ['empresa', 'colaborador', 'equipe']) {
-      expect(decidirRota('curso', 'POST', '/platform/invitations', { tipo }).resultado, tipo).toBe('negado');
+      expect(decidirRota('curso', 'POST', '/platform/invitations', { tipo }).resultado, tipo).toBe(
+        'negado',
+      );
     }
     for (const tipo of ['aluno', 'mentor', 'equipe']) {
-      expect(decidirRota('profissional', 'POST', '/platform/invitations', { tipo }).resultado, tipo).toBe('negado');
+      expect(
+        decidirRota('profissional', 'POST', '/platform/invitations', { tipo }).resultado,
+        tipo,
+      ).toBe('negado');
     }
-    expect(decidirRota('profissional', 'POST', '/platform/invitations', { tipo: 'empresa' }).resultado).toBe('liberado');
+    expect(
+      decidirRota('profissional', 'POST', '/platform/invitations', { tipo: 'empresa' }).resultado,
+    ).toBe('liberado');
 
     expect(decidirRota('curso', 'GET', `/platform/users/${uuid}/ficha`)).toEqual({
       resultado: 'verificar',

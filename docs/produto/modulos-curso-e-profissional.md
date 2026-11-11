@@ -7,7 +7,7 @@ equipe e a mesma IA (Ana), mas **não se misturam** em administração, dinheiro
 | ----------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | Para quem         | Alunos que compram o curso (Hotmart/Asaas) e mentores                                                 | Empresas assinantes e a operação própria de licitações                                                      |
 | Endereço sugerido | `mentoria.seudominio.com.br`                                                                          | `app.` (empresas), `admin.` (administração), `equipe.` (colaboradores)                                      |
-| Áreas             | Aluno, Mentor, Painel da mentoria (`/gestao`)                                                  | Empresa, Colaborador, Administração (`/admin`, `/leads`)                                                    |
+| Áreas             | Aluno, Mentor, Painel da mentoria (`/gestao`)                                                         | Empresa, Colaborador, Administração (`/admin`, `/leads`)                                                    |
 | O que tem         | Tirar dúvidas (Ana), materiais, academia, plano de 30 dias, prática, mentoria, encontros, certificado | Radar por nicho/local/esfera, alertas, oportunidades, preços pagos, pregões, agenda, documentos, assinatura |
 | Dinheiro          | Cobranças `tipo = 'curso'`                                                                            | Cobranças `tipo = 'assinatura'`                                                                             |
 | Leads             | `perfil` mentorado ou iniciante                                                                       | `perfil` empresario                                                                                         |
@@ -50,6 +50,5 @@ PANEL_URL_ALUNO=https://mentoria.seudominio.com.br   # Alunos, mentores e Painel
 
 Use os mesmos valores em `web`, `core-api` e `site`. Depois de atualizar o código, rode o recurso
 de migrations (migration `0030`) e reinicie o `core-api` e o `web`.
-
 
 > Acesso por escopo: a equipe pode ser convidada só para o Painel admin, só para o Painel da mentoria, ou para os dois (Equipe administrativa → Acesso). Colaborador e Empresa usam a página Análise (/analise) para ranquear, comparar e simular licitações.

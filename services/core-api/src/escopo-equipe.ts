@@ -30,7 +30,10 @@ const TIPOS_CONVITE: Record<EscopoRestrito, readonly string[]> = {
   curso: ['aluno', 'mentor'],
   profissional: ['empresa', 'colaborador'],
 };
-const TIPO_COBRANCA: Record<EscopoRestrito, string> = { curso: 'curso', profissional: 'assinatura' };
+const TIPO_COBRANCA: Record<EscopoRestrito, string> = {
+  curso: 'curso',
+  profissional: 'assinatura',
+};
 
 export type Alvo =
   | { tipo: 'usuario'; id: string }
@@ -49,19 +52,17 @@ const SOMENTE_PROFISSIONAL = [
   /^\/platform\/(companies|colaboradores)(\/|$)/,
 ];
 const SOMENTE_CURSO = [/^\/platform\/(students|mentors|classes|materiais)(\/|$)/];
-const POR_MODULO = [/^\/admin\/(financeiro|planos|cupons|leads)(\/|$)/, /^\/platform\/overview(\/|$)/];
+const POR_MODULO = [
+  /^\/admin\/(financeiro|planos|cupons|leads)(\/|$)/,
+  /^\/platform\/overview(\/|$)/,
+];
 const UUID = '[0-9a-fA-F-]{36}';
 
 const asRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
 
 /** Decide, só pela rota, se um escopo restrito pode chamá-la (ou o que precisa ser conferido). */
-export function decidirRota(
-  escopo: Escopo,
-  method: string,
-  url: string,
-  body?: unknown,
-): Decisao {
+export function decidirRota(escopo: Escopo, method: string, url: string, body?: unknown): Decisao {
   if (escopo === 'tudo') return { resultado: 'liberado' };
   const parsed = new URL(url, 'http://core-api.local');
   const path = parsed.pathname.replace(/\/+$/, '') || '/';
@@ -84,7 +85,8 @@ export function decidirRota(
     if (method === 'PUT' && path === '/admin/planos') {
       const dados = asRecord(body);
       if (dados.tipo !== TIPO_COBRANCA[escopo]) return negar('plano_do_outro_painel');
-      if (typeof dados.slug === 'string') return { resultado: 'verificar', alvo: { tipo: 'plano', slug: dados.slug } };
+      if (typeof dados.slug === 'string')
+        return { resultado: 'verificar', alvo: { tipo: 'plano', slug: dados.slug } };
     }
     return { resultado: 'liberado' };
   }
@@ -154,16 +156,26 @@ export async function lerEscopo(pool: Pool, request: FastifyRequest): Promise<Es
   return escopo;
 }
 
-async function valorDoAlvo(pool: Pool, request: FastifyRequest, alvo: Alvo): Promise<string | null> {
+async function valorDoAlvo(
+  pool: Pool,
+  request: FastifyRequest,
+  alvo: Alvo,
+): Promise<string | null> {
   return withTenant(pool, { ...authContext(request), platform: true }, async (client) => {
     const consulta =
       alvo.tipo === 'usuario'
-        ? client.query<{ v: string }>('SELECT papel::text AS v FROM usuarios WHERE id = $1', [alvo.id])
+        ? client.query<{ v: string }>('SELECT papel::text AS v FROM usuarios WHERE id = $1', [
+            alvo.id,
+          ])
         : alvo.tipo === 'convite'
           ? client.query<{ v: string }>('SELECT tipo AS v FROM convites WHERE id = $1', [alvo.id])
           : alvo.tipo === 'cobranca'
-            ? client.query<{ v: string }>('SELECT tipo AS v FROM cobrancas WHERE id = $1', [alvo.id])
-            : client.query<{ v: string }>('SELECT tipo AS v FROM planos WHERE slug = $1', [alvo.slug]);
+            ? client.query<{ v: string }>('SELECT tipo AS v FROM cobrancas WHERE id = $1', [
+                alvo.id,
+              ])
+            : client.query<{ v: string }>('SELECT tipo AS v FROM planos WHERE slug = $1', [
+                alvo.slug,
+              ]);
     return (await consulta).rows[0]?.v ?? null;
   });
 }
@@ -175,7 +187,10 @@ declare module 'fastify' {
 }
 
 /** Hook global: roda depois da autenticação e antes de qualquer rota. */
-export function registerEscopoEquipe(app: FastifyInstance, { pool }: { pool: Pool | undefined }): void {
+export function registerEscopoEquipe(
+  app: FastifyInstance,
+  { pool }: { pool: Pool | undefined },
+): void {
   app.addHook('preHandler', async (request, reply) => {
     if (!pool || !request.user || request.user.role !== 'plataforma') return;
     const escopo = await lerEscopo(pool, request);

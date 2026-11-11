@@ -11,6 +11,7 @@ import type { Pool, PoolClient } from 'pg';
 import { z } from 'zod';
 import { OPERATION_ROLES } from './auth.js';
 import { withTenant } from './db.js';
+import { readUserNiches } from './niche-scope.js';
 import { scopedFilters, searchContext } from './radar.js';
 import { authContext, requireRoles, sendDatabaseUnavailable } from './request-context.js';
 import { buildEditalExportQuery, editalSearchSchema } from './search.js';
@@ -25,13 +26,16 @@ import { buildEditalExportQuery, editalSearchSchema } from './search.js';
 
 type Deps = { pool: Pool | undefined };
 
-const CATALOGO = "tenant_id IN (SELECT current_setting('app.tenant_id')::uuid UNION SELECT id FROM plataforma_tenants)";
+const CATALOGO =
+  "tenant_id IN (SELECT current_setting('app.tenant_id')::uuid UNION SELECT id FROM plataforma_tenants)";
 const MAX_CANDIDATOS = 300;
 
 const extras = z.object({
   foco: z.enum(FOCOS_ANALISE).default('interessantes'),
   margem_pct: z.coerce.number().min(0).max(90).default(15),
   limite: z.coerce.number().int().min(1).max(100).default(30),
+  /** Usa estados, faixa de valor e palavras do perfil do Radar quando o filtro não foi informado. */
+  usar_perfil: z.preprocess((value) => value !== 'false' && value !== false, z.boolean()),
 });
 const rankingQuery = editalSearchSchema.and(extras);
 
@@ -97,10 +101,17 @@ type Historico = { amostras: number; economia: number | null };
 type PrecoRef = { itens: number; comparados: number; razao: number | null };
 
 /** Quanto cada órgão costuma fechar abaixo do estimado, a partir dos pregões com valor final. */
-async function historicoPorOrgao(client: PoolClient, cnpjs: string[]): Promise<Map<string, Historico>> {
+async function historicoPorOrgao(
+  client: PoolClient,
+  cnpjs: string[],
+): Promise<Map<string, Historico>> {
   const result = new Map<string, Historico>();
   if (!cnpjs.length) return result;
-  const rows = await client.query<{ orgao_cnpj: string; amostras: number; economia: number | null }>(
+  const rows = await client.query<{
+    orgao_cnpj: string;
+    amostras: number;
+    economia: number | null;
+  }>(
     `SELECT orgao_cnpj, count(*)::int AS amostras,
             avg(LEAST(0.9, GREATEST(-0.5, 1 - valor_homologado / valor_estimado)))::float8 AS economia
        FROM editais
@@ -156,7 +167,8 @@ async function precoContraMediana(
     result.set(row.edital_id, {
       itens: row.itens,
       comparados: row.comparados,
-      razao: row.estimado && row.mediana ? Math.round((row.estimado / row.mediana) * 100) / 100 : null,
+      razao:
+        row.estimado && row.mediana ? Math.round((row.estimado / row.mediana) * 100) / 100 : null,
     });
   }
   return result;
@@ -227,15 +239,60 @@ export function registerAnaliseRoutes(app: FastifyInstance, { pool }: Deps): voi
     if (!requireRoles(reply, request, OPERATION_ROLES)) return reply;
     if (!pool) return sendDatabaseUnavailable(reply);
     const parsed = rankingQuery.parse(request.query);
-    const { foco, margem_pct: margem, limite } = parsed as z.infer<typeof extras>;
+    const {
+      foco,
+      margem_pct: margem,
+      limite,
+      usar_perfil: usarPerfil,
+    } = parsed as z.infer<typeof extras>;
     const result = await withTenant(pool, authContext(request), async (client) => {
       const bruto = { ...(request.query as Record<string, unknown>) };
       delete bruto.foco;
       delete bruto.margem_pct;
       delete bruto.limite;
+      delete bruto.usar_perfil;
       if (!bruto.situacao_prazo) bruto.situacao_prazo = 'abertas';
-      const filters = await scopedFilters(client, request, bruto);
       const contexto = await searchContext(client, request);
+      const perfil = contexto.profile;
+      const vazio = (valor: unknown) => valor === undefined || valor === null || valor === '';
+      const aplicado = {
+        usado: false,
+        ufs: [] as string[],
+        valor_min: null as number | null,
+        valor_max: null as number | null,
+        palavras: [] as string[],
+      };
+      if (usarPerfil && perfil) {
+        if (vazio(bruto.uf) && perfil.ufs.length) {
+          bruto.uf = perfil.ufs.join(',');
+          aplicado.ufs = perfil.ufs;
+        }
+        if (vazio(bruto.valor_min) && perfil.valorMin !== null) {
+          bruto.valor_min = perfil.valorMin;
+          aplicado.valor_min = perfil.valorMin;
+        }
+        if (vazio(bruto.valor_max) && perfil.valorMax !== null) {
+          bruto.valor_max = perfil.valorMax;
+          aplicado.valor_max = perfil.valorMax;
+        }
+        if (vazio(bruto.q) && perfil.palavras.length) {
+          // "tecnologia" ou "material de expediente": qualquer uma das palavras do perfil vale.
+          const termos: string[] = [];
+          let tamanho = 0;
+          for (const palavra of perfil.palavras.slice(0, 8)) {
+            const termo = /\s/.test(palavra) ? `"${palavra.replace(/"/g, '')}"` : palavra;
+            if (tamanho + termo.length + 4 > 190) break;
+            termos.push(termo);
+            tamanho += termo.length + 4;
+          }
+          if (termos.length) {
+            bruto.q = termos.join(' or ');
+            aplicado.palavras = perfil.palavras.slice(0, termos.length);
+          }
+        }
+        aplicado.usado = true;
+      }
+      const filters = await scopedFilters(client, request, bruto);
       const query = buildEditalExportQuery(filters, contexto, MAX_CANDIDATOS);
       const found = await client.query<Linha>(query.text, query.values);
       const linhas = found.rows;
@@ -273,6 +330,8 @@ export function registerAnaliseRoutes(app: FastifyInstance, { pool }: Deps): voi
           analise: item.analise,
         })),
         perfil_definido: Boolean(contexto.profile),
+        perfil_aplicado: aplicado,
+        nichos: await readUserNiches(client, request.user.tenantId, request.user.sub),
       };
     });
     return reply.send({

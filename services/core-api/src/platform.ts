@@ -719,11 +719,10 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
         [tenantId, userId, invite.email, passwordHash],
       );
       if (invite.tipo === 'equipe' && invite.escopo && invite.escopo !== 'tudo') {
-        await client.query('UPDATE usuarios SET escopo_equipe = $3 WHERE tenant_id = $1 AND id = $2', [
-          tenantId,
-          userId,
-          invite.escopo,
-        ]);
+        await client.query(
+          'UPDATE usuarios SET escopo_equipe = $3 WHERE tenant_id = $1 AND id = $2',
+          [tenantId, userId, invite.escopo],
+        );
       }
       if (invite.tipo === 'aluno' && invite.turma_id) {
         await client.query(
