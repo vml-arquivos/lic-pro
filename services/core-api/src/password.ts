@@ -1,18 +1,14 @@
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { isAcceptablePassword } from '@licitecomigo/shared';
 
 const KEY_LENGTH = 64;
 const COST = 16_384;
 const BLOCK_SIZE = 8;
 const PARALLELIZATION = 1;
 
+/** Regra de senha: no mínimo 8 caracteres, sem exigência de símbolos. */
 export function assertStrongPassword(password: string): void {
-  if (
-    password.length < 12 ||
-    !/[a-z]/.test(password) ||
-    !/[A-Z]/.test(password) ||
-    !/[0-9]/.test(password) ||
-    !/[^A-Za-z0-9]/.test(password)
-  ) {
+  if (!isAcceptablePassword(password)) {
     throw new Error('senha_forte_obrigatoria');
   }
 }

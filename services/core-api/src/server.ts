@@ -11,6 +11,7 @@ import {
   REGIOES,
   UFS_POR_REGIAO,
   health,
+  PASSWORD_TECHNICAL_MAX,
   isNicheCode,
 } from '@licitecomigo/shared';
 import { createOpaqueToken, hashIp, hashOpaqueToken, PublicRateLimiter } from './auth-public.js';
@@ -53,6 +54,7 @@ import { registerCompanyRoutes } from './empresa.js';
 import { registerLearningRoutes } from './learning.js';
 import { registerStudentSupportRoutes } from './aluno-apoio.js';
 import { registerRadarRoutes } from './radar.js';
+import { registerActivityTracking } from './atividade.js';
 import { ESTADO_USUARIO, ORDEM, PERIODO_TIPO, SITUACAO_PRAZO, SITUACAO_TIPO } from './search.js';
 import { alertReadSchema, savedSearchPatchSchema, savedSearchSchema } from './alerts.js';
 
@@ -131,13 +133,13 @@ const conversaPathSchema = z.object({ conversaId: z.string().uuid() });
 const loginSchema = z.object({
   tenant_id: z.string().uuid().optional(),
   email: z.string().email(),
-  password: z.string().min(1).max(200),
+  password: z.string().min(1).max(PASSWORD_TECHNICAL_MAX),
 });
 const signupSchema = z.object({
   nome: z.string().trim().min(2).max(160),
   empresa_nome: z.string().trim().min(2).max(200),
   email: z.string().email(),
-  password: z.string().min(1).max(200),
+  password: z.string().min(1).max(PASSWORD_TECHNICAL_MAX),
   nichos: nicheListSchema,
   termos_aceitos: z.literal(true),
   privacidade_aceita: z.literal(true),
@@ -185,8 +187,8 @@ const accountProfileSchema = z.object({
   nichos: nicheListSchema.optional(),
 });
 const passwordChangeSchema = z.object({
-  current_password: z.string().min(1).max(200),
-  new_password: z.string().min(1).max(200),
+  current_password: z.string().min(1).max(PASSWORD_TECHNICAL_MAX),
+  new_password: z.string().min(1).max(PASSWORD_TECHNICAL_MAX),
 });
 const concessionSchema = z.object({
   mentor_id: z.string().uuid(),
@@ -354,6 +356,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
   });
 
+  // Antes das rotas: o hook só vale para o que é registrado depois dele.
+  registerActivityTracking(app, { pool });
+
   app.get('/health', async () => ({ ...health('core-api'), databaseConfigured: Boolean(pool) }));
 
   app.get('/ready', async (_request, reply) => {
@@ -420,6 +425,13 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       }
       await client.query("SELECT set_config('app.tenant_id', $1, true)", [user.tenant_id]);
       await client.query("SELECT set_config('app.user_id', $1, true)", [user.id]);
+      await client.query(
+        `INSERT INTO atividade_usuario (tenant_id, usuario_id, dia, recurso)
+         VALUES ($1, $2, (now() AT TIME ZONE 'America/Sao_Paulo')::date, 'login')
+         ON CONFLICT (tenant_id, usuario_id, dia, recurso)
+         DO UPDATE SET total = atividade_usuario.total + 1, ultimo_em = now()`,
+        [user.tenant_id, user.id],
+      );
       const company = await client.query<{ empresa_id: string }>(
         `SELECT empresa_id FROM empresa_usuarios
           WHERE tenant_id = $1 AND usuario_id = $2 AND ativo = true
@@ -700,7 +712,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   app.post('/auth/password-reset', async (request, reply) => {
     publicRateLimiter.check(`reset:${request.ip}`);
-    const body = tokenSchema.extend({ password: z.string().min(1).max(200) }).parse(request.body);
+    const body = tokenSchema
+      .extend({ password: z.string().min(1).max(PASSWORD_TECHNICAL_MAX) })
+      .parse(request.body);
     try {
       assertStrongPassword(body.password);
     } catch {

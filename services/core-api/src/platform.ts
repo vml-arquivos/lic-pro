@@ -1,13 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
-import { NICHE_CODES } from '@licitecomigo/shared';
+import { NICHE_CODES, PASSWORD_TECHNICAL_MAX } from '@licitecomigo/shared';
 import { z } from 'zod';
 import { createOpaqueToken, hashOpaqueToken, PublicRateLimiter } from './auth-public.js';
 import { panelBaseUrl, type RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
 import { sendEmail } from './email.js';
 import { assertStrongPassword, hashPassword } from './password.js';
+import { registerPlatformUserRoutes } from './platform-users.js';
 import { auditPublic, sendDatabaseUnavailable, withPlatform } from './request-context.js';
 
 /** Convites valem 7 dias e só podem ser usados uma vez. */
@@ -32,7 +33,7 @@ const classPatch = classBody
 
 const invitationBody = z
   .object({
-    tipo: z.enum(['aluno', 'mentor', 'empresa', 'colaborador']),
+    tipo: z.enum(['aluno', 'mentor', 'empresa', 'colaborador', 'equipe']),
     nome: z.string().trim().min(2).max(160),
     email: z.string().trim().toLowerCase().email().max(200),
     empresa_nome: z.string().trim().min(2).max(200).optional(),
@@ -58,7 +59,7 @@ const invitationBody = z
 
 const tokenBody = z.object({ token: z.string().min(20).max(200) });
 const acceptBody = tokenBody.extend({
-  password: z.string().min(1).max(200),
+  password: z.string().min(1).max(PASSWORD_TECHNICAL_MAX),
   termos_aceitos: z.literal(true),
   privacidade_aceita: z.literal(true),
 });
@@ -67,9 +68,10 @@ const acceptBody = tokenBody.extend({
 export function invitationLink(
   config: RuntimeConfig,
   token: string,
-  tipo: 'empresa' | 'aluno' | 'mentor' | 'colaborador' = 'aluno',
+  tipo: 'empresa' | 'aluno' | 'mentor' | 'colaborador' | 'equipe' = 'aluno',
 ): string {
-  return `${panelBaseUrl(config, tipo)}/convite?token=${token}`;
+  const area = tipo === 'equipe' ? 'administracao' : tipo;
+  return `${panelBaseUrl(config, area)}/convite?token=${token}`;
 }
 
 function slugify(value: string, suffix: string): string {
@@ -99,6 +101,8 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
       }
       if (!pool) return sendDatabaseUnavailable(reply);
     });
+
+    registerPlatformUserRoutes(platform, { pool, config });
 
     platform.get('/platform/overview', async (request) => {
       const tenantId = request.user.tenantId;
@@ -165,6 +169,11 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
                   u.id AS usuario_id, u.nome AS responsavel, u.email, u.ativo,
                   u.onboarding_concluido, u.nicho_preferencias, u.email_verificado_em,
                   e.razao_social, e.cnpj,
+                  (SELECT max(a.ultimo_em) FROM atividade_usuario a WHERE a.tenant_id = t.id) AS ultimo_acesso,
+                  (SELECT p.nome FROM assinaturas s JOIN planos p ON p.id = s.plano_id
+                    WHERE s.tenant_id = t.id ORDER BY s.created_at DESC LIMIT 1) AS plano,
+                  (SELECT s.status FROM assinaturas s
+                    WHERE s.tenant_id = t.id ORDER BY s.created_at DESC LIMIT 1) AS plano_status,
                   (SELECT count(*) FROM buscas_salvas b WHERE b.tenant_id = t.id AND b.ativa)::int AS buscas_ativas,
                   (SELECT count(*) FROM oportunidades_salvas o WHERE o.tenant_id = t.id)::int AS oportunidades
              FROM tenants t
@@ -217,6 +226,7 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
       const result = await withPlatform(pool!, request, 'platform.students.listed', (client) =>
         client.query(
           `SELECT u.id, u.nome, u.email, u.ativo, u.onboarding_concluido, u.created_at,
+                  (SELECT max(a.ultimo_em) FROM atividade_usuario a WHERE a.tenant_id = u.tenant_id AND a.usuario_id = u.id) AS ultimo_acesso,
                   m.status AS matricula_status, t.id AS turma_id, t.nome AS turma_nome,
                   mm.mentor_id, mu.nome AS mentor_nome,
                   (SELECT count(*) FILTER (WHERE p.concluida) FROM progresso_aula p
@@ -256,6 +266,7 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
       const result = await withPlatform(pool!, request, 'platform.mentors.listed', (client) =>
         client.query(
           `SELECT u.id, u.nome, u.email, u.ativo, u.created_at,
+                  (SELECT max(a.ultimo_em) FROM atividade_usuario a WHERE a.tenant_id = u.tenant_id AND a.usuario_id = u.id) AS ultimo_acesso,
                   (SELECT count(*) FROM mentor_mentorado m
                     WHERE m.tenant_id = u.tenant_id AND m.mentor_id = u.id AND m.status = 'ativo')::int AS alunos_ativos,
                   (SELECT count(*) FROM concessoes_mentor c
@@ -275,6 +286,7 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
       const result = await withPlatform(pool!, request, 'platform.colaboradores.listed', (client) =>
         client.query(
           `SELECT u.id, u.nome, u.email, u.ativo, u.created_at, u.nicho_preferencias AS nichos,
+                  (SELECT max(a.ultimo_em) FROM atividade_usuario a WHERE a.tenant_id = u.tenant_id AND a.usuario_id = u.id) AS ultimo_acesso,
                   (SELECT count(*) FROM buscas_salvas b
                     WHERE b.tenant_id = u.tenant_id AND b.usuario_id = u.id AND b.ativa)::int AS buscas_ativas,
                   (SELECT count(*) FROM oportunidades_salvas o
@@ -541,7 +553,7 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
           const result = await client.query<{
             email: string;
             nome: string;
-            tipo: 'empresa' | 'aluno' | 'mentor' | 'colaborador';
+            tipo: 'empresa' | 'aluno' | 'mentor' | 'colaborador' | 'equipe';
             expira_em: Date;
           }>(
             `UPDATE convites
@@ -599,7 +611,7 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
       const found = await client.query<{
         id: string;
         tenant_id: string;
-        tipo: 'aluno' | 'mentor' | 'empresa' | 'colaborador';
+        tipo: 'aluno' | 'mentor' | 'empresa' | 'colaborador' | 'equipe';
         email: string;
         nome: string;
         empresa_nome: string | null;
@@ -633,7 +645,8 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
       }
       await client.query("SELECT set_config('app.user_id', $1, true)", [userId]);
 
-      const role = invite.tipo === 'empresa' ? 'admin' : invite.tipo;
+      const role =
+        invite.tipo === 'empresa' ? 'admin' : invite.tipo === 'equipe' ? 'plataforma' : invite.tipo;
       await client.query(
         `INSERT INTO usuarios
            (id, tenant_id, email, nome, papel, perfil_jornada, password_hash, publico,
@@ -647,11 +660,13 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
           role,
           invite.tipo === 'aluno'
             ? 'mentorado'
-            : invite.tipo === 'mentor' || invite.tipo === 'colaborador'
+            : invite.tipo === 'mentor' || invite.tipo === 'colaborador' || invite.tipo === 'equipe'
               ? 'profissional'
               : 'iniciante',
           passwordHash,
-          invite.tipo === 'empresa' || invite.tipo === 'colaborador' ? 'empresa' : 'mentoria',
+          invite.tipo === 'empresa' || invite.tipo === 'colaborador' || invite.tipo === 'equipe'
+            ? 'empresa'
+            : 'mentoria',
           config.termsVersion,
           config.privacyVersion,
         ],
@@ -745,7 +760,7 @@ async function assertMentor(
 
 async function assertEmailFree(
   client: Parameters<Parameters<typeof withTenant>[2]>[0],
-  tipo: 'aluno' | 'mentor' | 'empresa' | 'colaborador',
+  tipo: 'aluno' | 'mentor' | 'empresa' | 'colaborador' | 'equipe',
   tenantId: string,
   email: string,
 ): Promise<void> {

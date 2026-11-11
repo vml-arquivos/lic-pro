@@ -161,6 +161,20 @@ const MATRIX: readonly Entry[] = [
     allowed: ONLY_PLATFORM,
     payload: { ativo: false },
   },
+  { method: 'GET', url: '/platform/team', allowed: ONLY_PLATFORM },
+  { method: 'GET', url: `/platform/users/${ID}/ficha`, allowed: ONLY_PLATFORM },
+  {
+    method: 'PATCH',
+    url: `/platform/users/${ID}`,
+    allowed: ONLY_PLATFORM,
+    payload: { nome: 'Nome Novo' },
+  },
+  {
+    method: 'POST',
+    url: `/platform/users/${ID}/password-reset-link`,
+    allowed: ONLY_PLATFORM,
+    payload: {},
+  },
 ];
 
 describe('matriz de permissões papel × rota', () => {
