@@ -1454,3 +1454,32 @@
   min-width: 0;
   width: 100%;
 }
+
+/* Guia "Como ler os valores" */
+.ui-guia {
+  background: #fff;
+  border: 1px solid var(--workspace-line);
+  border-radius: 0.8rem;
+  margin: 0.8rem 0;
+  padding: 0.7rem 1rem;
+}
+.ui-guia summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+.ui-guia dl {
+  display: grid;
+  gap: 0.5rem 1.2rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  margin: 0.7rem 0 0;
+}
+.ui-guia dt {
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+.ui-guia dd {
+  color: var(--workspace-muted);
+  font-size: 0.8rem;
+  margin: 0.1rem 0 0;
+}

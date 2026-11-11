@@ -313,6 +313,12 @@ export type EntradaSimulacao = {
   preco_referencia: number | null;
   /** Preço unitário de mercado (por exemplo, a mediana paga pelo governo), se houver. */
   preco_mercado: number | null;
+  /** Taxa da plataforma de disputa cobrada sobre o valor vendido (ex.: taxa de êxito). */
+  taxa_plataforma_pct?: number;
+  /** Teto da taxa percentual por processo, em R$ (sem teto quando ausente). */
+  taxa_plataforma_teto?: number | null;
+  /** Valor fixo pago à plataforma por processo, em R$ (ex.: crédito por processo). */
+  taxa_plataforma_fixa?: number;
 };
 
 export type CenarioSimulacao = {
@@ -341,22 +347,46 @@ export function simularProposta(entrada: EntradaSimulacao): ResultadoSimulacao {
   const avisos: string[] = [];
   const q = entrada.quantidade;
   const taxa = (entrada.impostos_pct + entrada.comissao_pct) / 100;
+  const taxaFixa = Math.max(0, entrada.taxa_plataforma_fixa ?? 0);
+  const feePct = Math.max(0, entrada.taxa_plataforma_pct ?? 0) / 100;
+  const feeTeto = entrada.taxa_plataforma_teto ?? null;
+  const taxaPlataforma = (receita: number): number => {
+    const bruta = receita * feePct;
+    return feeTeto !== null && feeTeto >= 0 ? Math.min(bruta, feeTeto) : bruta;
+  };
   const custoTotal = money(
-    q * entrada.custo_unitario + entrada.frete_total + entrada.outros_custos_total,
+    q * entrada.custo_unitario + entrada.frete_total + entrada.outros_custos_total + taxaFixa,
   );
   const margemMin = entrada.margem_minima_pct / 100;
 
   if (q <= 0) avisos.push('Informe uma quantidade maior que zero.');
   if (taxa >= 1) avisos.push('Impostos e comissão somam 100% ou mais: não há preço que cubra.');
 
-  const divisorEquilibrio = q * (1 - taxa);
-  const divisorMinimo = q * (1 - taxa - margemMin);
-  const precoEquilibrio =
-    q > 0 && divisorEquilibrio > 0 ? money(custoTotal / divisorEquilibrio) : null;
-  const precoMinimo = q > 0 && divisorMinimo > 0 ? money(custoTotal / divisorMinimo) : null;
+  /** Menor preço unitário que deixa a margem `m` depois de impostos, comissão e taxas. */
+  const precoPara = (m: number): number | null => {
+    if (q <= 0) return null;
+    const folga = 1 - taxa - m;
+    if (feePct <= 0) {
+      const divisor = q * folga;
+      return divisor > 0 ? money(custoTotal / divisor) : null;
+    }
+    // Sem teto: a taxa é só mais um percentual. Com teto: acima dele a taxa vira valor fixo.
+    const semTeto = folga - feePct;
+    if (semTeto > 0) {
+      const receita = custoTotal / semTeto;
+      if (feeTeto === null || feePct * receita <= feeTeto) return money(receita / q);
+    }
+    if (feeTeto !== null && folga > 0) {
+      const receita = (custoTotal + feeTeto) / folga;
+      if (feePct * receita >= feeTeto) return money(receita / q);
+    }
+    return null;
+  };
+  const precoEquilibrio = precoPara(0);
+  const precoMinimo = precoPara(margemMin);
   if (q > 0 && taxa < 1 && precoMinimo === null) {
     avisos.push(
-      'Com esses impostos, comissão e margem mínima, não existe preço que feche a conta.',
+      'Com esses impostos, comissão, taxas e margem mínima, não existe preço que feche a conta.',
     );
   }
 
@@ -366,7 +396,7 @@ export function simularProposta(entrada: EntradaSimulacao): ResultadoSimulacao {
     for (const desconto of DESCONTOS_PADRAO) {
       const preco = money(base * (1 - desconto / 100));
       const receita = money(preco * q);
-      const encargos = money(receita * taxa);
+      const encargos = money(receita * taxa + taxaPlataforma(receita));
       const lucro = money(receita - encargos - custoTotal);
       const margem = receita > 0 ? round1((lucro / receita) * 100) : 0;
       cenarios.push({

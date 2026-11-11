@@ -61,6 +61,9 @@ const simularBody = z.object({
   margem_minima_pct: percent.default(10),
   preco_referencia: nonNegative.nullable().default(null),
   preco_mercado: nonNegative.nullable().default(null),
+  taxa_plataforma_pct: percent.default(0),
+  taxa_plataforma_teto: nonNegative.nullable().default(null),
+  taxa_plataforma_fixa: nonNegative.default(0),
 });
 
 type Linha = Record<string, unknown> & {
@@ -208,6 +211,7 @@ function montar(
 
 const CAMPOS_LINHA = [
   'id',
+  'sistema_origem',
   'titulo',
   'orgao',
   'orgao_cnpj',

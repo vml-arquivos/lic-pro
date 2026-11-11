@@ -4,8 +4,10 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { UFS } from '@licitecomigo/shared';
 import { api, errorText } from '../../lib/api';
+import { baixarCsv, estatisticaDeVariacao } from '../../lib/csv';
 import { reais } from '../../lib/money';
 import { Alert, Empty, Kpi, Panel, Table, formatDate, formatNumber } from '../components/ui';
+import { GuiaDeValores } from '../components/GuiaDeValores';
 import { Paginado } from '../components/Pager';
 
 type Stats = {
@@ -166,6 +168,7 @@ export function PrecosApp({ nichos }: Readonly<{ nichos: readonly NichoOption[] 
   }, []);
 
   const stats = result?.sem_extremos ?? result?.todas ?? null;
+  const variacao = result ? estatisticaDeVariacao(result.itens.map((item) => item.preco)) : null;
   const chosen = lista.itens.find((item) => item.catmat === catmat);
   const outsideList = catmat && !chosen;
 
@@ -304,11 +307,54 @@ export function PrecosApp({ nichos }: Readonly<{ nichos: readonly NichoOption[] 
                 value={formatNumber(stats.amostras)}
                 hint={`${result.periodo_meses} meses`}
               />
+              {variacao ? (
+                <Kpi
+                  label="Variação dos preços"
+                  value={`${variacao.coeficiente.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%`}
+                  hint={
+                    variacao.coeficiente > 25
+                      ? 'Preços muito espalhados: use a mediana, não a média'
+                      : 'Preços parecidos entre si: a média é confiável'
+                  }
+                  tone={variacao.coeficiente > 25 ? 'warn' : 'ok'}
+                />
+              ) : null}
             </section>
             <Panel
               title={result.descricao ?? chosen?.descricao ?? `CATMAT ${result.catmat}`}
               description={`${result.extremos_removidos ? `${result.extremos_removidos} valor(es) muito fora da curva foram desconsiderados no resumo. ` : ''}Faixa comum (25% a 75%): ${reais(stats.p25)} a ${reais(stats.p75)}.`}
             >
+              <p>
+                <button
+                  type="button"
+                  className="ui-btn ui-btn-ghost ui-btn-small"
+                  onClick={() =>
+                    baixarCsv(
+                      `precos-${result.catmat}.csv`,
+                      [
+                        'Data',
+                        'Preço unitário',
+                        'Quantidade',
+                        'Unidade',
+                        'UASG',
+                        'UF',
+                        'Fornecedor',
+                      ],
+                      result.itens.map((item) => [
+                        item.data ? formatDate(item.data) : null,
+                        item.preco,
+                        item.quantidade,
+                        item.unidade,
+                        item.uasg,
+                        item.uf,
+                        item.fornecedor,
+                      ]),
+                    )
+                  }
+                >
+                  Baixar planilha (CSV)
+                </button>
+              </p>
               <Paginado itens={result.itens}>
                 {(visiveis) => (
                   <Table
@@ -333,7 +379,8 @@ export function PrecosApp({ nichos }: Readonly<{ nichos: readonly NichoOption[] 
               </Paginado>
               <p className="plan-note">
                 Fonte: {result.fonte.nome}, consultada em{' '}
-                {formatDate(result.fonte.consultado_em, true)}. São dados de apoio: o preço de
+                {formatDate(result.fonte.consultado_em, true)}. Os valores são de compras
+                homologadas ou contratadas, não pagamentos efetivos. São dados de apoio: o preço de
                 referência da sua proposta ou pesquisa segue a metodologia que o edital e a norma
                 exigirem, e a decisão é sua.
               </p>
@@ -361,7 +408,7 @@ export function PrecosApp({ nichos }: Readonly<{ nichos: readonly NichoOption[] 
               <section className="ui-kpis" aria-label="Resumo dos pregões fechados">
                 <Kpi label="Pregões fechados" value={formatNumber(fechados.data.resumo.pregoes)} />
                 <Kpi label="Estimado" value={reais(fechados.data.resumo.total_estimado)} />
-                <Kpi label="Fechado" value={reais(fechados.data.resumo.total_homologado)} />
+                <Kpi label="Homologado" value={reais(fechados.data.resumo.total_homologado)} />
                 <Kpi
                   label="Economia média"
                   value={pct(fechados.data.resumo.economia_pct)}
@@ -369,6 +416,37 @@ export function PrecosApp({ nichos }: Readonly<{ nichos: readonly NichoOption[] 
                   tone="ok"
                 />
               </section>
+              <p>
+                <button
+                  type="button"
+                  className="ui-btn ui-btn-ghost ui-btn-small"
+                  onClick={() =>
+                    baixarCsv(
+                      'pregoes-fechados.csv',
+                      [
+                        'Licitação',
+                        'Órgão',
+                        'UF',
+                        'Publicação',
+                        'Estimado',
+                        'Homologado',
+                        'Economia %',
+                      ],
+                      fechados.data.itens.map((item) => [
+                        item.titulo,
+                        item.orgao,
+                        item.uf,
+                        item.data_publicacao ? formatDate(item.data_publicacao) : null,
+                        item.valor_estimado,
+                        item.valor_homologado,
+                        item.economia_pct,
+                      ]),
+                    )
+                  }
+                >
+                  Baixar planilha (CSV)
+                </button>
+              </p>
               <Paginado itens={fechados.data.itens}>
                 {(visiveis) => (
                   <Table
@@ -402,6 +480,7 @@ export function PrecosApp({ nichos }: Readonly<{ nichos: readonly NichoOption[] 
           )
         ) : null}
       </Panel>
+      <GuiaDeValores />
     </>
   );
 }

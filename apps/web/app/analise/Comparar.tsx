@@ -151,6 +151,11 @@ export function Comparar({
       }),
     },
     {
+      titulo: 'Plataforma de disputa',
+      ajuda: 'A proposta e os lances são enviados na plataforma indicada no edital.',
+      celulas: editais.map((edital) => edital.sistema_origem ?? 'Ver no edital'),
+    },
+    {
       titulo: 'Itens no edital',
       celulas: editais.map((edital) =>
         edital.itens_total === null ? '—' : String(edital.itens_total),

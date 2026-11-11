@@ -5,6 +5,27 @@ import { simularProposta } from '@licitecomigo/shared';
 import { Alert, Kpi } from '../components/ui';
 import { moeda2 } from './analise-lib';
 
+/** Taxas públicas das plataformas de disputa (referência de 11/11/2026; confirme no plano vigente). */
+const PLATAFORMAS = {
+  nenhuma: { rotulo: 'Nenhuma / não sei', pct: '0', teto: '', fixa: '0', dica: '' },
+  bll: {
+    rotulo: 'BLL Compras — taxa de êxito',
+    pct: '1,5',
+    teto: '600',
+    fixa: '0',
+    dica: 'BLL sem mensalidade: 1,5% sobre o vencido, no máximo R$ 600 por lote.',
+  },
+  pcp: {
+    rotulo: 'Portal de Compras Públicas — crédito por processo',
+    pct: '0',
+    teto: '',
+    fixa: '129',
+    dica: 'R$ 129 por processo. Com plano mensal (R$ 165) ou anual (R$ 1.650), deixe em zero e some o plano nos outros custos.',
+  },
+  outra: { rotulo: 'Outra (informar)', pct: '0', teto: '', fixa: '0', dica: '' },
+} as const;
+type ChavePlataforma = keyof typeof PLATAFORMAS;
+
 export type SimulacaoInicial = { titulo: string; preco_referencia: number | null };
 
 const numero = (value: string): number => {
@@ -56,6 +77,18 @@ export function Simulador({ inicial }: Readonly<{ inicial: SimulacaoInicial | nu
   const [margemMin, setMargemMin] = useState('10');
   const [referencia, setReferencia] = useState('');
   const [mercado, setMercado] = useState('');
+  const [plataforma, setPlataforma] = useState<ChavePlataforma>('nenhuma');
+  const [taxaPct, setTaxaPct] = useState('0');
+  const [taxaTeto, setTaxaTeto] = useState('');
+  const [taxaFixa, setTaxaFixa] = useState('0');
+
+  function escolherPlataforma(chave: ChavePlataforma) {
+    setPlataforma(chave);
+    if (chave === 'outra') return;
+    setTaxaPct(PLATAFORMAS[chave].pct);
+    setTaxaTeto(PLATAFORMAS[chave].teto);
+    setTaxaFixa(PLATAFORMAS[chave].fixa);
+  }
 
   useEffect(() => {
     if (inicial?.preco_referencia) {
@@ -76,8 +109,24 @@ export function Simulador({ inicial }: Readonly<{ inicial: SimulacaoInicial | nu
         margem_minima_pct: Math.min(100, numero(margemMin)),
         preco_referencia: opcional(referencia),
         preco_mercado: opcional(mercado),
+        taxa_plataforma_pct: Math.min(100, numero(taxaPct)),
+        taxa_plataforma_teto: opcional(taxaTeto),
+        taxa_plataforma_fixa: numero(taxaFixa),
       }),
-    [quantidade, custo, frete, outros, impostos, comissao, margemMin, referencia, mercado],
+    [
+      quantidade,
+      custo,
+      frete,
+      outros,
+      impostos,
+      comissao,
+      margemMin,
+      referencia,
+      mercado,
+      taxaPct,
+      taxaTeto,
+      taxaFixa,
+    ],
   );
   const preenchido = numero(custo) > 0;
 
@@ -121,6 +170,44 @@ export function Simulador({ inicial }: Readonly<{ inicial: SimulacaoInicial | nu
               onChange={setComissao}
               sufixo="%"
             />
+            <label>
+              Plataforma de disputa
+              <select
+                value={plataforma}
+                onChange={(event) => escolherPlataforma(event.target.value as ChavePlataforma)}
+              >
+                {(Object.keys(PLATAFORMAS) as ChavePlataforma[]).map((chave) => (
+                  <option key={chave} value={chave}>
+                    {PLATAFORMAS[chave].rotulo}
+                  </option>
+                ))}
+              </select>
+              <small>
+                {PLATAFORMAS[plataforma].dica ||
+                  'A taxa de quem hospeda o pregão entra na conta. Confira no edital qual é.'}
+              </small>
+            </label>
+            {plataforma === 'outra' ? (
+              <>
+                <Campo
+                  rotulo="Taxa sobre o vendido"
+                  valor={taxaPct}
+                  onChange={setTaxaPct}
+                  sufixo="%"
+                />
+                <Campo
+                  rotulo="Teto da taxa por processo (R$)"
+                  valor={taxaTeto}
+                  onChange={setTaxaTeto}
+                  ajuda="Deixe vazio se não há teto."
+                />
+                <Campo
+                  rotulo="Valor fixo por processo (R$)"
+                  valor={taxaFixa}
+                  onChange={setTaxaFixa}
+                />
+              </>
+            ) : null}
             <Campo
               rotulo="Margem mínima que você aceita"
               valor={margemMin}
@@ -191,7 +278,7 @@ export function Simulador({ inicial }: Readonly<{ inicial: SimulacaoInicial | nu
                         <th scope="col">Desconto</th>
                         <th scope="col">Preço unitário</th>
                         <th scope="col">Receita</th>
-                        <th scope="col">Impostos e comissão</th>
+                        <th scope="col">Impostos, comissão e taxas</th>
                         <th scope="col">Lucro</th>
                         <th scope="col">Margem</th>
                       </tr>

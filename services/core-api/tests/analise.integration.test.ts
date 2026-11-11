@@ -369,6 +369,24 @@ suite('Análise de oportunidades: ranking, comparação e simulador (PostgreSQL 
     expect(json.preco_minimo).toBe(75);
     expect(json.desconto_maximo_pct).toBe(25);
 
+    const comTaxa = await app.inject({
+      method: 'POST',
+      url: '/analise/simular',
+      headers: ADMIN(),
+      payload: {
+        quantidade: 100,
+        custo_unitario: 50,
+        frete_total: 500,
+        outros_custos_total: 500,
+        impostos_pct: 6,
+        comissao_pct: 4,
+        margem_minima_pct: 10,
+        preco_referencia: 100,
+        taxa_plataforma_fixa: 129,
+      },
+    });
+    expect((comTaxa.json() as { custo_total: number }).custo_total).toBe(6_129);
+
     const bad = await app.inject({
       method: 'POST',
       url: '/analise/simular',

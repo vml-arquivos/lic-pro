@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { FOCOS_ANALISE, FOCO_ROTULOS, type FocoAnalise } from '@licitecomigo/shared';
 import { api, errorText } from '../../lib/api';
 import { Alert, Empty, Kpi } from '../components/ui';
+import { GuiaDeValores } from '../components/GuiaDeValores';
 import { Pager, paginar, totalDePaginas } from '../components/Pager';
 import { UfPicker } from '../components/UfPicker';
 import { faixaDeValor, nomeDoNicho } from '../radar/perfil-lib';
@@ -315,6 +316,7 @@ export function Ranking({
                             item.orgao,
                             [item.municipio_nome, item.uf].filter(Boolean).join('/'),
                             item.modalidade,
+                            item.sistema_origem ? `disputa em ${item.sistema_origem}` : null,
                           ]
                             .filter(Boolean)
                             .join(' · ')}
@@ -407,6 +409,7 @@ export function Ranking({
             }}
           />
           <p className="an-aviso">{estado.data.aviso}</p>
+          <GuiaDeValores />
         </>
       ) : null}
 

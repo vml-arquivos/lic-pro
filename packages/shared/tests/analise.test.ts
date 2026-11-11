@@ -162,6 +162,27 @@ describe('simularProposta', () => {
     expect(c30.atinge_margem_minima).toBe(false);
   });
 
+  it('inclui a taxa da plataforma: percentual com teto e valor fixo por processo', () => {
+    // Sem teto: 6000 / (100 * (1 - 0,10 - 0,10 - 0,015)) = 76,43
+    const semTeto = simularProposta({ ...entrada, taxa_plataforma_pct: 1.5 });
+    expect(semTeto.preco_minimo).toBeCloseTo(76.43, 2);
+    // Teto de R$ 50 por processo: a taxa de 1,5% passaria disso, então vira R$ 50 fixos.
+    const comTeto = simularProposta({
+      ...entrada,
+      taxa_plataforma_pct: 1.5,
+      taxa_plataforma_teto: 50,
+    });
+    expect(comTeto.preco_minimo).toBeCloseTo((6_000 + 50) / (100 * 0.8), 2);
+    const c = comTeto.cenarios.find((x) => x.desconto_pct === 0)!;
+    // receita 10000: 10% de encargos + taxa limitada a 50
+    expect(c.impostos_e_comissao).toBe(1_050);
+    // Valor fixo entra no custo total.
+    const fixa = simularProposta({ ...entrada, taxa_plataforma_fixa: 129 });
+    expect(fixa.custo_total).toBe(6_129);
+    // Sem os campos novos, a conta é a de sempre.
+    expect(simularProposta({ ...entrada, taxa_plataforma_pct: 0 }).preco_minimo).toBe(75);
+  });
+
   it('avisa quando o preço de referência não cobre a margem mínima', () => {
     const r = simularProposta({ ...entrada, custo_unitario: 95 });
     expect(r.avisos.join(' ')).toMatch(/não cobre/);

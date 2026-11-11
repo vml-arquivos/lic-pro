@@ -10,6 +10,8 @@ export type EditalAnalisado = {
   situacao: string | null;
   srp: boolean | null;
   numero_compra: string | null;
+  /** Plataforma onde a disputa acontece (ex.: BLL, Portal de Compras Públicas). */
+  sistema_origem?: string | null;
   valor_estimado: string | number | null;
   data_encerramento_proposta: string | null;
   url_origem: string | null;
@@ -92,6 +94,16 @@ export function prazoCurto(iso: string | null): string {
   if (dias === 1) return `Encerra amanhã (${data})`;
   return `Encerra em ${dias} dias (${data})`;
 }
+
+/** Em cada edital o valor é de uma etapa diferente; só o último é dinheiro que saiu do caixa. */
+export const GUIA_DE_VALORES: ReadonlyArray<readonly [string, string]> = [
+  ['Estimado', 'Quanto o órgão acha que vai custar. É o teto da disputa, quando publicado.'],
+  ['Lance ou proposta', 'Oferta de cada fornecedor durante a disputa.'],
+  ['Homologado', 'Valor final do resultado, depois da disputa e da adjudicação.'],
+  ['Ata de registro de preços', 'Preço registrado para compras futuras; pode não ser comprado.'],
+  ['Contrato', 'Valor previsto no contrato assinado.'],
+  ['Pagamento', 'O que o governo de fato pagou. Esta ferramenta não mostra pagamentos.'],
+];
 
 export const CRITERIOS_AJUDA: Record<string, string> = {
   aderencia: 'Quanto o edital combina com o seu perfil do Radar (UFs, palavras, faixa de valor).',
