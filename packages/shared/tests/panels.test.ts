@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  areasForPanel,
   panelApiAllowed,
   panelForHost,
   panelPathAllowed,
@@ -125,5 +126,61 @@ describe('painéis por endereço', () => {
     expect(panelApiAllowed('aluno', '/operations/ingest')).toBe(false);
     expect(panelApiAllowed('empresa', '/opportunities')).toBe(true);
     expect(panelApiAllowed('empresa', '/administrativo-x')).toBe(true);
+  });
+});
+
+const withCurso = parsePanels({
+  PANEL_URL_ADMIN: 'https://admin.licite.test',
+  PANEL_URL_EMPRESA: 'https://app.licite.test',
+  PANEL_URL_ALUNO: 'https://mentoria.licite.test',
+  PANEL_URL_CURSO: 'https://gestao.licite.test',
+});
+
+describe('módulo Curso: administração própria', () => {
+  it('sem endereço próprio, a Administração do curso vive no endereço do Aluno', () => {
+    expect(areasForPanel(all, 'aluno')).toEqual(['curso', 'aluno', 'mentor']);
+    expect(areasForPanel(withCurso, 'aluno')).toEqual(['aluno', 'mentor']);
+    expect(areasForPanel(withCurso, 'curso')).toEqual(['curso']);
+    expect(panelPathAllowed(all, 'aluno', '/gestao/financeiro')).toBe(true);
+    expect(panelPathAllowed(all, 'aluno', '/gestao/usuarios/abc')).toBe(true);
+    expect(panelPathAllowed(withCurso, 'aluno', '/gestao/alunos')).toBe(false);
+    expect(panelPathAllowed(withCurso, 'curso', '/gestao/alunos')).toBe(true);
+    expect(panelPathAllowed(withCurso, 'curso', '/mentor/encontros')).toBe(true);
+    expect(panelUrlForRole(all, 'plataforma')).toBe('https://admin.licite.test');
+  });
+
+  it('o módulo Profissional nunca abre as páginas do Curso, e o inverso também', () => {
+    for (const path of ['/gestao', '/gestao/financeiro', '/gestao/leads']) {
+      expect(panelPathAllowed(all, 'administracao', path), path).toBe(false);
+      expect(panelPathAllowed(all, 'empresa', path), path).toBe(false);
+      expect(panelPathAllowed(withCurso, 'curso', path), path).toBe(true);
+    }
+    for (const path of ['/admin', '/admin/financeiro', '/admin/assinantes', '/leads']) {
+      expect(panelPathAllowed(all, 'aluno', path), path).toBe(false);
+      expect(panelPathAllowed(withCurso, 'curso', path), path).toBe(false);
+      expect(panelPathAllowed(all, 'administracao', path), path).toBe(true);
+    }
+  });
+
+  it('só a equipe entra no endereço da Administração do curso', () => {
+    expect(roleAllowedOnPanel(withCurso, 'curso', 'plataforma')).toBe(true);
+    for (const role of ['admin', 'operador', 'aluno', 'mentor', 'colaborador']) {
+      expect(roleAllowedOnPanel(withCurso, 'curso', role), role).toBe(false);
+    }
+    expect(roleAllowedOnPanel(all, 'aluno', 'aluno')).toBe(true);
+    expect(roleAllowedOnPanel(withCurso, 'aluno', 'aluno')).toBe(true);
+  });
+
+  it('a Administração do curso não tem páginas públicas', () => {
+    expect(panelPathPublic('curso', '/radar')).toBe(false);
+    expect(panelPathPublic('curso', '/gestao')).toBe(false);
+    expect(panelPathPublic('curso', '/login')).toBe(true);
+  });
+
+  it('as rotas de administração da API existem onde a administração do curso vive', () => {
+    expect(panelApiAllowed('curso', '/admin/financeiro', withCurso)).toBe(true);
+    expect(panelApiAllowed('aluno', '/admin/financeiro', all)).toBe(true);
+    expect(panelApiAllowed('aluno', '/admin/financeiro', withCurso)).toBe(false);
+    expect(panelApiAllowed('empresa', '/admin/financeiro', all)).toBe(false);
   });
 });

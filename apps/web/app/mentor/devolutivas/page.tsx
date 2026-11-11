@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Devolutivas | Licite Comigo' };
 
 export default async function DevolutivasPage() {
-  const session = await requireArea('administracao', 'mentor');
+  const session = await requireArea('administracao', 'curso', 'mentor');
   return (
     <div className="ui-page">
       <PageHeader

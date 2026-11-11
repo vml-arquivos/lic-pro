@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { errorText, send } from '../../../lib/api';
 import { brl } from '../../../lib/money';
+import type { Modulo } from '../../../lib/modulo';
 import {
   Alert,
   Badge,
@@ -33,8 +34,8 @@ function valueLabel(cupom: Cupom): string {
   return cupom.tipo === 'percentual' ? `${cupom.valor}%` : brl(cupom.valor);
 }
 
-export function CouponsAdmin() {
-  const [data, reload] = useResource<Payload>('/admin/cupons');
+export function CouponsAdmin({ modulo = 'profissional' }: Readonly<{ modulo?: Modulo }>) {
+  const [data, reload] = useResource<Payload>(`/admin/cupons?modulo=${modulo}`);
   const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [codigo, setCodigo] = useState('');
@@ -49,7 +50,7 @@ export function CouponsAdmin() {
     setBusy(true);
     setMessage(null);
     try {
-      await send('PUT', '/admin/cupons', body);
+      await send('PUT', `/admin/cupons?modulo=${modulo}`, body);
       setMessage({ kind: 'success', text: ok });
       reload();
       return true;

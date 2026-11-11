@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Plano de 30 dias | Licite Comigo' };
 
 export default async function Plano30Page() {
-  const session = await requireArea('administracao', 'aluno');
+  const session = await requireArea('administracao', 'curso', 'aluno');
   return (
     <div className="ui-page">
       <PageHeader

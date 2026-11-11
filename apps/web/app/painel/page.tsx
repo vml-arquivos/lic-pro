@@ -11,8 +11,16 @@ export const metadata = {
 };
 
 export default async function PainelPage() {
-  const session = await requireArea('administracao', 'empresa', 'aluno', 'mentor', 'colaborador');
+  const session = await requireArea(
+    'administracao',
+    'curso',
+    'empresa',
+    'aluno',
+    'mentor',
+    'colaborador',
+  );
   if (session.area === 'administracao') redirect('/admin');
+  if (session.area === 'curso') redirect('/gestao');
   switch (session.area) {
     case 'aluno':
       return (

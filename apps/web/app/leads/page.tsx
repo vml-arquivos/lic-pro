@@ -2,11 +2,11 @@ import { requireArea } from '../../lib/session';
 import { LeadsTable } from './LeadsTable';
 
 export const metadata = {
-  title: 'Leads | Licite Comigo',
-  description: 'Contatos captados pelo site.',
+  title: 'Leads de empresas | Licite Comigo',
+  description: 'Empresas interessadas, captadas pelo site.',
 };
 
 export default async function LeadsPage() {
   await requireArea('administracao');
-  return <LeadsTable />;
+  return <LeadsTable modulo="profissional" />;
 }

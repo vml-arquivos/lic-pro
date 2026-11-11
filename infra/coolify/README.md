@@ -24,9 +24,9 @@ Todos os recursos de aplicação usam **Base Directory `/`** e o repositório co
 
 `bid-engine` e `realtime-gw` continuam recursos futuros e não fazem parte do deploy ativo do MVP 1. Seus Dockerfiles permanecem disponíveis para uma parada posterior.
 
-## Endereços por painel (Administração, Empresa, Aluno)
+## Endereços por painel (Administração, Empresa, Aluno e Curso)
 
-O mesmo recurso `web` atende os três painéis, cada um com o seu domínio:
+O mesmo recurso `web` atende os painéis, cada um com o seu domínio. O **módulo Curso** (alunos, mentores e a Administração do curso) usa o endereço do Aluno, por exemplo `mentoria.seudominio`; o **módulo Profissional** usa `admin.` e `app.` (veja `docs/produto/modulos-curso-e-profissional.md`). Para dar endereço próprio à Administração do curso, acrescente `PANEL_URL_CURSO` e o domínio dele em **Domains**. Nenhum recurso novo no Coolify é necessário.
 
 1. No DNS, crie um registro `A` para cada subdomínio (por exemplo `admin`, `app` e `aluno`) apontando para o IP do servidor.
 2. No recurso `web`, em **Domains**, informe os três separados por vírgula (`https://admin.seudominio,https://app.seudominio,https://aluno.seudominio`). Retire o domínio antigo.

@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata = {
   title: 'Planos e preços | Licite Comigo',
-  description: 'Defina o que é vendido, por quanto e o que cada plano inclui.',
+  description: 'Defina as assinaturas, o preço e o que cada plano inclui.',
 };
 
 export default async function PlanosPage() {
@@ -14,11 +14,11 @@ export default async function PlanosPage() {
   return (
     <main className="ui-page">
       <PageHeader
-        eyebrow="Administração"
+        eyebrow="Administração profissional"
         title="Planos e preços"
-        description="O curso e as assinaturas. Um plano só aparece para venda depois de ativado."
+        description="As assinaturas do sistema profissional. Um plano só aparece para venda depois de ativado."
       />
-      <PlansAdmin />
+      <PlansAdmin modulo="profissional" />
     </main>
   );
 }

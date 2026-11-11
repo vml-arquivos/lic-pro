@@ -1,20 +1,6 @@
-import { requireArea } from '../../../lib/session';
-import { PageHeader } from '../../components/ui';
-import { MateriaisAdmin } from './MateriaisAdmin';
+import { redirect } from 'next/navigation';
 
-export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Materiais | Licite Comigo' };
-
-export default async function AdminMateriaisPage() {
-  await requireArea('administracao');
-  return (
-    <div className="ui-page">
-      <PageHeader
-        eyebrow="Administração"
-        title="Materiais do aluno"
-        description="A biblioteca que o aluno vê. Item sem texto e sem link fica oculto até você anexar o link do arquivo."
-      />
-      <MateriaisAdmin />
-    </div>
-  );
+/** Endereço antigo: alunos, mentores e materiais agora ficam na Administração do curso. */
+export default function Moved() {
+  redirect('/gestao/materiais');
 }

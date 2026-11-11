@@ -1,22 +1,6 @@
-import { requireArea } from '../../../lib/session';
-import { PageHeader } from '../../components/ui';
-import { StudentsAdmin } from './StudentsAdmin';
+import { redirect } from 'next/navigation';
 
-export const metadata = {
-  title: 'Alunos e turmas | Licite Comigo',
-  description: 'Matrícula, turmas, convites e progresso dos alunos do curso.',
-};
-
-export default async function StudentsPage() {
-  await requireArea('administracao');
-  return (
-    <main className="ui-page">
-      <PageHeader
-        eyebrow="Administração"
-        title="Alunos e turmas"
-        description="O aluno só entra por matrícula feita aqui. Crie a turma, gere o convite e acompanhe o progresso."
-      />
-      <StudentsAdmin />
-    </main>
-  );
+/** Endereço antigo: alunos, mentores e materiais agora ficam na Administração do curso. */
+export default function Moved() {
+  redirect('/gestao/alunos');
 }

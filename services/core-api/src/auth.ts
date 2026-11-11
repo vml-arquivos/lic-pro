@@ -3,7 +3,8 @@ import { z } from 'zod';
 /**
  * Papéis gravados no banco.
  *
- * - `plataforma`: equipe do Licite Comigo. Único papel que enxerga a Administração.
+ * - `plataforma`: equipe do Licite Comigo. Único papel que enxerga a Administração (a do módulo
+ *   Profissional e a do módulo Curso, que são separadas).
  * - `admin`: dono da conta de uma empresa cliente (uma empresa = um usuário).
  * - `operador`: reservado para equipe de empresa; hoje tem as mesmas permissões de `admin`
  *   sobre a própria conta.
@@ -22,7 +23,14 @@ export const userRoleSchema = z.enum([
 export const journeyProfileSchema = z.enum(['iniciante', 'mentorado', 'profissional']);
 
 /** Áreas do produto. É o que o usuário enxerga; o papel é o que o banco guarda. */
-export const areaSchema = z.enum(['administracao', 'empresa', 'aluno', 'mentor', 'colaborador']);
+export const areaSchema = z.enum([
+  'administracao',
+  'curso',
+  'empresa',
+  'aluno',
+  'mentor',
+  'colaborador',
+]);
 
 export const authClaimsSchema = z.object({
   sub: z.string().uuid(),

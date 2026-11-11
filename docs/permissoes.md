@@ -6,13 +6,20 @@ exige mudar a outra.
 
 ## Áreas e papéis
 
-| Área          | Papel no banco (`papel_usuario`) | Quem é                                |
-| ------------- | -------------------------------- | ------------------------------------- |
-| Administração | `plataforma`                     | Equipe do Licite Comigo               |
-| Empresa       | `admin` (e `operador`)           | Cliente que busca e filtra licitações |
-| Aluno         | `aluno`                          | Aluno do curso / mentoria             |
-| Mentor        | `mentor`                         | Quem acompanha os alunos              |
-| Colaborador   | `colaborador`                    | Equipe de operação do Licite Comigo   |
+O produto tem dois módulos, cada um com a sua administração. Dinheiro, leads, cupons e planos de
+um módulo nunca aparecem no outro (veja `docs/produto/modulos-curso-e-profissional.md`).
+
+| Módulo       | Área                       | Papel no banco (`papel_usuario`) | Quem é                                |
+| ------------ | -------------------------- | -------------------------------- | ------------------------------------- |
+| Profissional | Administração profissional | `plataforma`                     | Equipe do Licite Comigo               |
+| Profissional | Empresa                    | `admin` (e `operador`)           | Cliente que busca e filtra licitações |
+| Profissional | Colaborador                | `colaborador`                    | Equipe de operação do Licite Comigo   |
+| Curso        | Administração do curso     | `plataforma` (só "ver como")     | Equipe do Licite Comigo               |
+| Curso        | Aluno                      | `aluno`                          | Aluno do curso / mentoria             |
+| Curso        | Mentor                     | `mentor`                         | Quem acompanha os alunos              |
+
+A Administração do curso (`curso`) não tem papel próprio no banco: é a mesma equipe
+(`plataforma`) trabalhando no módulo do curso.
 
 - A área é calculada no servidor a partir do papel do token. Nenhuma tela ou preferência do
   usuário muda a área.
@@ -28,7 +35,8 @@ exige mudar a outra.
 ## Endereços por painel
 
 Cada painel pode ter o seu próprio endereço (`PANEL_URL_ADMIN`, `PANEL_URL_EMPRESA`,
-`PANEL_URL_ALUNO` e, opcionalmente, `PANEL_URL_MENTOR` e `PANEL_URL_COLABORADOR`). É o mesmo aplicativo, mas em cada
+`PANEL_URL_ALUNO` e, opcionalmente, `PANEL_URL_CURSO`, `PANEL_URL_MENTOR` e
+`PANEL_URL_COLABORADOR`). É o mesmo aplicativo, mas em cada
 endereço só existe o painel dele. Sem essas variáveis nada muda e o sistema segue com um
 endereço só.
 
@@ -41,11 +49,18 @@ endereço só.
   para a auditoria com a área daquele painel.
 - **Sessão**: o cookie não tem `Domain`, então cada endereço tem a sua sessão. Entrar na
   Administração não abre a Empresa.
-- **API**: nos endereços de Empresa e Aluno as rotas `/admin`, `/platform` e `/operations`
-  não existem. O banco continua isolando por papel e por conta.
+- **API**: nos endereços de Empresa (e de Mentor/Colaborador, quando próprios) as rotas
+  `/admin`, `/platform` e `/operations` não existem. Elas existem na Administração profissional,
+  na Administração do curso e, quando esta não tem endereço próprio, no endereço do Aluno (onde
+  ela vive). O core-api exige o papel `plataforma` em cada uma, e o banco continua isolando por
+  papel e por conta.
 - **Links enviados**: convites, e-mails de confirmação, recuperação de senha e alertas apontam
   para o painel de quem recebe. Mentor sem endereço próprio usa o do Aluno.
 - **Mentor**: faz parte do lado do curso. Sem `PANEL_URL_MENTOR`, entra pelo endereço do Aluno.
+- **Administração do curso**: sem `PANEL_URL_CURSO`, vive no endereço do Aluno e só a equipe
+  (`plataforma`) a vê; ao entrar ali a equipe cai na Administração do curso (`/gestao`). Com
+  `PANEL_URL_CURSO`, ela ganha endereço próprio e o endereço do Aluno volta a ter só aluno e
+  mentor.
 - **Colaborador**: sem `PANEL_URL_COLABORADOR`, entra pelo endereço da Administração e vê só o
   painel dele (menu de Operação), nunca as páginas de Administração.
 - **Endereço antigo**: um endereço que não esteja em `PANEL_URL_*` continua funcionando como
@@ -100,7 +115,8 @@ não tem esse limite. O colaborador só enxerga os nichos que a Administração 
 
 | Página                                                                                | Administração | Empresa | Aluno | Mentor | Colaborador |
 | ------------------------------------------------------------------------------------- | :-----------: | :-----: | :---: | :----: | :---------: |
-| `/admin`, `/admin/*`, `/leads`                                                        |      sim      |   não   |  não  |  não   |     não     |
+| `/admin`, `/admin/*`, `/leads` (Administração profissional)                           |      sim      |   não   |  não  |  não   |     não     |
+| `/gestao`, `/gestao/*` (Administração do curso; só a área `curso`)                    |      não      |   não   |  não  |  não   |     não     |
 | `/painel`, `/conta`, `/ana`, `/onboarding`                                            |      sim      |   sim   |  sim  |  sim   |     sim     |
 | `/radar`, `/pregoes`                                                                  |      sim      |   sim   |  sim  |  não   |     sim     |
 | `/oportunidades`, `/agenda`, `/documentos`, `/buscas-salvas`, `/alertas`, `/empresas` |      sim      |   sim   |  não  |  não   |     sim     |
@@ -108,7 +124,6 @@ não tem esse limite. O colaborador só enxerga os nichos que a Administração 
 | `/mentor`, `/academia/mentor`                                                         |      sim      |   não   |  não  |  sim   |     não     |
 | `/diagnostico`, `/encontros`                                                          |      sim      |   não   |  sim  |  não   |     não     |
 | `/materiais`                                                                          |      sim      |   não   |  sim  |  sim   |     não     |
-| `/admin/materiais`                                                                    |      sim      |   não   |  não  |  não   |     não     |
 | `/admin/colaboradores`                                                                |      sim      |   não   |  não  |  não   |     não     |
 | `/admin/equipe`, `/admin/usuarios/:id` (ficha do usuário)                             |      sim      |   não   |  não  |  não   |     não     |
 | `/mentor/encontros`                                                                   |      sim      |   não   |  não  |  sim   |     não     |
@@ -135,6 +150,7 @@ Regras e menus ficam em `packages/shared/src/areas.ts`, com testes. As páginas 
 | `DELETE /mentor/concessions/:id`                                                                                                   |     ✔      |       |          |             |        |       |
 | `PATCH /me/view-as`                                                                                                                |     ✔      |       |          |             |        |       |
 | `GET /platform/overview, /companies, /students, /mentors, /classes, /invitations`                                                  |     ✔      |       |          |             |        |       |
+| `GET /platform/migracoes` (aviso de migrations por aplicar)                                                                        |     ✔      |       |          |             |        |       |
 | `POST /platform/invitations` (+ `/:id/revoke`, `/:id/reissue`)                                                                     |     ✔      |       |          |             |        |       |
 | `POST /platform/classes`, `PATCH /platform/classes/:id`                                                                            |     ✔      |       |          |             |        |       |
 | `PATCH /platform/users/:id/active`                                                                                                 |     ✔      |       |          |             |        |       |

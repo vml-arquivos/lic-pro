@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   AREAS,
   AREA_MENUS,
+  MODULE_AREAS,
   PAGE_RULES,
   canOpenPage,
   flatMenu,
+  moduleOfArea,
   pageAreas,
   requiresSession,
+  type Area,
 } from '../src/areas.js';
 
 describe('menus por área', () => {
@@ -63,16 +66,16 @@ describe('Empresa: agenda e documentos', () => {
 describe('regras de página', () => {
   it('a regra mais específica vence e /mentor não captura /mentorado', () => {
     expect(pageAreas('/academia')).toEqual(AREAS);
-    expect(pageAreas('/academia/mentor')).toEqual(['administracao', 'mentor']);
+    expect(pageAreas('/academia/mentor')).toEqual(['administracao', 'curso', 'mentor']);
     expect(pageAreas('/academia/trilhas/x/aulas/y')).toEqual(AREAS);
     expect(pageAreas('/mentorado')).toBeNull();
-    expect(pageAreas('/mentor')).toEqual(['administracao', 'mentor']);
+    expect(pageAreas('/mentor')).toEqual(['administracao', 'curso', 'mentor']);
   });
 
-  it('só a Administração abre /admin e /leads', () => {
-    for (const path of ['/admin', '/admin/alunos', '/leads']) {
+  it('só a Administração profissional abre /admin e /leads', () => {
+    for (const path of ['/admin', '/admin/empresas', '/leads']) {
       expect(canOpenPage(['administracao'], path)).toBe(true);
-      for (const area of ['empresa', 'aluno', 'mentor'] as const) {
+      for (const area of ['curso', 'empresa', 'aluno', 'mentor'] as const) {
         expect(canOpenPage([area], path), `${area} ${path}`).toBe(false);
       }
     }
@@ -123,5 +126,51 @@ describe('páginas do curso e da mentoria', () => {
   it('a página pública de cancelar e-mails não pede login nem área', () => {
     expect(requiresSession('/cancelar-alertas')).toBe(false);
     expect(canOpenPage([], '/cancelar-alertas')).toBe(true);
+  });
+});
+
+describe('módulos Curso e Profissional', () => {
+  it('cada área pertence a um único módulo', () => {
+    const doCurso = MODULE_AREAS.curso;
+    const doProfissional = MODULE_AREAS.profissional;
+    expect([...doCurso, ...doProfissional].sort()).toEqual([...AREAS].sort());
+    for (const area of doCurso) expect(moduleOfArea(area)).toBe('curso');
+    for (const area of doProfissional) expect(moduleOfArea(area)).toBe('profissional');
+  });
+
+  it('a Administração do curso abre /gestao e a profissional não', () => {
+    for (const path of [
+      '/gestao',
+      '/gestao/alunos',
+      '/gestao/financeiro',
+      '/gestao/usuarios/abc',
+    ]) {
+      expect(canOpenPage(['curso'], path), path).toBe(true);
+      for (const area of ['administracao', 'empresa', 'aluno', 'mentor', 'colaborador'] as const) {
+        expect(canOpenPage([area], path), `${area} ${path}`).toBe(false);
+      }
+    }
+  });
+
+  it('dinheiro, leads e cadastros do curso não aparecem no menu profissional (e vice-versa)', () => {
+    const hrefs = (area: Area) => flatMenu(area).map((item) => item.href);
+    for (const path of ['/admin/alunos', '/admin/mentores', '/admin/materiais']) {
+      expect(hrefs('administracao'), path).not.toContain(path);
+      expect(hrefs('curso'), path).not.toContain(path);
+    }
+    for (const path of ['/admin/financeiro', '/admin/assinantes', '/admin/empresas', '/leads']) {
+      expect(hrefs('curso'), path).not.toContain(path);
+    }
+    for (const path of ['/gestao/financeiro', '/gestao/alunos', '/gestao/leads']) {
+      expect(hrefs('administracao'), path).not.toContain(path);
+    }
+  });
+
+  it('todo item do menu leva a uma página que a própria área pode abrir', () => {
+    for (const area of AREAS) {
+      for (const item of flatMenu(area)) {
+        expect(canOpenPage([area], item.href), `${area} → ${item.href}`).toBe(true);
+      }
+    }
   });
 });

@@ -299,6 +299,7 @@ suite('áreas, plataforma e convites (PostgreSQL real)', () => {
     expect(initial).toMatchObject({ area: 'administracao', plataforma: true });
     expect(initial.areas_permitidas).toEqual([
       'administracao',
+      'curso',
       'empresa',
       'aluno',
       'mentor',

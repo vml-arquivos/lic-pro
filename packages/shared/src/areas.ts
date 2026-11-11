@@ -2,14 +2,49 @@
  * Áreas do produto e regras de navegação.
  *
  * Fonte única para o menu e para a guarda de páginas. O papel (`plataforma`, `admin`,
- * `aluno`, `mentor`, `colaborador`) é gravado no banco; a área é o que o usuário enxerga. Quem pode abrir
+ * `aluno`, `mentor`, `colaborador`) é gravado no banco; a área é o que o usuário enxerga.
+ * A equipe (`plataforma`) tem duas administrações separadas: a profissional (`administracao`)
+ * e a do curso (`curso`). Quem pode abrir
  * cada área é decidido no servidor (core-api); aqui só se descreve o que cada área mostra.
  */
-export const AREAS = ['administracao', 'empresa', 'aluno', 'mentor', 'colaborador'] as const;
+export const AREAS = [
+  'administracao',
+  'curso',
+  'empresa',
+  'aluno',
+  'mentor',
+  'colaborador',
+] as const;
 export type Area = (typeof AREAS)[number];
 
+/**
+ * Os dois módulos do produto. Cada um tem a sua administração, e dinheiro, leads e usuários de
+ * um módulo nunca se misturam com os do outro. A Ana e a base de editais são as mesmas.
+ *
+ * - `curso`: alunos, mentores e a Administração do curso (área `curso`).
+ * - `profissional`: empresas assinantes, colaboradores e a Administração profissional
+ *   (área `administracao`), que também trabalha com as licitações.
+ */
+export const MODULES = ['curso', 'profissional'] as const;
+export type ModuleName = (typeof MODULES)[number];
+
+export const MODULE_LABELS: Record<ModuleName, string> = {
+  curso: 'Curso e mentoria',
+  profissional: 'Sistema profissional de licitações',
+};
+
+export const MODULE_AREAS: Record<ModuleName, readonly Area[]> = {
+  curso: ['curso', 'aluno', 'mentor'],
+  profissional: ['administracao', 'empresa', 'colaborador'],
+};
+
+export function moduleOfArea(area: Area): ModuleName {
+  return MODULE_AREAS.curso.includes(area) ? 'curso' : 'profissional';
+}
+
 export const AREA_LABELS: Record<Area, string> = {
-  administracao: 'Administração',
+  administracao: 'Administração profissional',
+  curso: 'Administração do curso',
   empresa: 'Empresa',
   aluno: 'Aluno',
   mentor: 'Mentor',
@@ -32,11 +67,10 @@ const prices: MenuItem = { label: 'Preços pagos', href: '/precos', icon: 'chart
 export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
   administracao: [
     {
-      label: 'Administração',
+      label: 'Administração profissional',
       items: [
         { label: 'Visão geral', href: '/admin', icon: 'home' },
-        { label: 'Leads', href: '/leads', icon: 'inbox' },
-        { label: 'Materiais', href: '/admin/materiais', icon: 'file' },
+        { label: 'Leads de empresas', href: '/leads', icon: 'inbox' },
         { label: 'Fontes de dados', href: '/admin/fontes', icon: 'sync' },
         { label: 'Financeiro', href: '/admin/financeiro', icon: 'chart' },
         { label: 'Assinantes', href: '/admin/assinantes', icon: 'users' },
@@ -49,13 +83,34 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
       label: 'Usuários',
       items: [
         { label: 'Empresas clientes', href: '/admin/empresas', icon: 'building' },
-        { label: 'Alunos e turmas', href: '/admin/alunos', icon: 'users' },
-        { label: 'Mentores', href: '/admin/mentores', icon: 'award' },
         { label: 'Colaboradores', href: '/admin/colaboradores', icon: 'users' },
         { label: 'Equipe administrativa', href: '/admin/equipe', icon: 'shield' },
       ],
     },
     { label: 'Ferramentas', items: [radar, academy, ana] },
+    { label: 'Conta', items: [account] },
+  ],
+  curso: [
+    {
+      label: 'Administração do curso',
+      items: [
+        { label: 'Visão geral', href: '/gestao', icon: 'home' },
+        { label: 'Leads de alunos', href: '/gestao/leads', icon: 'inbox' },
+        { label: 'Vendas do curso', href: '/gestao/financeiro', icon: 'chart' },
+        { label: 'Cupons do curso', href: '/gestao/cupons', icon: 'award' },
+        { label: 'Preço do curso', href: '/gestao/planos', icon: 'clipboard' },
+      ],
+    },
+    {
+      label: 'Alunos e ensino',
+      items: [
+        { label: 'Alunos e turmas', href: '/gestao/alunos', icon: 'users' },
+        { label: 'Mentores', href: '/gestao/mentores', icon: 'award' },
+        { label: 'Materiais', href: '/gestao/materiais', icon: 'file' },
+        { label: 'Encontros ao vivo', href: '/mentor/encontros', icon: 'calendar' },
+      ],
+    },
+    { label: 'Ferramentas', items: [academy, ana] },
     { label: 'Conta', items: [account] },
   ],
   empresa: [
@@ -142,8 +197,8 @@ const WORK: readonly Area[] = ['administracao', 'empresa', 'aluno', 'colaborador
 const COMPANY: readonly Area[] = ['administracao', 'empresa'];
 /** Ferramentas de busca e acompanhamento: empresa cliente e colaborador da operação. */
 const OPERATION: readonly Area[] = ['administracao', 'empresa', 'colaborador'];
-const TEACHING: readonly Area[] = ['administracao', 'mentor'];
-const STUDENT: readonly Area[] = ['administracao', 'aluno'];
+const TEACHING: readonly Area[] = ['administracao', 'curso', 'mentor'];
+const STUDENT: readonly Area[] = ['administracao', 'curso', 'aluno'];
 
 /**
  * Páginas protegidas por área. A regra mais específica (prefixo mais longo) vence.
@@ -152,6 +207,7 @@ const STUDENT: readonly Area[] = ['administracao', 'aluno'];
 export const PAGE_RULES: readonly PageRule[] = [
   { prefix: '/admin', areas: ['administracao'] },
   { prefix: '/leads', areas: ['administracao'] },
+  { prefix: '/gestao', areas: ['curso'] },
   { prefix: '/mentor', areas: TEACHING },
   { prefix: '/academia/mentor', areas: TEACHING },
   { prefix: '/academia', areas: ALL },
@@ -159,7 +215,7 @@ export const PAGE_RULES: readonly PageRule[] = [
   { prefix: '/praticar', areas: STUDENT },
   { prefix: '/diagnostico', areas: STUDENT },
   { prefix: '/encontros', areas: STUDENT },
-  { prefix: '/materiais', areas: ['administracao', 'aluno', 'mentor'] },
+  { prefix: '/materiais', areas: ['administracao', 'curso', 'aluno', 'mentor'] },
   { prefix: '/mentoria', areas: STUDENT },
   { prefix: '/certificado', areas: STUDENT },
   { prefix: '/radar', areas: WORK },

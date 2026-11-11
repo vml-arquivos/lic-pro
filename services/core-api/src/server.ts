@@ -48,6 +48,7 @@ import { withTenant } from './db.js';
 import { assertStrongPassword, hashPassword, verifyPassword } from './password.js';
 import { sendEmail } from './email.js';
 import { checkReadiness } from './readiness.js';
+import { leadPertenceAoModulo, moduloSchema } from './modulo.js';
 import { applyNicheScope, readUserNiches } from './niche-scope.js';
 import { registerAlertRoutes } from './alerts-routes.js';
 import { registerCompanyRoutes } from './empresa.js';
@@ -831,10 +832,17 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.get('/admin/leads', async (request, reply) => {
     if (!requireRoles(reply, request, ['plataforma'])) return;
     if (!pool) return sendDatabaseUnavailable(reply);
+    // Lead de aluno (perfil mentorado/iniciante) e lead de empresa ficam em listas separadas.
+    const { modulo } = z.object({ modulo: moduloSchema.optional() }).parse(request.query);
     const result = await withPlatform(pool, request, 'platform.leads.listed', (client) =>
-      client.query('SELECT * FROM plataforma_listar_leads(200)'),
+      client.query(`SELECT * FROM plataforma_listar_leads(${modulo ? 500 : 200})`),
     );
-    return reply.send({ data: result.rows });
+    const rows = modulo
+      ? result.rows.filter((row: { perfil?: string | null }) =>
+          leadPertenceAoModulo(row.perfil, modulo),
+        )
+      : result.rows;
+    return reply.send({ data: rows.slice(0, 200) });
   });
 
   app.get('/me', async (request, reply) => {

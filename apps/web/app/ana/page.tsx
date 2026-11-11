@@ -25,6 +25,12 @@ const SUGESTOES: Record<Area, readonly string[]> = {
     'Como analisar um edital?',
     'O que é sessão de disputa?',
   ],
+  curso: [
+    'Como explicar o plano de 30 dias a um aluno?',
+    'Como analisar um edital?',
+    'Quais dúvidas os alunos costumam ter no início?',
+    'O que é sessão de disputa?',
+  ],
   administracao: [
     'Como analisar um edital?',
     'Quanto o governo pagou por itens de um nicho?',

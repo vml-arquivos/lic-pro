@@ -84,5 +84,13 @@ cria a conta da equipe direto.
 - `atividade_usuario` e `atividade_buscas`: o que cada usuário usou e buscou, para a ficha da
   Administração. Isolamento por conta (RLS) e leitura liberada à sessão da plataforma.
 
-Todas rodam em ordem pelo `migrate.sh`, cada uma na sua transação. O CI confere que as 29
+## Módulos Curso e Profissional (0030)
+
+- `usuarios.visualizar_como` passa a aceitar `curso` (Administração do curso, só para a equipe
+  "ver como"). Nenhum dado muda: o financeiro, os leads e os cupons de cada módulo são separados
+  nas consultas, por `cobrancas.tipo`, `planos.tipo` e `leads.perfil`.
+- `licite_core` ganha leitura de `schema_migrations`: a Administração mostra um aviso quando há
+  migrations por aplicar (`GET /platform/migracoes`).
+
+Todas rodam em ordem pelo `migrate.sh`, cada uma na sua transação. O CI confere que as 30
 foram aplicadas. Migration já aplicada nunca é editada: mudança vira arquivo novo.

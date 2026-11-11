@@ -4,8 +4,8 @@ import { PageHeader } from '../components/ui';
 import { AdminOverview } from './AdminOverview';
 
 export const metadata = {
-  title: 'Administração | Licite Comigo',
-  description: 'Visão geral da operação: empresas, alunos, mentores e coleta de editais.',
+  title: 'Administração profissional | Licite Comigo',
+  description: 'Visão geral da operação: empresas, assinaturas e coleta de editais.',
 };
 
 export default async function AdminPage() {
@@ -13,12 +13,12 @@ export default async function AdminPage() {
   return (
     <main className="ui-page">
       <PageHeader
-        eyebrow="Administração"
+        eyebrow="Administração profissional"
         title="Visão geral"
-        description="Como está a operação hoje: clientes, curso e coleta de editais."
+        description="Como está a operação hoje: empresas clientes, assinaturas e coleta de editais."
       />
       <AreaHub area="administracao" />
-      <AdminOverview />
+      <AdminOverview modulo="profissional" />
     </main>
   );
 }

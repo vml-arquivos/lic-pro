@@ -1,26 +1,49 @@
 # Mapa de acessos e painéis
 
-Cinco áreas separadas. Cada pessoa vê só a sua. Com endereços por painel (veja
-`docs/permissoes.md`, "Endereços por painel"), cada área tem a sua porta:
+Dois módulos, cada um com a sua administração (veja `modulos-curso-e-profissional.md`). Cada
+pessoa vê só a sua área. Com endereços por painel (veja `docs/permissoes.md`, "Endereços por
+painel"), cada área tem a sua porta:
 
-| Painel           | Endereço sugerido                           | Quem entra                          |
-| ---------------- | ------------------------------------------- | ----------------------------------- |
-| Administração    | `admin.seudominio`                          | Equipe do Licite Comigo             |
-| Empresa          | `app.seudominio`                            | Empresas assinantes                 |
-| Aluno (e Mentor) | `aluno.seudominio`                          | Alunos do curso e mentores          |
-| Colaborador      | `equipe.seudominio` (ou o da Administração) | Equipe de operação do Licite Comigo |
+| Módulo       | Painel                                 | Endereço sugerido                           | Quem entra                          |
+| ------------ | -------------------------------------- | ------------------------------------------- | ----------------------------------- |
+| Profissional | Administração profissional             | `admin.seudominio`                          | Equipe do Licite Comigo             |
+| Profissional | Empresa                                | `app.seudominio`                            | Empresas assinantes                 |
+| Profissional | Colaborador                            | `equipe.seudominio` (ou o da Administração) | Equipe de operação do Licite Comigo |
+| Curso        | Aluno, Mentor e Administração do curso | `mentoria.seudominio`                       | Alunos, mentores e a equipe         |
 
 Sem esses endereços, a equipe pode "ver como" cada área no mesmo endereço.
 
-## Administração (equipe do Licite Comigo)
+## Administração profissional (equipe do Licite Comigo)
 
-Menu: Visão geral · Leads · Empresas clientes · Alunos e turmas · Mentores · Colaboradores · Fontes de dados · Financeiro · Planos e preços · Assinantes · Cupons · Auditoria.
+Menu: Visão geral · Leads de empresas · Fontes de dados · Financeiro · Assinantes · Cupons ·
+Planos e preços · Auditoria · Empresas clientes · Colaboradores · Equipe administrativa.
 Também acessa Radar, Academia, Ana e a própria conta.
 
-- **Visão geral**: empresas clientes, alunos e mentores ativos, convites pendentes, leads,
-  editais no catálogo, uso (buscas, alertas, Ana) e situação da coleta.
+- **Visão geral**: empresas clientes, leads de empresas, editais no catálogo, uso (buscas,
+  alertas, Ana) e situação da coleta. Mostra um aviso quando o banco está desatualizado
+  (migrations por aplicar).
 - **Empresas clientes**: convidar empresa (um usuário por empresa), ver nichos, uso e situação;
   ativar/desativar.
+- **Fontes de dados**: coleta de editais do governo (PNCP) com botão "Sincronizar agora", últimas execuções, editais no catálogo, abertos e novos em 24 h.
+- **Financeiro**: receita do mês e de 30 dias, receita recorrente (MRR), assinantes ativos e em
+  atraso, conversão, cobranças recentes das assinaturas e liberação manual (Pix fora do sistema).
+  Só dinheiro das empresas.
+- **Planos e preços**: preço, benefícios e limites das assinaturas; ativar para vender.
+- **Assinantes**: quem está em teste, ativo, em atraso ou encerrado; estender o teste, cancelar ou
+  reativar de cortesia.
+- **Cupons**: códigos de desconto das assinaturas (percentual ou valor fixo), com limite de usos e
+  validade; ver quantos usos e pagamentos.
+- **Auditoria**: ações das duas administrações e do "ver como".
+- **Leads de empresas**: contatos de empresas captados pelo site.
+- **Colaboradores e Equipe administrativa**: convites, nichos liberados, ficha e senha.
+
+## Administração do curso (a mesma equipe, no módulo do curso)
+
+Menu: Visão geral · Leads de alunos · Vendas do curso · Cupons do curso · Preço do curso ·
+Alunos e turmas · Mentores · Materiais · Encontros ao vivo. Também acessa Academia, Ana e a
+própria conta. Páginas em `/gestao`.
+
+- **Visão geral**: alunos ativos, turmas, mentores, convites pendentes, leads de alunos.
 - **Alunos e turmas**: criar turma (com mentor), matricular aluno (gera convite), acompanhar
   progresso, reenviar ou revogar convites. Cada turma tem prazo de acesso, prazo de mentoria e
   link do grupo de conversa. Aluno com prazo vencido fica só com leitura e o aviso de renovar.
@@ -28,16 +51,12 @@ Também acessa Radar, Academia, Ana e a própria conta.
   inicial" traz os itens do curso sem mexer no que já existe. Item sem texto e sem link fica
   oculto até a equipe anexar o link do arquivo.
 - **Mentores**: convidar, ver alunos ativos, ativar/desativar.
-- **Fontes de dados**: coleta de editais do governo (PNCP) com botão "Sincronizar agora", últimas execuções, editais no catálogo, abertos e novos em 24 h.
-- **Financeiro**: receita do mês e de 30 dias, receita recorrente (MRR), assinantes ativos e em
-  atraso, vendas do curso, conversão, cobranças recentes e liberação manual (Pix fora do sistema).
-- **Planos e preços**: preço, benefícios e limites do curso e das assinaturas; ativar para vender.
-- **Assinantes**: quem está em teste, ativo, em atraso ou encerrado; estender o teste, cancelar ou
-  reativar de cortesia.
-- **Cupons**: criar código de desconto (percentual ou valor fixo), por plano, com limite de usos e
-  validade; ver quantos usos e pagamentos.
-- **Auditoria**: ações da administração e do "ver como".
-- **Leads**: contatos captados pelo site.
+- **Vendas do curso**: receita do curso, vendidos, aguardando pagamento, conversão, cobranças
+  recentes e liberação manual. Só dinheiro do curso.
+- **Preço do curso** e **Cupons do curso**: só o plano do curso; o cupom criado ali só vale
+  para ele.
+- **Leads de alunos**: interessados no curso (perfis mentorado e iniciante).
+- Antigos endereços `/admin/alunos`, `/admin/mentores` e `/admin/materiais` redirecionam para cá.
 
 ## Empresa
 

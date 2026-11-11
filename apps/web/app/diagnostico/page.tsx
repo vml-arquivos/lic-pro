@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Meu diagnóstico | Licite Comigo' };
 
 export default async function DiagnosticoPage() {
-  const session = await requireArea('administracao', 'aluno');
+  const session = await requireArea('administracao', 'curso', 'aluno');
   return (
     <div className="ui-page">
       <PageHeader

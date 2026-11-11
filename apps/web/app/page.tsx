@@ -33,11 +33,18 @@ const PILLARS = [
   ],
 ] as const;
 
+/** Página inicial de cada área depois do login. */
+function homeForArea(area: string | null | undefined): string {
+  if (area === 'administracao') return '/admin';
+  if (area === 'curso') return '/gestao';
+  return '/painel';
+}
+
 export default async function HomePage() {
   if (process.env.DEMO_MODE === 'true') return <HomeWorkspace demoMode />;
   const result = await getSessionResult();
   if (result.status === 'ok') {
-    redirect(result.session.area === 'administracao' ? '/admin' : '/painel');
+    redirect(homeForArea(result.session.area));
   }
   // Em endereço de painel a entrada é direto o login de cada acesso.
   if (currentPanel()) redirect('/login');

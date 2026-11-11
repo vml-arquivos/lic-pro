@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Material | Licite Comigo' };
 
 export default async function MaterialPage({ params }: Readonly<{ params: { id: string } }>) {
-  await requireArea('administracao', 'aluno', 'mentor');
+  await requireArea('administracao', 'curso', 'aluno', 'mentor');
   return (
     <div className="ui-page">
       <Link className="back-link" href="/materiais">

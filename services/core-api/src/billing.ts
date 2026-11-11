@@ -14,6 +14,7 @@ import { panelBaseUrl, type RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
 import { isValidDocumento, onlyDigits } from './documento.js';
 import { resolverCupom } from './cupom-calc.js';
+import { moduloSchema, tipoDeCobrancaDoModulo } from './modulo.js';
 import { sendEmail } from './email.js';
 import {
   authContext,
@@ -876,12 +877,18 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): void {
     });
 
     admin.get('/admin/planos', async (request) =>
-      withPlatform(pool!, request, 'billing.planos.read', async (client) => ({
-        vendas_ativas: billingOn(),
-        planos: (
-          await client.query<PlanRow>(`SELECT ${PLAN_COLUMNS} FROM planos ORDER BY ordem, nome`)
-        ).rows,
-      })),
+      withPlatform(pool!, request, 'billing.planos.read', async (client) => {
+        const { modulo } = z.object({ modulo: moduloSchema.optional() }).parse(request.query);
+        return {
+          vendas_ativas: billingOn(),
+          planos: (
+            await client.query<PlanRow>(
+              `SELECT ${PLAN_COLUMNS} FROM planos WHERE ($1::text IS NULL OR tipo = $1) ORDER BY ordem, nome`,
+              [tipoDeCobrancaDoModulo(modulo)],
+            )
+          ).rows,
+        };
+      }),
     );
 
     admin.put('/admin/planos', async (request, reply) => {
@@ -931,15 +938,22 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): void {
 
     admin.get('/admin/financeiro', async (request) =>
       withPlatform(pool!, request, 'billing.financeiro.read', async (client) => {
+        // Cada módulo enxerga só o próprio dinheiro: `curso` (venda do curso) ou `profissional`
+        // (assinaturas das empresas). Sem o parâmetro, soma os dois (comportamento anterior).
+        const { modulo } = z.object({ modulo: moduloSchema.optional() }).parse(request.query);
+        const tipo = tipoDeCobrancaDoModulo(modulo);
         const one = async (sql: string, params: unknown[] = []) =>
           (await client.query(sql, params)).rows[0];
         const receita = await one(
           `SELECT
-             COALESCE(sum(valor_centavos) FILTER (WHERE pago_em >= date_trunc('month', now() AT TIME ZONE 'America/Sao_Paulo') AT TIME ZONE 'America/Sao_Paulo'), 0)::bigint AS mes_centavos,
-             COALESCE(sum(valor_centavos) FILTER (WHERE pago_em > now() - interval '30 days'), 0)::bigint AS d30_centavos,
-             COALESCE(sum(valor_centavos), 0)::bigint AS total_centavos,
+             COALESCE(sum(pg.valor_centavos) FILTER (WHERE pg.pago_em >= date_trunc('month', now() AT TIME ZONE 'America/Sao_Paulo') AT TIME ZONE 'America/Sao_Paulo'), 0)::bigint AS mes_centavos,
+             COALESCE(sum(pg.valor_centavos) FILTER (WHERE pg.pago_em > now() - interval '30 days'), 0)::bigint AS d30_centavos,
+             COALESCE(sum(pg.valor_centavos), 0)::bigint AS total_centavos,
              count(*)::int AS pagamentos
-             FROM cobranca_pagamentos WHERE status IN ('CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH', 'MANUAL')`,
+             FROM cobranca_pagamentos pg JOIN cobrancas c ON c.id = pg.cobranca_id
+            WHERE pg.status IN ('CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH', 'MANUAL')
+              AND ($1::text IS NULL OR c.tipo = $1)`,
+          [tipo],
         );
         const assinaturas = await one(
           `SELECT count(*) FILTER (WHERE c.status = 'paga')::int AS ativas,
@@ -947,28 +961,35 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): void {
                   count(*) FILTER (WHERE c.status = 'pendente')::int AS aguardando_pagamento,
                   COALESCE(sum(CASE WHEN c.status = 'paga' THEN
                     CASE WHEN p.ciclo = 'anual' THEN c.valor_centavos / 12.0 ELSE c.valor_centavos END END), 0)::bigint AS mrr_centavos
-             FROM cobrancas c JOIN planos p ON p.id = c.plano_id WHERE c.tipo = 'assinatura'`,
+             FROM cobrancas c JOIN planos p ON p.id = c.plano_id WHERE c.tipo = 'assinatura'
+              AND ($1::text IS NULL OR c.tipo = $1)`,
+          [tipo],
         );
         const curso = await one(
           `SELECT count(*) FILTER (WHERE status = 'paga')::int AS vendidos,
                   count(*) FILTER (WHERE status = 'paga' AND pago_em > now() - interval '30 days')::int AS vendidos_30d,
                   count(*) FILTER (WHERE status IN ('pendente', 'vencida'))::int AS aguardando,
                   count(*) FILTER (WHERE status = 'paga' AND resultado_liberacao = 'revisar')::int AS a_revisar
-             FROM cobrancas WHERE tipo = 'curso'`,
+             FROM cobrancas WHERE tipo = 'curso' AND ($1::text IS NULL OR tipo = $1)`,
+          [tipo],
         );
         const funil = await one(
           `SELECT count(*)::int AS criadas,
                   count(*) FILTER (WHERE status = 'paga')::int AS pagas
-             FROM cobrancas WHERE created_at > now() - interval '30 days' AND status <> 'cancelada'`,
+             FROM cobrancas WHERE created_at > now() - interval '30 days' AND status <> 'cancelada'
+              AND ($1::text IS NULL OR tipo = $1)`,
+          [tipo],
         );
         const meses = (
           await client.query(
-            `SELECT to_char(date_trunc('month', pago_em AT TIME ZONE 'America/Sao_Paulo'), 'YYYY-MM') AS mes,
-                    sum(valor_centavos)::bigint AS centavos, count(*)::int AS pagamentos
-               FROM cobranca_pagamentos
-              WHERE status IN ('CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH', 'MANUAL')
-                AND pago_em >= date_trunc('month', now()) - interval '5 months'
+            `SELECT to_char(date_trunc('month', pg.pago_em AT TIME ZONE 'America/Sao_Paulo'), 'YYYY-MM') AS mes,
+                    sum(pg.valor_centavos)::bigint AS centavos, count(*)::int AS pagamentos
+               FROM cobranca_pagamentos pg JOIN cobrancas c ON c.id = pg.cobranca_id
+              WHERE pg.status IN ('CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH', 'MANUAL')
+                AND pg.pago_em >= date_trunc('month', now()) - interval '5 months'
+                AND ($1::text IS NULL OR c.tipo = $1)
               GROUP BY 1 ORDER BY 1`,
+            [tipo],
           )
         ).rows;
         const recentes = (
@@ -976,7 +997,9 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): void {
             `SELECT c.id, c.tipo, c.status, c.comprador_nome, c.comprador_email, c.valor_centavos,
                     c.created_at, c.pago_em, c.resultado_liberacao, p.nome AS plano
                FROM cobrancas c JOIN planos p ON p.id = c.plano_id
+              WHERE ($1::text IS NULL OR c.tipo = $1)
               ORDER BY c.created_at DESC LIMIT 25`,
+            [tipo],
           )
         ).rows;
         const base = (config.apiUrl ?? '').replace(/\/+$/, '');

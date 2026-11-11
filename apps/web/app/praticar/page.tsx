@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Praticar com editais | Licite Comigo' };
 
 export default async function PraticarPage() {
-  await requireArea('administracao', 'aluno');
+  await requireArea('administracao', 'curso', 'aluno');
   return (
     <div className="ui-page">
       <PageHeader

@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { NICHE_CATALOG } from '@licitecomigo/shared';
+import { adminBase } from '../../../../lib/admin-base';
 import { errorText, send } from '../../../../lib/api';
 import {
   Alert,
@@ -99,8 +101,8 @@ const TIPO_LABEL: Record<Tipo, string> = {
 };
 const TIPO_LISTA: Record<Tipo, { href: string; label: string }> = {
   empresa: { href: '/admin/empresas', label: 'Empresas clientes' },
-  aluno: { href: '/admin/alunos', label: 'Alunos e turmas' },
-  mentor: { href: '/admin/mentores', label: 'Mentores' },
+  aluno: { href: '/gestao/alunos', label: 'Alunos e turmas' },
+  mentor: { href: '/gestao/mentores', label: 'Mentores' },
   colaborador: { href: '/admin/colaboradores', label: 'Colaboradores' },
   equipe: { href: '/admin/equipe', label: 'Equipe administrativa' },
 };
@@ -261,6 +263,7 @@ export function FichaUsuario({
   selfId,
   startEditing,
 }: Readonly<{ userId: string; selfId: string; startEditing: boolean }>) {
+  const base = adminBase(usePathname());
   const [ficha, reload] = useResource<Ficha>(`/platform/users/${userId}/ficha`);
   const [editing, setEditing] = useState(startEditing);
   const [error, setError] = useState('');
@@ -568,7 +571,10 @@ export function FichaUsuario({
                         {item.id === usuario.id ? (
                           'Esta ficha'
                         ) : (
-                          <Link className="ui-btn ui-btn-small" href={`/admin/usuarios/${item.id}`}>
+                          <Link
+                            className="ui-btn ui-btn-small"
+                            href={`${base}/usuarios/${item.id}`}
+                          >
                             Ver ficha
                           </Link>
                         )}

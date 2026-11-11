@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Aluno | Licite Comigo' };
 
 export default async function AlunoPage({ params }: { params: { alunoId: string } }) {
-  const session = await requireArea('administracao', 'mentor');
+  const session = await requireArea('administracao', 'curso', 'mentor');
   return (
     <div className="ui-page">
       <Link className="back-link" href="/mentor">

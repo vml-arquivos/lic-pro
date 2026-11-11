@@ -22,6 +22,7 @@ type Profile = (typeof profiles)[number]['value'];
 /** Cada área só oferece os modos coerentes com ela (o servidor confere de novo). */
 const PROFILES_BY_AREA: Record<Area, readonly Profile[]> = {
   administracao: ['iniciante', 'mentorado', 'profissional'],
+  curso: ['iniciante', 'mentorado', 'profissional'],
   empresa: ['iniciante', 'profissional'],
   aluno: ['iniciante', 'mentorado'],
   mentor: ['iniciante', 'mentorado', 'profissional'],

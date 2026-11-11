@@ -173,6 +173,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
 
 const PANEL_ENV: Record<Area, string> = {
   administracao: 'PANEL_URL_ADMIN',
+  curso: 'PANEL_URL_CURSO',
   empresa: 'PANEL_URL_EMPRESA',
   aluno: 'PANEL_URL_ALUNO',
   mentor: 'PANEL_URL_MENTOR',
@@ -204,7 +205,7 @@ export function panelBaseUrl(config: RuntimeConfig, area: Area, requested?: stri
   if (hint && Object.values(config.panelUrls).includes(hint)) return hint;
   const own =
     config.panelUrls[area] ??
-    (area === 'mentor'
+    (area === 'mentor' || area === 'curso'
       ? config.panelUrls.aluno
       : area === 'colaborador'
         ? config.panelUrls.administracao

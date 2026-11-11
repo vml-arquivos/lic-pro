@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { errorText, send } from '../../../lib/api';
 import { brl } from '../../../lib/money';
+import type { Modulo } from '../../../lib/modulo';
 import {
   Alert,
   Badge,
@@ -60,8 +61,9 @@ function monthLabel(value: string): string {
   return `${month}/${(year ?? '').slice(2)}`;
 }
 
-export function FinanceAdmin() {
-  const [data, reload] = useResource<Finance>('/admin/financeiro');
+export function FinanceAdmin({ modulo = 'profissional' }: Readonly<{ modulo?: Modulo }>) {
+  const [data, reload] = useResource<Finance>(`/admin/financeiro?modulo=${modulo}`);
+  const doCurso = modulo === 'curso';
   const [busy, setBusy] = useState('');
   const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
 
@@ -104,22 +106,34 @@ export function FinanceAdmin() {
             <section className="ui-kpis" aria-label="Resumo financeiro">
               <Kpi label="Receita do mês" value={brl(info.receita.mes_centavos)} tone="ok" />
               <Kpi label="Últimos 30 dias" value={brl(info.receita.d30_centavos)} />
-              <Kpi
-                label="Receita recorrente (MRR)"
-                value={brl(info.assinaturas.mrr_centavos)}
-                hint="assinaturas pagas, por mês"
-              />
-              <Kpi label="Assinantes ativos" value={formatNumber(info.assinaturas.ativas)} />
-              <Kpi
-                label="Em atraso"
-                value={formatNumber(info.assinaturas.em_atraso)}
-                tone={info.assinaturas.em_atraso ? 'warn' : undefined}
-              />
-              <Kpi
-                label="Curso vendido"
-                value={formatNumber(info.curso.vendidos)}
-                hint={`${formatNumber(info.curso.vendidos_30d)} nos últimos 30 dias`}
-              />
+              {doCurso ? (
+                <>
+                  <Kpi
+                    label="Curso vendido"
+                    value={formatNumber(info.curso.vendidos)}
+                    hint={`${formatNumber(info.curso.vendidos_30d)} nos últimos 30 dias`}
+                  />
+                  <Kpi
+                    label="Aguardando pagamento"
+                    value={formatNumber(info.curso.aguardando)}
+                    tone={info.curso.aguardando ? 'warn' : undefined}
+                  />
+                </>
+              ) : (
+                <>
+                  <Kpi
+                    label="Receita recorrente (MRR)"
+                    value={brl(info.assinaturas.mrr_centavos)}
+                    hint="assinaturas pagas, por mês"
+                  />
+                  <Kpi label="Assinantes ativos" value={formatNumber(info.assinaturas.ativas)} />
+                  <Kpi
+                    label="Em atraso"
+                    value={formatNumber(info.assinaturas.em_atraso)}
+                    tone={info.assinaturas.em_atraso ? 'warn' : undefined}
+                  />
+                </>
+              )}
               <Kpi
                 label="Conversão (30 dias)"
                 value={`${conversion}%`}
@@ -127,7 +141,7 @@ export function FinanceAdmin() {
               />
             </section>
 
-            {info.curso.a_revisar ? (
+            {doCurso && info.curso.a_revisar ? (
               <Alert kind="error">
                 {info.curso.a_revisar} compra(s) do curso pagas precisam de revisão: o e-mail já
                 tinha conta de outro tipo. Confira em Alunos e turmas.

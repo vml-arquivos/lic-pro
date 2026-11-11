@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Praticar com edital | Licite Comigo' };
 
 export default async function PraticarEditalPage({ params }: { params: { editalId: string } }) {
-  const session = await requireArea('administracao', 'aluno');
+  const session = await requireArea('administracao', 'curso', 'aluno');
   return (
     <div className="ui-page">
       <Link className="back-link" href="/praticar">

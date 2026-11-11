@@ -3,8 +3,8 @@ import { flatMenu, pageAreas, type Area } from './areas.js';
 /**
  * Painéis com endereço próprio.
  *
- * Cada painel (Administração, Empresa, Aluno e, se quiser, Mentor) pode ter o seu domínio ou
- * subdomínio. O mesmo aplicativo responde por todos, mas em cada endereço só abre o que é
+ * Cada painel (Administração profissional, Empresa, Aluno e, se quiser, Administração do curso,
+ * Mentor e Colaborador) pode ter o seu domínio ou subdomínio. O mesmo aplicativo responde por todos, mas em cada endereço só abre o que é
  * daquele painel, e a sessão (cookie sem `Domain`) não passa de um endereço para o outro.
  *
  * Tudo é opcional: sem nenhuma variável `PANEL_URL_*` o sistema se comporta como antes.
@@ -16,6 +16,7 @@ type Env = Record<string, string | undefined>;
 
 const ENV_KEYS: Record<Area, string> = {
   administracao: 'PANEL_URL_ADMIN',
+  curso: 'PANEL_URL_CURSO',
   empresa: 'PANEL_URL_EMPRESA',
   aluno: 'PANEL_URL_ALUNO',
   mentor: 'PANEL_URL_MENTOR',
@@ -58,11 +59,21 @@ export function panelForHost(panels: PanelMap, host: string | null | undefined):
 }
 
 /**
- * Áreas que um painel abre. Sem endereço de Mentor, o mentor usa o painel do Aluno; sem
- * endereço de Colaborador, o colaborador usa o painel da Administração.
+ * Áreas que um painel abre. O lado do curso vive no endereço do Aluno: sem endereço de Mentor,
+ * o mentor entra por ali; sem endereço da Administração do curso (`PANEL_URL_CURSO`), a equipe
+ * administra o curso por ali também. Sem endereço de Colaborador, o colaborador usa o painel da
+ * Administração profissional.
+ *
+ * A primeira área da lista é a que a equipe vê ao entrar naquele endereço.
  */
 export function areasForPanel(panels: PanelMap, panel: Area): readonly Area[] {
-  if (panel === 'aluno' && !panels.mentor) return ['aluno', 'mentor'];
+  if (panel === 'aluno') {
+    const areas: Area[] = [];
+    if (!panels.curso) areas.push('curso');
+    areas.push('aluno');
+    if (!panels.mentor) areas.push('mentor');
+    return areas;
+  }
   if (panel === 'administracao' && !panels.colaborador) return ['administracao', 'colaborador'];
   return [panel];
 }
@@ -96,7 +107,9 @@ export function roleAllowedOnPanel(panels: PanelMap, panel: Area, role: string):
 
 /** Endereço do painel de uma área, quando configurado. */
 export function panelUrl(panels: PanelMap, area: Area): string | null {
-  if (area === 'mentor' && !panels.mentor) return panels.aluno?.url ?? null;
+  if ((area === 'mentor' && !panels.mentor) || (area === 'curso' && !panels.curso)) {
+    return panels.aluno?.url ?? null;
+  }
   if (area === 'colaborador' && !panels.colaborador) return panels.administracao?.url ?? null;
   return panels[area]?.url ?? null;
 }
@@ -141,7 +154,7 @@ function matches(pathname: string, prefix: string): boolean {
 }
 
 function menuPrefixes(area: Area): string[] {
-  const extras = area === 'administracao' ? [] : ['/painel', '/onboarding'];
+  const extras = area === 'administracao' || area === 'curso' ? [] : ['/painel', '/onboarding'];
   return [...flatMenu(area).map((item) => item.href), '/conta', ...extras];
 }
 
@@ -164,24 +177,31 @@ export function panelPathAllowed(panels: PanelMap, panel: Area, pathname: string
 /** Páginas que qualquer visitante pode abrir em um painel (o resto exige sessão). */
 export function panelPathPublic(panel: Area, pathname: string): boolean {
   if (OPEN_EVERYWHERE.some((prefix) => matches(pathname, prefix))) return true;
-  if (panel === 'administracao') return false;
+  if (panel === 'administracao' || panel === 'curso') return false;
   return ['/radar', '/academia', '/curso', '/compra', '/signup', '/cancelar-alertas'].some(
     (prefix) => matches(pathname, prefix),
   );
 }
 
-/** Rotas da API que só existem no painel da Administração. */
+/** Rotas da API de administração: só existem nos painéis que administram algo. */
 const ADMIN_API_PREFIXES = ['/admin', '/platform', '/operations'] as const;
 
-export function panelApiAllowed(panel: Area, apiPath: string): boolean {
-  if (panel === 'administracao') return true;
+/**
+ * As rotas de administração existem na Administração profissional, na Administração do curso
+ * e, quando esta não tem endereço próprio, no endereço do Aluno (onde ela vive). O core-api
+ * continua exigindo o papel da equipe em cada rota.
+ */
+export function panelApiAllowed(panel: Area, apiPath: string, panels?: PanelMap): boolean {
+  if (panel === 'administracao' || panel === 'curso') return true;
+  if (panel === 'aluno' && panels && !panels.curso) return true;
   const path = apiPath.startsWith('/') ? apiPath : `/${apiPath}`;
   return !ADMIN_API_PREFIXES.some((prefix) => matches(path, prefix));
 }
 
 /** Nome de cada painel, usado no título da página e na tela de entrada. */
 export const PANEL_COPY: Record<Area, { title: string }> = {
-  administracao: { title: 'Administração' },
+  administracao: { title: 'Administração profissional' },
+  curso: { title: 'Administração do curso' },
   empresa: { title: 'Empresas' },
   aluno: { title: 'Alunos' },
   mentor: { title: 'Mentores' },

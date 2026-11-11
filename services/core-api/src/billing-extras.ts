@@ -5,6 +5,7 @@ import { AsaasError, createAsaasClient, type AsaasClient } from './asaas.js';
 import { PublicRateLimiter } from './auth-public.js';
 import type { RuntimeConfig } from './config.js';
 import { normalizeCupomCodigo, resolverCupom } from './cupom-calc.js';
+import { moduloSchema, tipoDeCobrancaDoModulo } from './modulo.js';
 import { withTenant } from './db.js';
 import {
   audit,
@@ -249,28 +250,63 @@ export function registerBillingExtras(app: FastifyInstance, deps: Deps): void {
     });
 
     admin.get('/admin/cupons', async (request) =>
-      withPlatform(pool!, request, 'billing.cupons.read', async (client) => ({
-        cupons: (
-          await client.query(
-            `SELECT c.id, c.codigo, c.descricao, c.tipo, c.valor, c.plano_slugs, c.max_usos, c.valido_ate,
-                    c.ativo, c.created_at,
-                    (SELECT count(*)::int FROM cobrancas b
-                      WHERE b.cupom_codigo = c.codigo AND b.status IN ('pendente', 'paga')) AS usos,
-                    (SELECT count(*)::int FROM cobrancas b
-                      WHERE b.cupom_codigo = c.codigo AND b.status = 'paga') AS pagos
-               FROM cupons c ORDER BY c.created_at DESC LIMIT 200`,
-          )
-        ).rows,
-        planos: (
-          await client.query<{ slug: string; nome: string }>(
-            'SELECT slug, nome FROM planos ORDER BY ordem, nome',
-          )
-        ).rows,
-      })),
+      withPlatform(pool!, request, 'billing.cupons.read', async (client) => {
+        // Cada módulo vê os cupons dos próprios planos. Cupom antigo "para todos os planos"
+        // (sem lista) aparece nos dois, para nenhum se perder.
+        const { modulo } = z.object({ modulo: moduloSchema.optional() }).parse(request.query);
+        const tipo = tipoDeCobrancaDoModulo(modulo);
+        return {
+          cupons: (
+            await client.query(
+              `SELECT c.id, c.codigo, c.descricao, c.tipo, c.valor, c.plano_slugs, c.max_usos, c.valido_ate,
+                      c.ativo, c.created_at,
+                      (SELECT count(*)::int FROM cobrancas b
+                        WHERE b.cupom_codigo = c.codigo AND b.status IN ('pendente', 'paga')) AS usos,
+                      (SELECT count(*)::int FROM cobrancas b
+                        WHERE b.cupom_codigo = c.codigo AND b.status = 'paga') AS pagos
+                 FROM cupons c
+                WHERE ($1::text IS NULL OR c.plano_slugs IS NULL
+                       OR c.plano_slugs && COALESCE((SELECT array_agg(slug) FROM planos WHERE tipo = $1), '{}'::text[]))
+                ORDER BY c.created_at DESC LIMIT 200`,
+              [tipo],
+            )
+          ).rows,
+          planos: (
+            await client.query<{ slug: string; nome: string }>(
+              'SELECT slug, nome FROM planos WHERE ($1::text IS NULL OR tipo = $1) ORDER BY ordem, nome',
+              [tipo],
+            )
+          ).rows,
+        };
+      }),
     );
 
     admin.put('/admin/cupons', async (request, reply) => {
       const body = cupomBody.parse(request.body);
+      const { modulo } = z.object({ modulo: moduloSchema.optional() }).parse(request.query);
+      const tipoModulo = tipoDeCobrancaDoModulo(modulo);
+      if (tipoModulo) {
+        // Cupom criado dentro de um módulo só vale para planos daquele módulo.
+        const doModulo = await withPlatform(
+          pool!,
+          request,
+          'billing.cupom.escopo',
+          async (client) =>
+            (
+              await client.query<{ slug: string }>('SELECT slug FROM planos WHERE tipo = $1', [
+                tipoModulo,
+              ])
+            ).rows.map((row) => row.slug),
+        );
+        if (!body.plano_slugs || body.plano_slugs.length === 0) {
+          body.plano_slugs = doModulo;
+        } else if (body.plano_slugs.some((slug) => !doModulo.includes(slug))) {
+          return reply.code(400).send({
+            error: 'plano_de_outro_modulo',
+            message: 'O cupom só pode valer para planos deste módulo.',
+          });
+        }
+      }
       const saved = await withPlatform(
         pool!,
         request,

@@ -9,7 +9,7 @@ export const metadata = {
 };
 
 export default async function MentorPage() {
-  await requireArea('administracao', 'mentor');
+  await requireArea('administracao', 'curso', 'mentor');
   return (
     <div className="ui-page">
       <PageHeader

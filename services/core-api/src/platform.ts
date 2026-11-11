@@ -5,6 +5,8 @@ import { NICHE_CODES, PASSWORD_TECHNICAL_MAX } from '@licitecomigo/shared';
 import { z } from 'zod';
 import { createOpaqueToken, hashOpaqueToken, PublicRateLimiter } from './auth-public.js';
 import { panelBaseUrl, type RuntimeConfig } from './config.js';
+import { MIGRATIONS_SEM_ACESSO, estadoMigrations } from './migrations-esperadas.js';
+import { moduloSchema } from './modulo.js';
 import { withTenant } from './db.js';
 import { sendEmail } from './email.js';
 import { assertStrongPassword, hashPassword } from './password.js';
@@ -104,8 +106,23 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
 
     registerPlatformUserRoutes(platform, { pool, config });
 
+    // Aviso de banco desatualizado (migrations por aplicar). Leitura simples, sem auditoria:
+    // a Administração consulta ao abrir a visão geral.
+    platform.get('/platform/migracoes', async () => {
+      try {
+        const result = await pool!.query<{ ultima: string | null }>(
+          'SELECT max(filename) AS ultima FROM schema_migrations',
+        );
+        return estadoMigrations(result.rows[0]?.ultima ?? null);
+      } catch {
+        return MIGRATIONS_SEM_ACESSO;
+      }
+    });
+
     platform.get('/platform/overview', async (request) => {
       const tenantId = request.user.tenantId;
+      // `modulo` limita contas e leads ao módulo (curso ou profissional); sem ele, vale tudo.
+      const { modulo } = z.object({ modulo: moduloSchema.optional() }).parse(request.query);
       return withPlatform(pool!, request, 'platform.overview.read', async (client) => {
         // Sequencial de propósito: o driver não aceita consultas simultâneas no mesmo cliente.
         const row = async (sql: string, params: unknown[] = []) =>
@@ -113,7 +130,10 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
         const accounts = await client.query(
           `SELECT papel::text AS papel, count(*)::int AS total,
                   count(*) FILTER (WHERE ativo)::int AS ativos
-             FROM usuarios GROUP BY papel ORDER BY papel`,
+             FROM usuarios
+            WHERE ($1::text IS NULL OR ($1 = 'curso') = (papel::text IN ('aluno', 'mentor')))
+            GROUP BY papel ORDER BY papel`,
+          [modulo ?? null],
         );
         return {
           contas_por_papel: accounts.rows,
@@ -139,7 +159,9 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
             `SELECT count(*)::int AS total,
                     count(*) FILTER (WHERE created_at > now() - interval '7 days')::int AS novos_7d,
                     count(*) FILTER (WHERE status = 'novo')::int AS novos
-               FROM plataforma_listar_leads(500)`,
+               FROM plataforma_listar_leads(500)
+              WHERE ($1::text IS NULL OR ($1 = 'curso') = (perfil IN ('mentorado', 'iniciante')))`,
+            [modulo ?? null],
           ),
           editais: await row(
             `SELECT count(*)::int AS total,

@@ -43,6 +43,7 @@ const journeyOptions = [
 /** Mesma regra do servidor: cada área só pode escolher modos coerentes com ela. */
 const journeyByArea: Record<Area, readonly string[]> = {
   administracao: ['iniciante', 'mentorado', 'profissional'],
+  curso: ['iniciante', 'mentorado', 'profissional'],
   empresa: ['iniciante', 'profissional'],
   aluno: ['iniciante', 'mentorado'],
   mentor: ['iniciante', 'mentorado', 'profissional'],
@@ -50,11 +51,18 @@ const journeyByArea: Record<Area, readonly string[]> = {
 };
 
 const panelDescriptions: Record<string, string> = {
-  '/admin': 'Indicadores da operação, clientes, curso e coleta.',
-  '/leads': 'Contatos captados pelo site.',
+  '/admin': 'Indicadores da operação, clientes e coleta.',
+  '/leads': 'Empresas interessadas, captadas pelo site.',
   '/admin/empresas': 'Convidar e acompanhar empresas clientes.',
-  '/admin/alunos': 'Matrículas, turmas e convites do curso.',
-  '/admin/mentores': 'Mentores e seus alunos.',
+  '/gestao': 'Indicadores do curso: alunos, mentores, vendas e leads.',
+  '/gestao/leads': 'Interessados no curso, captados pelo site.',
+  '/gestao/financeiro': 'Receita e vendas do curso.',
+  '/gestao/cupons': 'Descontos do curso.',
+  '/gestao/planos': 'Preço e conteúdo do curso.',
+  '/gestao/alunos': 'Matrículas, turmas e convites do curso.',
+  '/gestao/mentores': 'Mentores e seus alunos.',
+  '/gestao/materiais': 'Biblioteca de materiais do aluno.',
+  '/mentor/encontros': 'Encontros ao vivo do curso.',
   '/admin/colaboradores': 'Equipe da operação e nichos liberados.',
   '/admin/equipe': 'Administradores do sistema.',
   '/admin/fontes': 'Situação da coleta de editais.',

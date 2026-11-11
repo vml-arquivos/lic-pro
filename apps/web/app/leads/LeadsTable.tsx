@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type { Modulo } from '../../lib/modulo';
 
 type Lead = {
   id: string;
@@ -12,11 +13,24 @@ type Lead = {
   origem?: string | null;
   created_at: string;
 };
-export function LeadsTable() {
+const COPY: Record<Modulo, { eyebrow: string; title: string; text: string }> = {
+  profissional: {
+    eyebrow: 'Administração profissional',
+    title: 'Leads de empresas',
+    text: 'Empresas interessadas no sistema profissional, captadas pelo site. Somente a equipe vê esta lista.',
+  },
+  curso: {
+    eyebrow: 'Administração do curso',
+    title: 'Leads de alunos',
+    text: 'Interessados no curso e na mentoria, captados pelo site. Somente a equipe vê esta lista.',
+  },
+};
+
+export function LeadsTable({ modulo = 'profissional' }: Readonly<{ modulo?: Modulo }>) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [message, setMessage] = useState('Carregando leads…');
   useEffect(() => {
-    void fetch('/api/core/admin/leads').then(async (response) => {
+    void fetch(`/api/core/admin/leads?modulo=${modulo}`).then(async (response) => {
       if (!response.ok) {
         setMessage(
           response.status === 403
@@ -29,13 +43,13 @@ export function LeadsTable() {
       setLeads(payload.data ?? []);
       setMessage('');
     });
-  }, []);
+  }, [modulo]);
   return (
     <main className="ui-page">
       <div className="page-heading">
-        <p className="eyebrow">Administração</p>
-        <h1>Leads do site</h1>
-        <p>Contatos captados pelo site. Somente a equipe vê esta lista.</p>
+        <p className="eyebrow">{COPY[modulo].eyebrow}</p>
+        <h1>{COPY[modulo].title}</h1>
+        <p>{COPY[modulo].text}</p>
       </div>
       {message ? (
         <p className="notice">{message}</p>

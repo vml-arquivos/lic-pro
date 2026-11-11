@@ -24,14 +24,18 @@ export {
   AREAS,
   AREA_LABELS,
   AREA_MENUS,
+  MODULES,
+  MODULE_AREAS,
+  MODULE_LABELS,
   PAGE_RULES,
   canOpenPage,
   flatMenu,
   isArea,
+  moduleOfArea,
   pageAreas,
   requiresSession,
 } from './areas.js';
-export type { Area, MenuGroup, MenuItem, PageRule } from './areas.js';
+export type { Area, MenuGroup, MenuItem, ModuleName, PageRule } from './areas.js';
 
 export {
   GRANDE_VULTO_PADRAO,

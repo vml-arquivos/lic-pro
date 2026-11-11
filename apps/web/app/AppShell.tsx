@@ -48,13 +48,13 @@ function initials(name: string) {
 }
 
 function isCurrent(pathname: string, href: string) {
-  return href === '/painel' || href === '/admin'
+  return href === '/painel' || href === '/admin' || href === '/gestao'
     ? pathname === href
     : pathname === href || pathname.startsWith(`${href}/`);
 }
 
 function homeFor(area: Area) {
-  return area === 'administracao' ? '/admin' : '/painel';
+  return area === 'administracao' ? '/admin' : area === 'curso' ? '/gestao' : '/painel';
 }
 
 export function AccessDenied({ href = '/painel' }: Readonly<{ href?: string }>) {
@@ -80,7 +80,11 @@ export function AppShell({ session, children }: AppShellProps) {
   const current = area ? flatMenu(area).find((item) => isCurrent(pathname, item.href)) : undefined;
   const blocked = session ? !canOpenPage(session.areas_permitidas, pathname) : false;
   const viewingAs = Boolean(
-    session?.plataforma && area && area !== 'administracao' && !session.painel_fixo,
+    session?.plataforma &&
+    area &&
+    area !== 'administracao' &&
+    area !== 'curso' &&
+    !session.painel_fixo,
   );
   const name = session?.nome ?? session?.email ?? 'Visitante';
 

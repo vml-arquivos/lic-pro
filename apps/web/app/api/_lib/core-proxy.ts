@@ -8,7 +8,7 @@ export async function proxyCore(request: Request, path: string): Promise<Respons
 
   // Com endereços por painel, as rotas de administração só existem no painel da Administração.
   const panel = currentPanel();
-  if (panel && !panelApiAllowed(panel, path.split('?')[0] ?? path)) {
+  if (panel && !panelApiAllowed(panel, path.split('?')[0] ?? path, configuredPanels())) {
     return Response.json({ error: 'not_found' }, { status: 404 });
   }
 

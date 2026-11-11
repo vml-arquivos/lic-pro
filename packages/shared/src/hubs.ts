@@ -254,8 +254,72 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
       tone: 'pink',
     },
   ],
+  curso: [
+    {
+      label: 'Alunos e turmas',
+      caption: 'Matrículas e convites',
+      href: '/gestao/alunos',
+      icon: 'users',
+      tone: 'blue',
+    },
+    {
+      label: 'Mentores',
+      caption: 'Equipe de ensino',
+      href: '/gestao/mentores',
+      icon: 'award',
+      tone: 'amber',
+    },
+    {
+      label: 'Materiais',
+      caption: 'Biblioteca do aluno',
+      href: '/gestao/materiais',
+      icon: 'file',
+      tone: 'violet',
+    },
+    {
+      label: 'Encontros',
+      caption: 'Aulas ao vivo',
+      href: '/mentor/encontros',
+      icon: 'calendar',
+      tone: 'teal',
+    },
+    {
+      label: 'Vendas',
+      caption: 'Receita do curso',
+      href: '/gestao/financeiro',
+      icon: 'chart',
+      tone: 'green',
+    },
+    {
+      label: 'Leads',
+      caption: 'Interessados no curso',
+      href: '/gestao/leads',
+      icon: 'inbox',
+      tone: 'rose',
+    },
+    {
+      label: 'Cupons',
+      caption: 'Descontos do curso',
+      href: '/gestao/cupons',
+      icon: 'award',
+      tone: 'pink',
+    },
+    {
+      label: 'Academia',
+      caption: 'Conteúdo do curso',
+      href: '/academia',
+      icon: 'cap',
+      tone: 'slate',
+    },
+  ],
   administracao: [
-    { label: 'Leads', caption: 'Contatos do site', href: '/leads', icon: 'inbox', tone: 'rose' },
+    {
+      label: 'Leads',
+      caption: 'Empresas interessadas',
+      href: '/leads',
+      icon: 'inbox',
+      tone: 'rose',
+    },
     {
       label: 'Empresas',
       caption: 'Clientes e convites',
@@ -264,32 +328,11 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
       tone: 'violet',
     },
     {
-      label: 'Alunos e turmas',
-      caption: 'Matrículas',
-      href: '/admin/alunos',
-      icon: 'users',
-      tone: 'blue',
-    },
-    {
-      label: 'Mentores',
-      caption: 'Equipe de ensino',
-      href: '/admin/mentores',
-      icon: 'award',
-      tone: 'amber',
-    },
-    {
       label: 'Colaboradores',
       caption: 'Equipe da operação',
       href: '/admin/colaboradores',
       icon: 'users',
       tone: 'teal',
-    },
-    {
-      label: 'Materiais',
-      caption: 'Biblioteca do aluno',
-      href: '/admin/materiais',
-      icon: 'file',
-      tone: 'violet',
     },
     {
       label: 'Fontes de dados',
@@ -428,5 +471,9 @@ export const HUB_CTA: Record<Area, { title: string; text: string }> = {
   administracao: {
     title: 'Ana',
     text: 'Use a Ana para conferir como o sistema responde a quem está na ponta, em cada área.',
+  },
+  curso: {
+    title: 'Ana',
+    text: 'Use a Ana para conferir como ela responde às dúvidas dos alunos e do conteúdo do curso.',
   },
 };

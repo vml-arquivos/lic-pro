@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata = {
   title: 'Financeiro | Licite Comigo',
-  description: 'Receita, assinantes e vendas do curso.',
+  description: 'Receita e assinantes do sistema profissional.',
 };
 
 export default async function FinanceiroPage() {
@@ -14,11 +14,11 @@ export default async function FinanceiroPage() {
   return (
     <main className="ui-page">
       <PageHeader
-        eyebrow="Administração"
+        eyebrow="Administração profissional"
         title="Financeiro"
-        description="Quanto entrou, quem assina e quem comprou o curso."
+        description="Quanto entrou e quem assina o sistema profissional. As vendas do curso ficam na Administração do curso."
       />
-      <FinanceAdmin />
+      <FinanceAdmin modulo="profissional" />
     </main>
   );
 }

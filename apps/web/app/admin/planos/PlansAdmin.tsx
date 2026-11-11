@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { errorText, send } from '../../../lib/api';
 import { brl } from '../../../lib/money';
+import type { Modulo } from '../../../lib/modulo';
 import { Alert, Badge, Panel, Resource, Table, useResource } from '../../components/ui';
 
 type Plan = {
@@ -22,8 +23,8 @@ type Plan = {
 };
 type Payload = { vendas_ativas: boolean; planos: Plan[] };
 
-export function PlansAdmin() {
-  const [data, reload] = useResource<Payload>('/admin/planos');
+export function PlansAdmin({ modulo = 'profissional' }: Readonly<{ modulo?: Modulo }>) {
+  const [data, reload] = useResource<Payload>(`/admin/planos?modulo=${modulo}`);
   const [editing, setEditing] = useState<string | null>(null);
   const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
 

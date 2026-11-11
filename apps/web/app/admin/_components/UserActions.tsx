@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { adminBase } from '../../../lib/admin-base';
 import { errorText, send } from '../../../lib/api';
 import { ActiveToggle } from './ActiveToggle';
 
@@ -105,14 +107,15 @@ export function UserRowActions({
   onChanged: () => void;
   onError: (message: string) => void;
 }>) {
+  const base = adminBase(usePathname());
   return (
     <span className="ui-table-actions">
-      <Link className="ui-btn ui-btn-small" href={`/admin/usuarios/${userId}`}>
+      <Link className="ui-btn ui-btn-small" href={`${base}/usuarios/${userId}`}>
         Ver ficha
       </Link>
       <Link
         className="ui-btn ui-btn-small ui-btn-ghost"
-        href={`/admin/usuarios/${userId}?editar=1`}
+        href={`${base}/usuarios/${userId}?editar=1`}
       >
         Editar
       </Link>
