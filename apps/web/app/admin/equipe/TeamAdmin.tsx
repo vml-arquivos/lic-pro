@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { errorText, send } from '../../../lib/api';
 import {
   Alert,
   Badge,
@@ -27,7 +28,48 @@ type Member = {
   ativo: boolean;
   created_at: string;
   ultimo_acesso: string | null;
+  escopo_equipe: 'tudo' | 'profissional' | 'curso';
 };
+
+const ESCOPOS = [
+  { value: 'profissional', label: 'Só o Painel admin' },
+  { value: 'curso', label: 'Só o Painel da mentoria' },
+  { value: 'tudo', label: 'Acesso total' },
+] as const;
+
+function EscopoSelect({
+  member,
+  onChanged,
+  onError,
+}: Readonly<{ member: Member; onChanged: () => void; onError: (message: string) => void }>) {
+  const [busy, setBusy] = useState(false);
+  async function change(value: string) {
+    setBusy(true);
+    onError('');
+    try {
+      await send('PATCH', `/platform/users/${member.id}/escopo`, { escopo_equipe: value });
+      onChanged();
+    } catch (cause) {
+      onError(errorText(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <select
+      aria-label={`Acesso de ${member.nome}`}
+      value={member.escopo_equipe}
+      disabled={busy}
+      onChange={(event) => void change(event.target.value)}
+    >
+      {ESCOPOS.map((item) => (
+        <option key={item.value} value={item.value}>
+          {item.label}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 export function TeamAdmin() {
   const [people, reload] = useResource<{ data: Member[] }>('/platform/team');
@@ -38,7 +80,7 @@ export function TeamAdmin() {
     <>
       <Panel
         title="Convidar administrador"
-        description="A pessoa recebe um link, cria a senha e entra no painel da Administração, com acesso a tudo o que está aqui. Convide só quem precisa."
+        description="A pessoa recebe um link e cria a senha. Escolha se ela entra só no Painel admin, só no Painel da mentoria ou nos dois. Convide só quem precisa."
       >
         <InviteForm
           kind="equipe"
@@ -56,13 +98,16 @@ export function TeamAdmin() {
             data.length ? (
               <Table
                 label="Equipe administrativa"
-                head={['Administrador', 'Último acesso', 'Situação', 'Desde', 'Ações']}
+                head={['Administrador', 'Acesso', 'Último acesso', 'Situação', 'Desde', 'Ações']}
               >
                 {data.map((person) => (
                   <tr key={person.id}>
                     <td>
                       <strong>{person.nome}</strong>
                       <small>{person.email}</small>
+                    </td>
+                    <td>
+                      <EscopoSelect member={person} onChanged={reload} onError={setError} />
                     </td>
                     <td>{lastAccessText(person.ultimo_acesso)}</td>
                     <td>

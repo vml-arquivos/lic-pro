@@ -137,7 +137,7 @@ const withCurso = parsePanels({
 });
 
 describe('módulo Curso: administração própria', () => {
-  it('sem endereço próprio, a Administração do curso vive no endereço do Aluno', () => {
+  it('sem endereço próprio, a Administração da mentoria vive no endereço do Aluno', () => {
     expect(areasForPanel(all, 'aluno')).toEqual(['curso', 'aluno', 'mentor']);
     expect(areasForPanel(withCurso, 'aluno')).toEqual(['aluno', 'mentor']);
     expect(areasForPanel(withCurso, 'curso')).toEqual(['curso']);
@@ -162,7 +162,7 @@ describe('módulo Curso: administração própria', () => {
     }
   });
 
-  it('só a equipe entra no endereço da Administração do curso', () => {
+  it('só a equipe entra no endereço da Administração da mentoria', () => {
     expect(roleAllowedOnPanel(withCurso, 'curso', 'plataforma')).toBe(true);
     for (const role of ['admin', 'operador', 'aluno', 'mentor', 'colaborador']) {
       expect(roleAllowedOnPanel(withCurso, 'curso', role), role).toBe(false);
@@ -171,13 +171,13 @@ describe('módulo Curso: administração própria', () => {
     expect(roleAllowedOnPanel(withCurso, 'aluno', 'aluno')).toBe(true);
   });
 
-  it('a Administração do curso não tem páginas públicas', () => {
+  it('a Administração da mentoria não tem páginas públicas', () => {
     expect(panelPathPublic('curso', '/radar')).toBe(false);
     expect(panelPathPublic('curso', '/gestao')).toBe(false);
     expect(panelPathPublic('curso', '/login')).toBe(true);
   });
 
-  it('as rotas de administração da API existem onde a administração do curso vive', () => {
+  it('as rotas de administração da API existem onde a administração da mentoria vive', () => {
     expect(panelApiAllowed('curso', '/admin/financeiro', withCurso)).toBe(true);
     expect(panelApiAllowed('aluno', '/admin/financeiro', all)).toBe(true);
     expect(panelApiAllowed('aluno', '/admin/financeiro', withCurso)).toBe(false);

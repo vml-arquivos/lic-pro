@@ -14,9 +14,9 @@ export default async function VendasPage() {
   return (
     <main className="ui-page">
       <PageHeader
-        eyebrow="Administração do curso"
+        eyebrow="Painel da mentoria"
         title="Vendas do curso"
-        description="Quanto entrou e quem comprou o curso. As assinaturas das empresas ficam na Administração profissional."
+        description="Quanto entrou e quem comprou o curso. As assinaturas das empresas ficam no Painel admin."
       />
       <FinanceAdmin modulo="curso" />
     </main>

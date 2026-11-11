@@ -37,7 +37,7 @@ describe('links por painel', () => {
     );
   });
 
-  it('a Administração do curso usa o endereço do Aluno, ou o próprio se existir', () => {
+  it('a Administração da mentoria usa o endereço do Aluno, ou o próprio se existir', () => {
     expect(panelBaseUrl(loadConfig(panels), 'curso')).toBe('https://aluno.licite.test');
     const own = loadConfig({ ...panels, PANEL_URL_CURSO: 'https://gestao.licite.test' });
     expect(panelBaseUrl(own, 'curso')).toBe('https://gestao.licite.test');

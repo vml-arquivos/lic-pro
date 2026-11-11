@@ -116,6 +116,8 @@ export const editalSearchSchema = z.object({
   raio_km: z.coerce.number().min(1).max(3000).optional(),
   compat_min: z.coerce.number().min(0).max(100).optional(),
   ordem: z.enum(ORDEM).optional(),
+  /** Restringe a editais específicos (comparação lado a lado). */
+  ids: listish(z.union([z.string().uuid(), z.array(z.string().uuid()).min(1).max(10)])).optional(),
   facetas: booleanish.default(true),
   page: z.coerce.number().int().min(1).default(1),
   page_size: z.coerce.number().int().min(1).max(100).default(20),
@@ -309,6 +311,8 @@ export function buildEditalSearchQuery(
       add("search_vector @@ websearch_to_tsquery('portuguese', {0})", [nicheExpression]);
     }
   }
+  const ids = asList(filters.ids as string | string[] | undefined);
+  if (ids.length) add('editais.id = ANY({0}::uuid[])', [ids]);
   if (filters.fonte) addText('fonte', filters.fonte);
   if (filters.sistema_origem) addText('sistema_origem', filters.sistema_origem);
   if (filters.esfera) addText('esfera', filters.esfera as string | string[], 'esfera');

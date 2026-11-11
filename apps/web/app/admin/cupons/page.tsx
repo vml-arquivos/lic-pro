@@ -14,7 +14,7 @@ export default async function CuponsPage() {
   return (
     <main className="ui-page">
       <PageHeader
-        eyebrow="Administração profissional"
+        eyebrow="Painel admin"
         title="Cupons de desconto"
         description="Crie códigos para campanhas e parcerias. O desconto vale para as assinaturas escolhidas."
       />

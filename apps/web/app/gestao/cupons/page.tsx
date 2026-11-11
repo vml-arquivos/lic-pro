@@ -14,7 +14,7 @@ export default async function CuponsPage() {
   return (
     <main className="ui-page">
       <PageHeader
-        eyebrow="Administração do curso"
+        eyebrow="Painel da mentoria"
         title="Cupons do curso"
         description="Crie códigos para campanhas e parcerias. O desconto vale para o curso."
       />

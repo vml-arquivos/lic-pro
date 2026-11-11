@@ -60,6 +60,7 @@ export function InviteForm({
   const [empresa, setEmpresa] = useState('');
   const [turma, setTurma] = useState('');
   const [mentor, setMentor] = useState('');
+  const [escopo, setEscopo] = useState<'tudo' | 'profissional' | 'curso'>('profissional');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState<Created | null>(null);
@@ -75,6 +76,7 @@ export function InviteForm({
         nome,
         email,
         ...(kind === 'empresa' ? { empresa_nome: empresa } : {}),
+        ...(kind === 'equipe' ? { escopo } : {}),
         ...(kind === 'aluno' ? { turma_id: turma, ...(mentor ? { mentor_id: mentor } : {}) } : {}),
       });
       setCreated(result);
@@ -112,6 +114,22 @@ export function InviteForm({
             minLength={2}
             required
           />
+        </label>
+      ) : null}
+      {kind === 'equipe' ? (
+        <label>
+          Acesso
+          <select
+            value={escopo}
+            onChange={(e) => setEscopo(e.target.value as 'tudo' | 'profissional' | 'curso')}
+          >
+            <option value="profissional">Só o Painel admin (empresas e licitações)</option>
+            <option value="curso">Só o Painel da mentoria (alunos, turmas e materiais)</option>
+            <option value="tudo">Acesso total (os dois painéis e a equipe)</option>
+          </select>
+          <small>
+            Quem tem acesso só a um painel não vê o dinheiro, os leads nem as contas do outro.
+          </small>
         </label>
       ) : null}
       {kind === 'aluno' ? (

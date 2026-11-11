@@ -4,7 +4,7 @@ import { PageHeader } from '../components/ui';
 import { AdminOverview } from '../admin/AdminOverview';
 
 export const metadata = {
-  title: 'Administração do curso | Licite Comigo',
+  title: 'Painel da mentoria | Licite Comigo',
   description: 'Visão geral do curso: alunos, turmas, mentores, vendas e leads.',
 };
 
@@ -13,7 +13,7 @@ export default async function GestaoPage() {
   return (
     <main className="ui-page">
       <PageHeader
-        eyebrow="Administração do curso"
+        eyebrow="Painel da mentoria"
         title="Visão geral"
         description="Como está o curso hoje: alunos, turmas, mentores, vendas e leads de alunos."
       />

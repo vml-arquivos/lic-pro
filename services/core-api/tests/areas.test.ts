@@ -12,7 +12,7 @@ import {
 describe('áreas e papéis', () => {
   it('cada papel pertence a uma única área própria', () => {
     expect(areaForRole('plataforma')).toBe('administracao');
-    // A Administração do curso é uma área só de "ver como": nenhum papel nasce nela.
+    // A Administração da mentoria é uma área só de "ver como": nenhum papel nasce nela.
     expect(areaForRole('admin')).toBe('empresa');
     expect(areaForRole('operador')).toBe('empresa');
     expect(areaForRole('aluno')).toBe('aluno');

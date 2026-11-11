@@ -221,7 +221,7 @@ export function AppShell({ session, children }: AppShellProps) {
           <div className="topbar-actions">
             {area ? (
               <span className={`area-pill ${viewingAs ? 'area-pill-view' : ''}`}>
-                {viewingAs ? `Administração · vendo como ${AREA_LABELS[area]}` : AREA_LABELS[area]}
+                {viewingAs ? `Painel admin · vendo como ${AREA_LABELS[area]}` : AREA_LABELS[area]}
               </span>
             ) : null}
             {viewingAs ? (
@@ -231,7 +231,7 @@ export function AppShell({ session, children }: AppShellProps) {
                 onClick={() => void viewAs('administracao')}
                 disabled={busy}
               >
-                Voltar à Administração
+                Voltar ao Painel admin
               </button>
             ) : null}
             {session ? <NotificationBell /> : null}

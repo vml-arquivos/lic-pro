@@ -12,7 +12,7 @@ export default async function StudentsPage() {
   return (
     <main className="ui-page">
       <PageHeader
-        eyebrow="Administração do curso"
+        eyebrow="Painel da mentoria"
         title="Alunos e turmas"
         description="O aluno só entra por matrícula feita aqui. Crie a turma, gere o convite e acompanhe o progresso."
       />

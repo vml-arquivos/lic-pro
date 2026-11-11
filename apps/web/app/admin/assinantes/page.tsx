@@ -14,7 +14,7 @@ export default async function AssinantesPage() {
   return (
     <main className="ui-page">
       <PageHeader
-        eyebrow="Administração"
+        eyebrow="Painel admin"
         title="Assinantes"
         description="Quem está em teste grátis, quem assina e o que fazer com cada conta."
       />

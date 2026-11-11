@@ -7,6 +7,7 @@ import { RECURSO_LABEL } from './atividade.js';
 import { panelBaseUrl, type RuntimeConfig } from './config.js';
 import type { withTenant } from './db.js';
 import { sendEmail } from './email.js';
+import { ESCOPOS, esquecerEscopo } from './escopo-equipe.js';
 import { withPlatform } from './request-context.js';
 
 /** O link de redefinição vale por 48 horas e só pode ser usado uma vez. */
@@ -100,6 +101,7 @@ export function registerPlatformUserRoutes(
     const result = await withPlatform(pool!, request, 'platform.team.listed', (client) =>
       client.query(
         `SELECT u.id, u.nome, u.email, u.ativo, u.created_at,
+                COALESCE(to_jsonb(u)->>'escopo_equipe', 'tudo') AS escopo_equipe,
                 (SELECT max(a.ultimo_em) FROM atividade_usuario a
                   WHERE a.tenant_id = u.tenant_id AND a.usuario_id = u.id) AS ultimo_acesso
            FROM usuarios u
@@ -109,6 +111,34 @@ export function registerPlatformUserRoutes(
       ),
     );
     return { data: result.rows };
+  });
+
+  // Muda o escopo de alguém da equipe (só quem tem acesso total; nunca o próprio).
+  platform.patch('/platform/users/:userId/escopo', async (request, reply) => {
+    const { userId } = userParams.parse(request.params);
+    const body = z.object({ escopo_equipe: z.enum(ESCOPOS) }).parse(request.body);
+    if (userId === request.user.sub) {
+      return reply.code(400).send({ error: 'nao_altere_o_proprio_escopo' });
+    }
+    const alterado = await withPlatform(
+      pool!,
+      request,
+      'platform.team.scope_changed',
+      async (client) => {
+        const target = await loadTarget(client, userId);
+        if (!target || target.papel !== 'plataforma') return false;
+        await enterTargetAccount(client, target.tenant_id);
+        await client.query(
+          'UPDATE usuarios SET escopo_equipe = $3, updated_at = now() WHERE tenant_id = $1 AND id = $2',
+          [target.tenant_id, userId, body.escopo_equipe],
+        );
+        return true;
+      },
+      { usuario_id: userId, escopo: body.escopo_equipe },
+    );
+    if (!alterado) return reply.code(404).send({ error: 'user_not_found' });
+    esquecerEscopo(userId);
+    return { id: userId, escopo_equipe: body.escopo_equipe };
   });
 
   platform.get('/platform/users/:userId/ficha', async (request, reply) => {

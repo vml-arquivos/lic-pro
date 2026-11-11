@@ -1,4 +1,10 @@
-import { panelUrlForRole, roleAllowedOnPanel } from '@licitecomigo/shared';
+import {
+  panelOpensForAreas,
+  panelUrl,
+  panelUrlForRole,
+  roleAllowedOnPanel,
+  type Area,
+} from '@licitecomigo/shared';
 import { configuredPanels, currentPanel } from '../../../../lib/panel';
 
 export const runtime = 'nodejs';
@@ -37,11 +43,19 @@ export async function POST(request: Request): Promise<Response> {
       cache: 'no-store',
     }).catch(() => null);
     if (!gate?.ok) return Response.json({ error: 'core_api_unavailable' }, { status: 503 });
-    const me = (await gate.json()) as { papel?: string };
+    const me = (await gate.json()) as { papel?: string; areas_permitidas?: Area[] };
     const panels = configuredPanels();
     if (!me.papel || !roleAllowedOnPanel(panels, panel, me.papel)) {
       return Response.json(
         { error: 'wrong_panel', url: me.papel ? panelUrlForRole(panels, me.papel) : null },
+        { status: 403 },
+      );
+    }
+    // Equipe com escopo restrito só entra nos painéis do próprio escopo.
+    if (me.papel === 'plataforma' && !panelOpensForAreas(panels, panel, me.areas_permitidas)) {
+      const first = me.areas_permitidas?.[0];
+      return Response.json(
+        { error: 'wrong_panel', url: first ? panelUrl(panels, first) : null },
         { status: 403 },
       );
     }

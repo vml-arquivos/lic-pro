@@ -3,7 +3,7 @@ import { flatMenu, pageAreas, type Area } from './areas.js';
 /**
  * Painéis com endereço próprio.
  *
- * Cada painel (Administração profissional, Empresa, Aluno e, se quiser, Administração do curso,
+ * Cada painel (Administração, Empresa, Aluno e, se quiser, Administração da mentoria,
  * Mentor e Colaborador) pode ter o seu domínio ou subdomínio. O mesmo aplicativo responde por todos, mas em cada endereço só abre o que é
  * daquele painel, e a sessão (cookie sem `Domain`) não passa de um endereço para o outro.
  *
@@ -60,9 +60,9 @@ export function panelForHost(panels: PanelMap, host: string | null | undefined):
 
 /**
  * Áreas que um painel abre. O lado do curso vive no endereço do Aluno: sem endereço de Mentor,
- * o mentor entra por ali; sem endereço da Administração do curso (`PANEL_URL_CURSO`), a equipe
+ * o mentor entra por ali; sem endereço da Administração da mentoria (`PANEL_URL_CURSO`), a equipe
  * administra o curso por ali também. Sem endereço de Colaborador, o colaborador usa o painel da
- * Administração profissional.
+ * Administração.
  *
  * A primeira área da lista é a que a equipe vê ao entrar naquele endereço.
  */
@@ -103,6 +103,19 @@ export function areaOfRole(role: string): Area {
 export function roleAllowedOnPanel(panels: PanelMap, panel: Area, role: string): boolean {
   if (role === 'plataforma') return true;
   return areasForPanel(panels, panel).includes(areaOfRole(role));
+}
+
+/**
+ * A equipe com escopo restrito (só a mentoria, só o Painel admin) abre apenas os painéis das
+ * áreas que o escopo permite. Sem a lista de áreas, vale a regra por papel.
+ */
+export function panelOpensForAreas(
+  panels: PanelMap,
+  panel: Area,
+  allowed: readonly Area[] | undefined,
+): boolean {
+  if (!allowed || allowed.length === 0) return true;
+  return areasForPanel(panels, panel).some((area) => allowed.includes(area));
 }
 
 /** Endereço do painel de uma área, quando configurado. */
@@ -187,7 +200,7 @@ export function panelPathPublic(panel: Area, pathname: string): boolean {
 const ADMIN_API_PREFIXES = ['/admin', '/platform', '/operations'] as const;
 
 /**
- * As rotas de administração existem na Administração profissional, na Administração do curso
+ * As rotas de administração existem na Administração, na Administração da mentoria
  * e, quando esta não tem endereço próprio, no endereço do Aluno (onde ela vive). O core-api
  * continua exigindo o papel da equipe em cada rota.
  */
@@ -200,8 +213,8 @@ export function panelApiAllowed(panel: Area, apiPath: string, panels?: PanelMap)
 
 /** Nome de cada painel, usado no título da página e na tela de entrada. */
 export const PANEL_COPY: Record<Area, { title: string }> = {
-  administracao: { title: 'Administração profissional' },
-  curso: { title: 'Administração do curso' },
+  administracao: { title: 'Painel admin' },
+  curso: { title: 'Painel da mentoria' },
   empresa: { title: 'Empresas' },
   aluno: { title: 'Alunos' },
   mentor: { title: 'Mentores' },

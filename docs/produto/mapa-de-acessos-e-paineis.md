@@ -4,16 +4,16 @@ Dois módulos, cada um com a sua administração (veja `modulos-curso-e-profissi
 pessoa vê só a sua área. Com endereços por painel (veja `docs/permissoes.md`, "Endereços por
 painel"), cada área tem a sua porta:
 
-| Módulo       | Painel                                 | Endereço sugerido                           | Quem entra                          |
-| ------------ | -------------------------------------- | ------------------------------------------- | ----------------------------------- |
-| Profissional | Administração profissional             | `admin.seudominio`                          | Equipe do Licite Comigo             |
-| Profissional | Empresa                                | `app.seudominio`                            | Empresas assinantes                 |
-| Profissional | Colaborador                            | `equipe.seudominio` (ou o da Administração) | Equipe de operação do Licite Comigo |
-| Curso        | Aluno, Mentor e Administração do curso | `mentoria.seudominio`                       | Alunos, mentores e a equipe         |
+| Módulo       | Painel                                    | Endereço sugerido                           | Quem entra                          |
+| ------------ | ----------------------------------------- | ------------------------------------------- | ----------------------------------- |
+| Profissional | Painel admin                              | `admin.seudominio`                          | Equipe do Licite Comigo             |
+| Profissional | Empresa                                   | `app.seudominio`                            | Empresas assinantes                 |
+| Profissional | Colaborador                               | `equipe.seudominio` (ou o da Administração) | Equipe de operação do Licite Comigo |
+| Curso        | Aluno, Mentor e Painel da mentoria | `mentoria.seudominio`                       | Alunos, mentores e a equipe         |
 
 Sem esses endereços, a equipe pode "ver como" cada área no mesmo endereço.
 
-## Administração profissional (equipe do Licite Comigo)
+## Painel admin (equipe do Licite Comigo)
 
 Menu: Visão geral · Leads de empresas · Fontes de dados · Financeiro · Assinantes · Cupons ·
 Planos e preços · Auditoria · Empresas clientes · Colaboradores · Equipe administrativa.
@@ -37,7 +37,7 @@ Também acessa Radar, Academia, Ana e a própria conta.
 - **Leads de empresas**: contatos de empresas captados pelo site.
 - **Colaboradores e Equipe administrativa**: convites, nichos liberados, ficha e senha.
 
-## Administração do curso (a mesma equipe, no módulo do curso)
+## Painel da mentoria (a mesma equipe, no módulo do curso)
 
 Menu: Visão geral · Leads de alunos · Vendas do curso · Cupons do curso · Preço do curso ·
 Alunos e turmas · Mentores · Materiais · Encontros ao vivo. Também acessa Academia, Ana e a
@@ -122,3 +122,6 @@ contas nem o curso.
 - Equipe dentro da empresa (vários usuários e papéis).
 - Mais limites por plano (hoje só buscas salvas) e nota fiscal.
 - Revogação imediata de sessão.
+
+
+> Acesso por escopo: a equipe pode ser convidada só para o Painel admin, só para o Painel da mentoria, ou para os dois (Equipe administrativa → Acesso). Colaborador e Empresa usam a página Análise (/analise) para ranquear, comparar e simular licitações.

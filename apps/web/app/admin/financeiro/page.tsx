@@ -14,9 +14,9 @@ export default async function FinanceiroPage() {
   return (
     <main className="ui-page">
       <PageHeader
-        eyebrow="Administração profissional"
+        eyebrow="Painel admin"
         title="Financeiro"
-        description="Quanto entrou e quem assina o sistema profissional. As vendas do curso ficam na Administração do curso."
+        description="Quanto entrou e quem assina o sistema profissional. As vendas do curso ficam no Painel da mentoria."
       />
       <FinanceAdmin modulo="profissional" />
     </main>

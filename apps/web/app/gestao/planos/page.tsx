@@ -14,7 +14,7 @@ export default async function PlanosPage() {
   return (
     <main className="ui-page">
       <PageHeader
-        eyebrow="Administração do curso"
+        eyebrow="Painel da mentoria"
         title="Preço do curso"
         description="O curso e a turma que ele libera. O curso só aparece para venda depois de ativado."
       />

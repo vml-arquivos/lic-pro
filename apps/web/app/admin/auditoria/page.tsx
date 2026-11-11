@@ -12,7 +12,7 @@ export default async function AuditPage() {
   return (
     <main className="ui-page">
       <PageHeader
-        eyebrow="Administração"
+        eyebrow="Painel admin"
         title="Auditoria"
         description="Quem fez o quê na administração, incluindo as visualizações “ver como”."
       />

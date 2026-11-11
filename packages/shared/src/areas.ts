@@ -21,8 +21,8 @@ export type Area = (typeof AREAS)[number];
  * Os dois módulos do produto. Cada um tem a sua administração, e dinheiro, leads e usuários de
  * um módulo nunca se misturam com os do outro. A Ana e a base de editais são as mesmas.
  *
- * - `curso`: alunos, mentores e a Administração do curso (área `curso`).
- * - `profissional`: empresas assinantes, colaboradores e a Administração profissional
+ * - `curso`: alunos, mentores e a Administração da mentoria (área `curso`).
+ * - `profissional`: empresas assinantes, colaboradores e a Administração
  *   (área `administracao`), que também trabalha com as licitações.
  */
 export const MODULES = ['curso', 'profissional'] as const;
@@ -43,8 +43,8 @@ export function moduleOfArea(area: Area): ModuleName {
 }
 
 export const AREA_LABELS: Record<Area, string> = {
-  administracao: 'Administração profissional',
-  curso: 'Administração do curso',
+  administracao: 'Painel admin',
+  curso: 'Painel da mentoria',
   empresa: 'Empresa',
   aluno: 'Aluno',
   mentor: 'Mentor',
@@ -61,13 +61,18 @@ const academy: MenuItem = { label: 'Academia', href: '/academia', icon: 'cap' };
 const materials: MenuItem = { label: 'Materiais', href: '/materiais', icon: 'file' };
 const radar: MenuItem = { label: 'Explorar licitações', href: '/radar', icon: 'search' };
 const published: MenuItem = { label: 'Pregões publicados', href: '/pregoes', icon: 'globe' };
+const analysis: MenuItem = {
+  label: 'Análise',
+  href: '/analise',
+  icon: 'scale',
+};
 const prices: MenuItem = { label: 'Preços pagos', href: '/precos', icon: 'chart' };
 
 /** Somente páginas que existem e funcionam. Nada de item "em breve". */
 export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
   administracao: [
     {
-      label: 'Administração profissional',
+      label: 'Painel admin',
       items: [
         { label: 'Visão geral', href: '/admin', icon: 'home' },
         { label: 'Leads de empresas', href: '/leads', icon: 'inbox' },
@@ -87,12 +92,12 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
         { label: 'Equipe administrativa', href: '/admin/equipe', icon: 'shield' },
       ],
     },
-    { label: 'Ferramentas', items: [radar, academy, ana] },
+    { label: 'Ferramentas', items: [radar, analysis, academy, ana] },
     { label: 'Conta', items: [account] },
   ],
   curso: [
     {
-      label: 'Administração do curso',
+      label: 'Painel da mentoria',
       items: [
         { label: 'Visão geral', href: '/gestao', icon: 'home' },
         { label: 'Leads de alunos', href: '/gestao/leads', icon: 'inbox' },
@@ -119,6 +124,7 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
       items: [
         { label: 'Início', href: '/painel', icon: 'home' },
         radar,
+        analysis,
         { label: 'Buscas salvas', href: '/buscas-salvas', icon: 'target' },
         { label: 'Alertas', href: '/alertas', icon: 'bell' },
         { label: 'Oportunidades', href: '/oportunidades', icon: 'columns' },
@@ -175,6 +181,7 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
       items: [
         { label: 'Início', href: '/painel', icon: 'home' },
         radar,
+        analysis,
         { label: 'Buscas salvas', href: '/buscas-salvas', icon: 'target' },
         { label: 'Alertas', href: '/alertas', icon: 'bell' },
         { label: 'Oportunidades', href: '/oportunidades', icon: 'columns' },
@@ -219,6 +226,7 @@ export const PAGE_RULES: readonly PageRule[] = [
   { prefix: '/mentoria', areas: STUDENT },
   { prefix: '/certificado', areas: STUDENT },
   { prefix: '/radar', areas: WORK },
+  { prefix: '/analise', areas: OPERATION },
   { prefix: '/pregoes', areas: WORK },
   { prefix: '/precos', areas: WORK },
   { prefix: '/assinatura', areas: COMPANY },

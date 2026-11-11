@@ -12,7 +12,7 @@ export default async function MentorsPage() {
   return (
     <main className="ui-page">
       <PageHeader
-        eyebrow="Administração do curso"
+        eyebrow="Painel da mentoria"
         title="Mentores"
         description="Quem acompanha os alunos do curso."
       />

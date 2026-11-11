@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
 import { NICHE_CODES, PASSWORD_TECHNICAL_MAX } from '@licitecomigo/shared';
 import { z } from 'zod';
+import { ESCOPOS, tiposDeConviteVisiveis, type Escopo } from './escopo-equipe.js';
 import { createOpaqueToken, hashOpaqueToken, PublicRateLimiter } from './auth-public.js';
 import { panelBaseUrl, type RuntimeConfig } from './config.js';
 import { MIGRATIONS_SEM_ACESSO, estadoMigrations } from './migrations-esperadas.js';
@@ -41,6 +42,8 @@ const invitationBody = z
     empresa_nome: z.string().trim().min(2).max(200).optional(),
     turma_id: uuid.optional(),
     mentor_id: uuid.optional(),
+    /** Só vale para tipo `equipe`: de onde a pessoa pode ver e mexer. */
+    escopo: z.enum(ESCOPOS).default('tudo'),
   })
   .superRefine((value, context) => {
     if (value.tipo === 'empresa' && !value.empresa_nome) {
@@ -71,8 +74,9 @@ export function invitationLink(
   config: RuntimeConfig,
   token: string,
   tipo: 'empresa' | 'aluno' | 'mentor' | 'colaborador' | 'equipe' = 'aluno',
+  escopo: Escopo = 'tudo',
 ): string {
-  const area = tipo === 'equipe' ? 'administracao' : tipo;
+  const area = tipo === 'equipe' ? (escopo === 'curso' ? 'curso' : 'administracao') : tipo;
   return `${panelBaseUrl(config, area)}/convite?token=${token}`;
 }
 
@@ -470,10 +474,10 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
                        WHEN c.expira_em <= now() THEN 'expirado'
                        ELSE 'pendente' END AS situacao
              FROM convites c LEFT JOIN turmas t ON t.id = c.turma_id
-            WHERE c.tenant_id = $1
+            WHERE c.tenant_id = $1 AND ($2::text[] IS NULL OR c.tipo = ANY($2::text[]))
             ORDER BY c.created_at DESC
             LIMIT 300`,
-          [request.user.tenantId],
+          [request.user.tenantId, tiposDeConviteVisiveis(request.escopoEquipe ?? 'tudo')],
         ),
       );
       return { data: result.rows };
@@ -525,11 +529,23 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
                 request.user.sub,
               ],
             );
+            const escopo = body.tipo === 'equipe' ? body.escopo : 'tudo';
+            if (escopo !== 'tudo') {
+              await client.query('UPDATE convites SET escopo = $2 WHERE id = $1', [
+                inserted.rows[0]!.id,
+                escopo,
+              ]);
+            }
             return inserted.rows[0]!;
           },
-          { tipo: body.tipo },
+          { tipo: body.tipo, escopo: body.tipo === 'equipe' ? body.escopo : 'tudo' },
         );
-        const link = invitationLink(config, token, body.tipo);
+        const link = invitationLink(
+          config,
+          token,
+          body.tipo,
+          body.tipo === 'equipe' ? body.escopo : 'tudo',
+        );
         await deliverInvitationEmail(config, body.email, body.nome, link);
         // O link só aparece nesta resposta. Quem tem acesso a ele pode criar a conta.
         return reply.code(201).send({
@@ -577,11 +593,12 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
             nome: string;
             tipo: 'empresa' | 'aluno' | 'mentor' | 'colaborador' | 'equipe';
             expira_em: Date;
+            escopo: Escopo | null;
           }>(
             `UPDATE convites
                 SET token_hash = $3, expira_em = now() + make_interval(days => $4), revogado_em = NULL
               WHERE tenant_id = $1 AND id = $2 AND usado_em IS NULL
-              RETURNING email, nome, tipo, expira_em`,
+              RETURNING email, nome, tipo, expira_em, to_jsonb(convites)->>'escopo' AS escopo`,
             [request.user.tenantId, id, hashOpaqueToken(token), INVITATION_TTL_DAYS],
           );
           return result.rows[0] ?? null;
@@ -589,7 +606,7 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
         { convite_id: id },
       );
       if (!reissued) return reply.code(404).send({ error: 'invitation_not_found' });
-      const link = invitationLink(config, token, reissued.tipo);
+      const link = invitationLink(config, token, reissued.tipo, reissued.escopo ?? 'tudo');
       await deliverInvitationEmail(config, reissued.email, reissued.nome, link);
       return reply.send({
         id,
@@ -639,8 +656,10 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
         empresa_nome: string | null;
         turma_id: string | null;
         mentor_id: string | null;
+        escopo: Escopo | null;
       }>(
-        `SELECT id, tenant_id, tipo, email, nome, empresa_nome, turma_id, mentor_id FROM convites
+        `SELECT id, tenant_id, tipo, email, nome, empresa_nome, turma_id, mentor_id,
+                to_jsonb(convites)->>'escopo' AS escopo FROM convites
           WHERE token_hash = $1 AND usado_em IS NULL AND revogado_em IS NULL AND expira_em > now()
           FOR UPDATE`,
         [hashOpaqueToken(body.token)],
@@ -699,6 +718,13 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
          VALUES ($1, $2, $3, $4, now())`,
         [tenantId, userId, invite.email, passwordHash],
       );
+      if (invite.tipo === 'equipe' && invite.escopo && invite.escopo !== 'tudo') {
+        await client.query('UPDATE usuarios SET escopo_equipe = $3 WHERE tenant_id = $1 AND id = $2', [
+          tenantId,
+          userId,
+          invite.escopo,
+        ]);
+      }
       if (invite.tipo === 'aluno' && invite.turma_id) {
         await client.query(
           'INSERT INTO matriculas (tenant_id, turma_id, aluno_id) VALUES ($1, $2, $3)',

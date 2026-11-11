@@ -86,11 +86,18 @@ cria a conta da equipe direto.
 
 ## Módulos Curso e Profissional (0030)
 
-- `usuarios.visualizar_como` passa a aceitar `curso` (Administração do curso, só para a equipe
+- `usuarios.visualizar_como` passa a aceitar `curso` (Administração da mentoria, só para a equipe
   "ver como"). Nenhum dado muda: o financeiro, os leads e os cupons de cada módulo são separados
   nas consultas, por `cobrancas.tipo`, `planos.tipo` e `leads.perfil`.
 - `licite_core` ganha leitura de `schema_migrations`: a Administração mostra um aviso quando há
   migrations por aplicar (`GET /platform/migracoes`).
 
-Todas rodam em ordem pelo `migrate.sh`, cada uma na sua transação. O CI confere que as 30
+## Escopo da equipe (0031)
+
+- `usuarios.escopo_equipe` (`tudo`, `curso` ou `profissional`) e `convites.escopo`: a equipe
+  administrativa pode ser só do Painel admin ou só do Painel da mentoria. Contas e convites
+  existentes ficam em `tudo`, como sempre foi. O escopo vale na API (`escopo-equipe.ts`), não só
+  na tela.
+
+Todas rodam em ordem pelo `migrate.sh`, cada uma na sua transação. O CI confere que as 31
 foram aplicadas. Migration já aplicada nunca é editada: mudança vira arquivo novo.

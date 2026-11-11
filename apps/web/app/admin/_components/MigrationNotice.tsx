@@ -24,10 +24,11 @@ export function MigrationNotice() {
   if (!estado?.pendente) return null;
   return (
     <Alert kind="error">
-      O banco de dados está desatualizado (última migration aplicada:{' '}
-      {estado.aplicada ?? 'não foi possível ler'}; esperada: {estado.esperada}). Rode o recurso
-      "migrations" no Coolify e reinicie o core-api. Enquanto isso, algumas telas podem mostrar "Não
-      foi possível concluir agora".
+      {estado.motivo === 'sem_acesso'
+        ? 'O banco de dados ainda não recebeu as últimas migrations (a API não consegue ler o registro delas).'
+        : `O banco de dados está desatualizado (última migration aplicada: ${estado.aplicada ?? 'nenhuma'}; esperada: ${estado.esperada}).`}{' '}
+      Refaça o deploy do recurso "migrations" no Coolify, rode-o até terminar sem erro e reinicie o
+      core-api. Enquanto isso, algumas telas podem mostrar "Não foi possível concluir agora".
     </Alert>
   );
 }

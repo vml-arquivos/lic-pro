@@ -38,6 +38,8 @@ const MESSAGES: Record<string, string> = {
   missing_answers: 'Responda as perguntas marcadas com *.',
   encontro_not_found: 'Encontro não encontrado.',
   user_not_found: 'Usuário não encontrado.',
+  escopo_da_equipe: 'O seu acesso não inclui esta área. Fale com quem convidou você.',
+  nao_altere_o_proprio_escopo: 'Você não pode mudar o seu próprio acesso. Peça a outro administrador.',
   user_inactive: 'Esta conta está desativada. Reative antes de gerar o link de senha.',
   user_has_no_credentials: 'Esta conta ainda não tem acesso criado. Gere um link de cadastro.',
   company_name_only_for_company: 'O nome da empresa só pode ser editado em conta de empresa.',

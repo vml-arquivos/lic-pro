@@ -12,7 +12,7 @@ export default async function ColaboradoresPage() {
   return (
     <main className="ui-page">
       <PageHeader
-        eyebrow="Administração"
+        eyebrow="Painel admin"
         title="Colaboradores"
         description="Equipe que busca e acompanha licitações pela operação do Licite Comigo. Cada colaborador só enxerga os nichos que você liberar."
       />

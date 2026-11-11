@@ -26,6 +26,13 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
       tone: 'violet',
     },
     {
+      label: 'Análise',
+      caption: 'O que vale a pena disputar',
+      href: '/analise',
+      icon: 'scale',
+      tone: 'green',
+    },
+    {
       label: 'Buscas salvas',
       caption: 'Seu funil de busca',
       href: '/buscas-salvas',
@@ -198,6 +205,13 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
       tone: 'violet',
     },
     {
+      label: 'Análise',
+      caption: 'O que vale a pena disputar',
+      href: '/analise',
+      icon: 'scale',
+      tone: 'green',
+    },
+    {
       label: 'Buscas salvas',
       caption: 'Seu funil de busca',
       href: '/buscas-salvas',
@@ -367,6 +381,13 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
       caption: 'Editais do governo',
       href: '/radar',
       icon: 'search',
+      tone: 'green',
+    },
+    {
+      label: 'Análise',
+      caption: 'O que vale a pena disputar',
+      href: '/analise',
+      icon: 'scale',
       tone: 'green',
     },
     {

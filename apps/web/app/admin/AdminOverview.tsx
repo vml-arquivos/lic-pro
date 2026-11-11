@@ -35,7 +35,7 @@ type Overview = {
 };
 
 const PAPEIS: Record<string, string> = {
-  plataforma: 'Administração',
+  plataforma: 'Equipe (Painel admin)',
   admin: 'Empresas (responsável)',
   operador: 'Empresas (operador)',
   colaborador: 'Colaboradores',

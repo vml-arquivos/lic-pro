@@ -14,7 +14,7 @@ export default async function PlanosPage() {
   return (
     <main className="ui-page">
       <PageHeader
-        eyebrow="Administração profissional"
+        eyebrow="Painel admin"
         title="Planos e preços"
         description="As assinaturas do sistema profissional. Um plano só aparece para venda depois de ativado."
       />

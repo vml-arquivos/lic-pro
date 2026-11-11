@@ -12,7 +12,7 @@ export default async function SourcesPage() {
   return (
     <main className="ui-page">
       <PageHeader
-        eyebrow="Administração"
+        eyebrow="Painel admin"
         title="Fontes de dados"
         description="De onde vêm os editais e se a coleta está rodando."
       />

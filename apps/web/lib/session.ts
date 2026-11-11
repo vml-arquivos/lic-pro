@@ -2,6 +2,8 @@ import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import {
   areasForPanel,
+  panelOpensForAreas,
+  panelUrl,
   panelUrlForRole,
   roleAllowedOnPanel,
   type Area,
@@ -59,7 +61,18 @@ export async function getSessionResult(): Promise<SessionResult> {
     // Neste endereço só existe o painel dele. A equipe entra pela porta de cada painel e vê só
     // o que ele mostra (sem trocar de área).
     if (session.papel === 'plataforma') {
-      const area = areasForPanel(panels, panel)[0] ?? panel;
+      // Equipe com escopo restrito (só a mentoria, só o Painel admin) não abre o outro painel.
+      if (!panelOpensForAreas(panels, panel, session.areas_permitidas)) {
+        const first = session.areas_permitidas[0];
+        return {
+          status: 'wrong_panel',
+          papel: session.papel,
+          url: first ? panelUrl(panels, first) : null,
+        };
+      }
+      const area =
+        areasForPanel(panels, panel).find((item) => session.areas_permitidas.includes(item)) ??
+        panel;
       return {
         status: 'ok',
         session: {

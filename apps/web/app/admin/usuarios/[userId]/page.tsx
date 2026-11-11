@@ -20,7 +20,7 @@ export default async function UserFichaPage({
   return (
     <main className="ui-page">
       <PageHeader
-        eyebrow="Administração"
+        eyebrow="Painel admin"
         title="Ficha do usuário"
         description="Quem é, o que já acessou, o que buscou e o que está procurando."
       />

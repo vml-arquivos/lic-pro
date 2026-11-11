@@ -590,7 +590,7 @@ export function FichaUsuario({
               description={
                 forCompany
                   ? 'Últimas ações de todos os usuários da empresa.'
-                  : 'Últimas ações desta pessoa e o que a Administração fez na conta dela.'
+                  : 'Últimas ações desta pessoa e o que a equipe fez na conta dela.'
               }
             >
               {data.historico.length ? (

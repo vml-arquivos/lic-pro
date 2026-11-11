@@ -22,7 +22,7 @@ export function RadarApp({
   signedIn: boolean;
   canExport: boolean;
   canSave: boolean;
-  /** Colaborador: os nichos são definidos pela Administração. */
+  /** Colaborador: os nichos são definidos pelo Painel admin. */
   nichosTravados?: boolean;
 }>) {
   const router = useRouter();
@@ -152,7 +152,7 @@ export function RadarApp({
             <>
               <h2>Seus nichos ainda não foram liberados</h2>
               <p>
-                Os nichos do Radar para a sua conta são definidos pela Administração. Peça a
+                Os nichos do Radar para a sua conta são definidos pelo Painel admin. Peça a
                 liberação para começar a buscar.
               </p>
             </>

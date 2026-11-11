@@ -10,7 +10,7 @@ export default async function GestaoMateriaisPage() {
   return (
     <div className="ui-page">
       <PageHeader
-        eyebrow="Administração do curso"
+        eyebrow="Painel da mentoria"
         title="Materiais do aluno"
         description="A biblioteca que o aluno vê. Item sem texto e sem link fica oculto até você anexar o link do arquivo."
       />

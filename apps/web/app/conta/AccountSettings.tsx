@@ -386,7 +386,7 @@ export function AccountSettings() {
               <fieldset className="account-fieldset">
                 <legend>Nichos do Radar</legend>
                 <p className="form-hint">
-                  Os nichos da sua conta são definidos pela Administração.
+                  Os nichos da sua conta são definidos pelo Painel admin.
                 </p>
                 <p>
                   {(account.nicho_preferencias ?? []).length

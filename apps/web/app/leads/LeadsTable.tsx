@@ -15,12 +15,12 @@ type Lead = {
 };
 const COPY: Record<Modulo, { eyebrow: string; title: string; text: string }> = {
   profissional: {
-    eyebrow: 'Administração profissional',
+    eyebrow: 'Painel admin',
     title: 'Leads de empresas',
     text: 'Empresas interessadas no sistema profissional, captadas pelo site. Somente a equipe vê esta lista.',
   },
   curso: {
-    eyebrow: 'Administração do curso',
+    eyebrow: 'Painel da mentoria',
     title: 'Leads de alunos',
     text: 'Interessados no curso e na mentoria, captados pelo site. Somente a equipe vê esta lista.',
   },

@@ -58,6 +58,7 @@ export {
   normalizeHost,
   panelApiAllowed,
   panelForHost,
+  panelOpensForAreas,
   panelPathAllowed,
   panelPathPublic,
   panelUrl,
@@ -75,3 +76,28 @@ export {
   PASSWORD_WEAK_MESSAGE,
   isAcceptablePassword,
 } from './password.js';
+
+export {
+  DESCONTOS_PADRAO,
+  DESCONTO_PADRAO_PCT,
+  FAIXA_PADRAO_VALOR,
+  FOCOS_ANALISE,
+  FOCO_ROTULOS,
+  LIMITE_EXCLUSIVO_ME_EPP,
+  MIN_AMOSTRAS_HISTORICO,
+  PESOS,
+  analisarOportunidade,
+  chaveDeOrdem,
+  descontoTipico,
+  simularProposta,
+} from './analise.js';
+export type {
+  CenarioSimulacao,
+  ComponenteAnalise,
+  EntradaAnalise,
+  EntradaSimulacao,
+  FocoAnalise,
+  ResultadoAnalise,
+  ResultadoSimulacao,
+  SinalAnalise,
+} from './analise.js';

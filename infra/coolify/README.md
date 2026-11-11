@@ -26,7 +26,7 @@ Todos os recursos de aplicação usam **Base Directory `/`** e o repositório co
 
 ## Endereços por painel (Administração, Empresa, Aluno e Curso)
 
-O mesmo recurso `web` atende os painéis, cada um com o seu domínio. O **módulo Curso** (alunos, mentores e a Administração do curso) usa o endereço do Aluno, por exemplo `mentoria.seudominio`; o **módulo Profissional** usa `admin.` e `app.` (veja `docs/produto/modulos-curso-e-profissional.md`). Para dar endereço próprio à Administração do curso, acrescente `PANEL_URL_CURSO` e o domínio dele em **Domains**. Nenhum recurso novo no Coolify é necessário.
+O mesmo recurso `web` atende os painéis, cada um com o seu domínio. O **módulo Curso** (alunos, mentores e a Administração da mentoria) usa o endereço do Aluno, por exemplo `mentoria.seudominio`; o **módulo Profissional** usa `admin.` e `app.` (veja `docs/produto/modulos-curso-e-profissional.md`). Para dar endereço próprio à Administração da mentoria, acrescente `PANEL_URL_CURSO` e o domínio dele em **Domains**. Nenhum recurso novo no Coolify é necessário.
 
 1. No DNS, crie um registro `A` para cada subdomínio (por exemplo `admin`, `app` e `aluno`) apontando para o IP do servidor.
 2. No recurso `web`, em **Domains**, informe os três separados por vírgula (`https://admin.seudominio,https://app.seudominio,https://aluno.seudominio`). Retire o domínio antigo.

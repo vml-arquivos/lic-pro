@@ -54,6 +54,8 @@ import { registerAlertRoutes } from './alerts-routes.js';
 import { registerCompanyRoutes } from './empresa.js';
 import { registerLearningRoutes } from './learning.js';
 import { registerStudentSupportRoutes } from './aluno-apoio.js';
+import { registerAnaliseRoutes } from './analise.js';
+import { areasDoEscopo, lerEscopo, registerEscopoEquipe } from './escopo-equipe.js';
 import { registerRadarRoutes } from './radar.js';
 import { registerActivityTracking } from './atividade.js';
 import { ESTADO_USUARIO, ORDEM, PERIODO_TIPO, SITUACAO_PRAZO, SITUACAO_TIPO } from './search.js';
@@ -358,6 +360,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   // Antes das rotas: o hook só vale para o que é registrado depois dele.
+  registerEscopoEquipe(app, { pool });
   registerActivityTracking(app, { pool });
 
   app.get('/health', async () => ({ ...health('core-api'), databaseConfigured: Boolean(pool) }));
@@ -869,11 +872,15 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (!account) return reply.code(404).send({ error: 'user_not_found' });
     // A área vem do papel do token, nunca de preferências do usuário.
     const role = request.user.role;
+    const escopo = await lerEscopo(pool, request);
+    const permitidas = role === 'plataforma' ? areasDoEscopo(escopo) : allowedAreas(role);
+    const ativa = activeArea(role, account.visualizar_como as string | null);
     return reply.send({
       ...account,
       papel: role,
-      area: activeArea(role, account.visualizar_como as string | null),
-      areas_permitidas: allowedAreas(role),
+      area: permitidas.includes(ativa) ? ativa : (permitidas[0] ?? ativa),
+      areas_permitidas: permitidas,
+      escopo_equipe: role === 'plataforma' ? escopo : null,
       plataforma: role === 'plataforma',
     });
   });
@@ -883,6 +890,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (!requireRoles(reply, request, ['plataforma'])) return;
     const body = z.object({ area: areaSchema }).parse(request.body);
     if (!pool) return sendDatabaseUnavailable(reply);
+    if (!areasDoEscopo(await lerEscopo(pool, request)).includes(body.area)) {
+      return reply.code(403).send({ error: 'escopo_da_equipe', motivo: 'area_fora_do_escopo' });
+    }
     await withTenant(pool, authContext(request), async (client) => {
       await client.query(
         'UPDATE usuarios SET visualizar_como = $3, updated_at = now() WHERE tenant_id = $1 AND id = $2',
@@ -2059,6 +2069,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   registerPlatformRoutes(app, { pool, config });
   registerRadarRoutes(app, { pool });
+  registerAnaliseRoutes(app, { pool });
   registerAlertRoutes(app, { pool, config });
   registerLearningRoutes(app, { pool });
   registerStudentSupportRoutes(app, { pool });

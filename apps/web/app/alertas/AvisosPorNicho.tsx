@@ -91,7 +91,7 @@ export function AvisosPorNicho({
       {nichos.length === 0 ? (
         <Empty>
           {travados ? (
-            'Seus nichos ainda não foram liberados pela Administração.'
+            'Seus nichos ainda não foram liberados pela equipe.'
           ) : (
             <>
               Escolha seus nichos para receber avisos.{' '}

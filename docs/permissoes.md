@@ -9,16 +9,16 @@ exige mudar a outra.
 O produto tem dois módulos, cada um com a sua administração. Dinheiro, leads, cupons e planos de
 um módulo nunca aparecem no outro (veja `docs/produto/modulos-curso-e-profissional.md`).
 
-| Módulo       | Área                       | Papel no banco (`papel_usuario`) | Quem é                                |
-| ------------ | -------------------------- | -------------------------------- | ------------------------------------- |
-| Profissional | Administração profissional | `plataforma`                     | Equipe do Licite Comigo               |
-| Profissional | Empresa                    | `admin` (e `operador`)           | Cliente que busca e filtra licitações |
-| Profissional | Colaborador                | `colaborador`                    | Equipe de operação do Licite Comigo   |
-| Curso        | Administração do curso     | `plataforma` (só "ver como")     | Equipe do Licite Comigo               |
-| Curso        | Aluno                      | `aluno`                          | Aluno do curso / mentoria             |
-| Curso        | Mentor                     | `mentor`                         | Quem acompanha os alunos              |
+| Módulo       | Área                      | Papel no banco (`papel_usuario`) | Quem é                                |
+| ------------ | ------------------------- | -------------------------------- | ------------------------------------- |
+| Profissional | Painel admin              | `plataforma`                     | Equipe do Licite Comigo               |
+| Profissional | Empresa                   | `admin` (e `operador`)           | Cliente que busca e filtra licitações |
+| Profissional | Colaborador               | `colaborador`                    | Equipe de operação do Licite Comigo   |
+| Curso        | Painel da mentoria        | `plataforma` (só "ver como")     | Equipe do Licite Comigo               |
+| Curso        | Aluno                     | `aluno`                          | Aluno do curso / mentoria             |
+| Curso        | Mentor                    | `mentor`                         | Quem acompanha os alunos              |
 
-A Administração do curso (`curso`) não tem papel próprio no banco: é a mesma equipe
+O Painel da mentoria (`curso`) não tem papel próprio no banco: é a mesma equipe
 (`plataforma`) trabalhando no módulo do curso.
 
 - A área é calculada no servidor a partir do papel do token. Nenhuma tela ou preferência do
@@ -50,15 +50,15 @@ endereço só.
 - **Sessão**: o cookie não tem `Domain`, então cada endereço tem a sua sessão. Entrar na
   Administração não abre a Empresa.
 - **API**: nos endereços de Empresa (e de Mentor/Colaborador, quando próprios) as rotas
-  `/admin`, `/platform` e `/operations` não existem. Elas existem na Administração profissional,
-  na Administração do curso e, quando esta não tem endereço próprio, no endereço do Aluno (onde
+  `/admin`, `/platform` e `/operations` não existem. Elas existem na Administração,
+  na Administração da mentoria e, quando esta não tem endereço próprio, no endereço do Aluno (onde
   ela vive). O core-api exige o papel `plataforma` em cada uma, e o banco continua isolando por
   papel e por conta.
 - **Links enviados**: convites, e-mails de confirmação, recuperação de senha e alertas apontam
   para o painel de quem recebe. Mentor sem endereço próprio usa o do Aluno.
 - **Mentor**: faz parte do lado do curso. Sem `PANEL_URL_MENTOR`, entra pelo endereço do Aluno.
-- **Administração do curso**: sem `PANEL_URL_CURSO`, vive no endereço do Aluno e só a equipe
-  (`plataforma`) a vê; ao entrar ali a equipe cai na Administração do curso (`/gestao`). Com
+- **Administração da mentoria**: sem `PANEL_URL_CURSO`, vive no endereço do Aluno e só a equipe
+  (`plataforma`) a vê; ao entrar ali a equipe cai na Administração da mentoria (`/gestao`). Com
   `PANEL_URL_CURSO`, ela ganha endereço próprio e o endereço do Aluno volta a ter só aluno e
   mentor.
 - **Colaborador**: sem `PANEL_URL_COLABORADOR`, entra pelo endereço da Administração e vê só o
@@ -115,8 +115,8 @@ não tem esse limite. O colaborador só enxerga os nichos que a Administração 
 
 | Página                                                                                | Administração | Empresa | Aluno | Mentor | Colaborador |
 | ------------------------------------------------------------------------------------- | :-----------: | :-----: | :---: | :----: | :---------: |
-| `/admin`, `/admin/*`, `/leads` (Administração profissional)                           |      sim      |   não   |  não  |  não   |     não     |
-| `/gestao`, `/gestao/*` (Administração do curso; só a área `curso`)                    |      não      |   não   |  não  |  não   |     não     |
+| `/admin`, `/admin/*`, `/leads` (Administração)                                        |      sim      |   não   |  não  |  não   |     não     |
+| `/gestao`, `/gestao/*` (Administração da mentoria; só a área `curso`)                 |      não      |   não   |  não  |  não   |     não     |
 | `/painel`, `/conta`, `/ana`, `/onboarding`                                            |      sim      |   sim   |  sim  |  sim   |     sim     |
 | `/radar`, `/pregoes`                                                                  |      sim      |   sim   |  sim  |  não   |     sim     |
 | `/oportunidades`, `/agenda`, `/documentos`, `/buscas-salvas`, `/alertas`, `/empresas` |      sim      |   sim   |  não  |  não   |     sim     |
@@ -209,3 +209,25 @@ Rotas públicas do convite: `POST /auth/invitations/preview` e `POST /auth/invit
   para o token trazer o papel novo.
 - Os links de Termos e Privacidade da página de convite apontam para o domínio do app; as
   páginas jurídicas vivem no site. Ajustar quando o texto jurídico estiver revisado.
+
+
+## Escopo da equipe administrativa (migration 0031)
+
+Cada conta `plataforma` tem um **escopo**: `tudo`, `curso` ou `profissional`.
+
+- `tudo`: Painel admin e Painel da mentoria (quem já era da equipe continua assim).
+- `profissional`: só o Painel admin (empresas, colaboradores, licitações). Não vê dinheiro nem contas do curso.
+- `curso`: só o Painel da mentoria (alunos, mentores, vendas e cupons do curso).
+
+O convite pede o acesso (padrão: `profissional`, o menor acesso). Só quem tem acesso total muda o
+escopo de outra conta (Painel admin → Equipe administrativa). O servidor aplica o escopo em toda
+rota administrativa (rota nova de admin sem regra fica negada para quem tem escopo) e o painel
+errado manda a pessoa para o endereço certo. Antes da migration 0031 o sistema trata todos como `tudo`.
+
+## Análise de oportunidades (`/analise`)
+
+Disponível para Empresa, Colaborador e Painel admin. Ranking por foco (mais interessantes, mais
+lucrativas, mais fáceis, melhor preço), comparação lado a lado de 2 a 4 editais e simulador de
+proposta. As notas são **estimativas de apoio**, não previsão de vitória: o lucro usa a margem
+informada e o desconto típico do órgão (≥3 pregões homologados; senão premissa de 10%), e o preço
+é comparado à mediana do catálogo de itens (≥3 amostras).

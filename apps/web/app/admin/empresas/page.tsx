@@ -12,7 +12,7 @@ export default async function CompaniesPage() {
   return (
     <main className="ui-page">
       <PageHeader
-        eyebrow="Administração"
+        eyebrow="Painel admin"
         title="Empresas clientes"
         description="Cada empresa tem uma conta própria e isolada. Convide, acompanhe e desative por aqui."
       />

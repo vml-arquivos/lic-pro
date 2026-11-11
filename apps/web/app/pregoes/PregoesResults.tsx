@@ -45,7 +45,7 @@ export function PregoesResults({
     return (
       <Empty>
         {nichosTravados ? (
-          'Seus nichos ainda não foram liberados pela Administração.'
+          'Seus nichos ainda não foram liberados pela equipe.'
         ) : (
           <>
             Escolha seus nichos para ver os pregões. <Link href="/onboarding">Escolher nichos</Link>

@@ -72,7 +72,7 @@ describe('regras de página', () => {
     expect(pageAreas('/mentor')).toEqual(['administracao', 'curso', 'mentor']);
   });
 
-  it('só a Administração profissional abre /admin e /leads', () => {
+  it('só a Administração abre /admin e /leads', () => {
     for (const path of ['/admin', '/admin/empresas', '/leads']) {
       expect(canOpenPage(['administracao'], path)).toBe(true);
       for (const area of ['curso', 'empresa', 'aluno', 'mentor'] as const) {
@@ -138,7 +138,7 @@ describe('módulos Curso e Profissional', () => {
     for (const area of doProfissional) expect(moduleOfArea(area)).toBe('profissional');
   });
 
-  it('a Administração do curso abre /gestao e a profissional não', () => {
+  it('a Administração da mentoria abre /gestao e a profissional não', () => {
     for (const path of [
       '/gestao',
       '/gestao/alunos',

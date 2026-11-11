@@ -7,7 +7,7 @@ equipe e a mesma IA (Ana), mas **não se misturam** em administração, dinheiro
 | ----------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | Para quem         | Alunos que compram o curso (Hotmart/Asaas) e mentores                                                 | Empresas assinantes e a operação própria de licitações                                                      |
 | Endereço sugerido | `mentoria.seudominio.com.br`                                                                          | `app.` (empresas), `admin.` (administração), `equipe.` (colaboradores)                                      |
-| Áreas             | Aluno, Mentor, Administração do curso (`/gestao`)                                                     | Empresa, Colaborador, Administração profissional (`/admin`, `/leads`)                                       |
+| Áreas             | Aluno, Mentor, Painel da mentoria (`/gestao`)                                                  | Empresa, Colaborador, Administração (`/admin`, `/leads`)                                                    |
 | O que tem         | Tirar dúvidas (Ana), materiais, academia, plano de 30 dias, prática, mentoria, encontros, certificado | Radar por nicho/local/esfera, alertas, oportunidades, preços pagos, pregões, agenda, documentos, assinatura |
 | Dinheiro          | Cobranças `tipo = 'curso'`                                                                            | Cobranças `tipo = 'assinatura'`                                                                             |
 | Leads             | `perfil` mentorado ou iniciante                                                                       | `perfil` empresario                                                                                         |
@@ -15,8 +15,8 @@ equipe e a mesma IA (Ana), mas **não se misturam** em administração, dinheiro
 
 ## Como a separação é feita
 
-- **Páginas e menus**: a área `curso` (Administração do curso) tem o próprio menu e as páginas em
-  `/gestao`. A Administração profissional não lista mais alunos, mentores e materiais, e a do
+- **Páginas e menus**: a área `curso` (Painel da mentoria) tem o próprio menu e as páginas em
+  `/gestao`. A Administração não lista mais alunos, mentores e materiais, e a do
   curso não lista empresas, assinantes, fontes de dados nem financeiro das assinaturas.
   Com endereços por painel, o que não é daquele endereço responde 404.
 - **Dados**: as rotas `/admin/financeiro`, `/admin/planos`, `/admin/cupons`, `/admin/leads` e
@@ -32,8 +32,8 @@ equipe e a mesma IA (Ana), mas **não se misturam** em administração, dinheiro
 ## Quem administra o quê
 
 A equipe (`plataforma`) é a mesma nos dois módulos e entra em cada um pela porta dele:
-`admin.` para a Administração profissional e `mentoria.` (ou `PANEL_URL_CURSO`) para a
-Administração do curso. Não existe papel novo no banco: a Administração do curso é uma área
+`admin.` para a Administração e `mentoria.` (ou `PANEL_URL_CURSO`) para a
+Painel da mentoria. Não existe papel novo no banco: a Painel da mentoria é uma área
 "ver como" da equipe. A mentora entra como `mentor` e vê só os alunos dela.
 
 ## Configuração
@@ -42,11 +42,14 @@ Sem nenhuma variável nova tudo continua como antes (um endereço, a equipe troc
 "Ver como"). Para separar por endereço:
 
 ```
-PANEL_URL_ADMIN=https://admin.seudominio.com.br      # Administração profissional
+PANEL_URL_ADMIN=https://admin.seudominio.com.br      # Administração
 PANEL_URL_EMPRESA=https://app.seudominio.com.br      # Empresas assinantes
-PANEL_URL_ALUNO=https://mentoria.seudominio.com.br   # Alunos, mentores e Administração do curso
-# PANEL_URL_CURSO=https://gestao.seudominio.com.br   # opcional: Administração do curso à parte
+PANEL_URL_ALUNO=https://mentoria.seudominio.com.br   # Alunos, mentores e Painel da mentoria
+# PANEL_URL_CURSO=https://gestao.seudominio.com.br   # opcional: Painel da mentoria à parte
 ```
 
 Use os mesmos valores em `web`, `core-api` e `site`. Depois de atualizar o código, rode o recurso
 de migrations (migration `0030`) e reinicie o `core-api` e o `web`.
+
+
+> Acesso por escopo: a equipe pode ser convidada só para o Painel admin, só para o Painel da mentoria, ou para os dois (Equipe administrativa → Acesso). Colaborador e Empresa usam a página Análise (/analise) para ranquear, comparar e simular licitações.

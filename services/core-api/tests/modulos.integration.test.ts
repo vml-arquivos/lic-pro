@@ -10,7 +10,7 @@ const suite = describe.skipIf(!connectionString || !setupConnectionString);
 
 /**
  * Módulo Curso × módulo Profissional: dinheiro, leads, cupons e planos de um módulo nunca
- * aparecem no outro, e a equipe pode "ver como" a Administração do curso.
+ * aparecem no outro, e a equipe pode "ver como" a Administração da mentoria.
  */
 suite('Módulos Curso e Profissional (PostgreSQL real)', () => {
   let pool!: Pool;
@@ -230,7 +230,7 @@ suite('Módulos Curso e Profissional (PostgreSQL real)', () => {
     expect((crossed.json() as { error: string }).error).toBe('plano_de_outro_modulo');
   });
 
-  it('a equipe pode "ver como" a Administração do curso, e ela vem em /me', async () => {
+  it('a equipe pode "ver como" a Administração da mentoria, e ela vem em /me', async () => {
     const set = await call('PATCH', '/me/view-as', TEAM(), { area: 'curso' });
     expect(set.statusCode, set.body).toBe(200);
     const me = await call('GET', '/me', TEAM());
