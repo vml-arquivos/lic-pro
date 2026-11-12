@@ -26,9 +26,15 @@ export type RuntimeConfig = {
   /** Motor de alertas dentro do core-api (ligado por padrão; `ALERT_ENGINE_ENABLED=false` desliga). */
   alertEngineEnabled: boolean;
   alertEngineIntervalSeconds: number;
+  logRetentionDays: number;
+  historyRetentionDays: number;
   /** Coleta do PNCP dentro do core-api (ligada por padrão; `PNCP_SYNC_ENABLED=false` desliga). */
   pncpSyncEnabled: boolean;
   pncpSyncIntervalMinutes: number;
+  /** Rodada rápida (só o dia de hoje), em minutos. 0 desliga e deixa só a rodada completa. */
+  pncpSyncFastMinutes: number;
+  /** Quantas consultas ao PNCP rodam ao mesmo tempo (modalidades em paralelo). */
+  pncpSyncConcurrency: number;
   /** Quantos dias para trás cada rodada agendada olha (1 a 30). */
   pncpSyncDays: number;
   /** Códigos de modalidade do PNCP (6 pregão eletrônico, 8 dispensa, 4 concorrência eletrônica, 5 concorrência presencial, 7 pregão presencial, 9 inexigibilidade). */
@@ -126,11 +132,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
     smtpPort: Number(env.SMTP_PORT ?? 587),
     alertEngineEnabled: clean(env.ALERT_ENGINE_ENABLED) !== 'false',
     alertEngineIntervalSeconds: Math.max(
-      60,
-      Number(env.ALERT_ENGINE_INTERVAL_SECONDS ?? 300) || 300,
+      30,
+      Number(env.ALERT_ENGINE_INTERVAL_SECONDS ?? 120) || 120,
     ),
+    logRetentionDays: boundedInt(env.LOG_RETENTION_DAYS, 7, 1, 90),
+    historyRetentionDays: boundedInt(env.HISTORY_RETENTION_DAYS, 90, 7, 730),
     pncpSyncEnabled: clean(env.PNCP_SYNC_ENABLED) !== 'false',
-    pncpSyncIntervalMinutes: boundedInt(env.PNCP_SYNC_INTERVAL_MINUTES, 30, 5, 1440),
+    pncpSyncIntervalMinutes: boundedInt(env.PNCP_SYNC_INTERVAL_MINUTES, 15, 5, 1440),
+    pncpSyncFastMinutes: boundedInt(env.PNCP_SYNC_FAST_MINUTES, 5, 0, 60),
+    pncpSyncConcurrency: boundedInt(env.PNCP_SYNC_CONCURRENCY, 3, 1, 6),
     pncpSyncDays: boundedInt(env.PNCP_SYNC_DAYS, 2, 1, 30),
     pncpSyncModalidades: modalidades(env.PNCP_SYNC_MODALIDADES),
     pncpSyncMaxPages: boundedInt(env.PNCP_SYNC_MAX_PAGES, 40, 1, 200),

@@ -3,7 +3,13 @@ import type { Pool } from 'pg';
 import { z } from 'zod';
 import type { RuntimeConfig } from './config.js';
 import { MODALIDADES_PNCP, runPncpSync } from './pncp-sync.js';
-import { requireRoles, sendDatabaseUnavailable, withPlatform } from './request-context.js';
+import { withTenant } from './db.js';
+import {
+  authContext,
+  requireRoles,
+  sendDatabaseUnavailable,
+  withPlatform,
+} from './request-context.js';
 
 type Deps = { pool: Pool | undefined; config: RuntimeConfig };
 
@@ -11,6 +17,28 @@ const runBody = z.object({ dias: z.number().int().min(1).max(30).default(3) }).d
 
 /** Coleta do PNCP: estado e execução manual (só a equipe da plataforma). */
 export function registerCollectionRoutes(app: FastifyInstance, { pool, config }: Deps): void {
+  /** Frescor dos dados, para qualquer pessoa logada ver "atualizado há X minutos". */
+  app.get('/editais/atualizacao', async (request, reply) => {
+    if (!pool) return sendDatabaseUnavailable(reply);
+    const row = await withTenant(pool, authContext(request), async (client) => {
+      const found = await client.query<{ ultima: string | null; status: string | null }>(
+        `SELECT finalizado_em AS ultima, status
+           FROM coleta_pncp_execucoes
+          WHERE status IN ('ok', 'parcial') AND finalizado_em IS NOT NULL
+          ORDER BY finalizado_em DESC LIMIT 1`,
+      );
+      return found.rows[0] ?? null;
+    });
+    return reply.send({
+      fonte: 'PNCP',
+      ligada: config.pncpSyncEnabled,
+      ultima_atualizacao_em: row?.ultima ?? null,
+      status: row?.status ?? null,
+      rodada_rapida_minutos: config.pncpSyncFastMinutes,
+      rodada_completa_minutos: config.pncpSyncIntervalMinutes,
+    });
+  });
+
   app.get('/admin/coleta/status', async (request, reply) => {
     if (!requireRoles(reply, request, ['plataforma'])) return reply;
     if (!pool) return sendDatabaseUnavailable(reply);
@@ -38,6 +66,8 @@ export function registerCollectionRoutes(app: FastifyInstance, { pool, config }:
     return reply.send({
       ligada: config.pncpSyncEnabled,
       intervalo_minutos: config.pncpSyncIntervalMinutes,
+      rodada_rapida_minutos: config.pncpSyncFastMinutes,
+      consultas_paralelas: config.pncpSyncConcurrency,
       dias_por_rodada: config.pncpSyncDays,
       max_paginas: config.pncpSyncMaxPages,
       modalidades: config.pncpSyncModalidades.map((codigo) => ({

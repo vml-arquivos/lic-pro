@@ -3,7 +3,10 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { Area } from '@licitecomigo/shared';
 import { api, errorText, send } from '../../lib/api';
+import { DadosAtualizados } from '../components/DadosAtualizados';
+import { LicitacoesNav } from '../components/LicitacoesNav';
 import { Alert, Empty, PageHeader } from '../components/ui';
 import { RadarFilters } from './RadarFilters';
 import { RadarPainel } from './RadarPainel';
@@ -19,12 +22,14 @@ export function RadarApp({
   canExport,
   canSave,
   nichosTravados = false,
+  area,
 }: Readonly<{
   signedIn: boolean;
   canExport: boolean;
   canSave: boolean;
   /** Colaborador: os nichos são definidos pelo Painel admin. */
   nichosTravados?: boolean;
+  area?: Area | null;
 }>) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -138,6 +143,8 @@ export function RadarApp({
         title="Encontre licitações para analisar com calma"
         description="Os dados vêm de fontes públicas e sempre mostram a origem. Confira o edital e o portal oficial antes de decidir."
       />
+      <LicitacoesNav atual="/radar" area={area} />
+      {signedIn ? <DadosAtualizados /> : null}
       {signedIn ? (
         <RadarPainel onPick={pick} refreshKey={profileVersion} onProfile={setHasProfile} />
       ) : null}

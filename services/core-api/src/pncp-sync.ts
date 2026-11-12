@@ -272,6 +272,10 @@ export type PncpSyncDeps = {
   pauseMs?: number;
   /** Conta da plataforma que recebe o catálogo (padrão: a configurada ou a primeira). */
   tenantId?: string;
+  /** Consultas simultâneas ao PNCP (padrão: a configurada). */
+  concurrency?: number;
+  /** Chamado ao fim de uma rodada que trouxe novidades (usado para acionar os alertas na hora). */
+  onRound?: (result: PncpSyncResult) => void;
 };
 
 export type PncpSyncOptions = {
@@ -422,64 +426,81 @@ export async function runPncpSync(
         `${scope}: ${error instanceof Error ? error.message : 'erro desconhecido'}`.slice(0, 500);
     };
 
-    for (const feed of ['publicacao', 'atualizacao'] as const) {
-      for (const modalidade of modalidades) {
-        for (let pagina = 1; pagina <= maxPaginas; pagina += 1) {
-          const query = new URLSearchParams({
-            dataInicial: inicio,
-            dataFinal: fim,
-            codigoModalidadeContratacao: String(modalidade),
-            pagina: String(pagina),
-            tamanhoPagina: String(PAGE_SIZE),
-          });
-          let body: Json;
-          try {
-            body = await getJson(
-              fetchImpl,
-              `${config.pncpBaseUrl}/v1/contratacoes/${feed}?${query}`,
-              sleep,
-            );
-          } catch (error) {
-            fail(error, `${feed} modalidade ${modalidade} página ${pagina}`);
-            break;
-          }
-          result.paginas += 1;
-          const rows = Array.isArray(body.data) ? body.data : [];
-          const normalized = new Map<string, PncpEdital>();
-          for (const row of rows) {
-            const item = normalizePncp(row);
-            if (item) normalized.set(item.id_externo, item);
-            else result.ignorados += 1;
-          }
-          result.lidos += rows.length;
-          if (normalized.size) {
-            try {
-              const saved = await withTenant(
-                pool,
-                { tenantId, userId: NIL_UUID },
-                async (client) => {
-                  const written = await client.query<{ inseridos: number; atualizados: number }>(
-                    'SELECT inseridos, atualizados FROM coleta_gravar_editais($1::jsonb)',
-                    [JSON.stringify([...normalized.values()])],
-                  );
-                  return written.rows[0] ?? { inseridos: 0, atualizados: 0 };
-                },
-              );
-              result.inseridos += saved.inseridos;
-              result.atualizados += saved.atualizados;
-            } catch (error) {
-              fail(error, `gravação (${feed}, modalidade ${modalidade}, página ${pagina})`);
-              break;
-            }
-          }
-          const totalPaginas = Number(body.totalPaginas ?? 0);
-          const restantes = Number(body.paginasRestantes ?? 0);
-          if (!rows.length || (restantes <= 0 && (!totalPaginas || pagina >= totalPaginas))) break;
-          await sleep(pause);
+    /** Uma modalidade em um dos feeds do PNCP, página por página. */
+    const coletar = async (feed: 'publicacao' | 'atualizacao', modalidade: number) => {
+      for (let pagina = 1; pagina <= maxPaginas; pagina += 1) {
+        const query = new URLSearchParams({
+          dataInicial: inicio,
+          dataFinal: fim,
+          codigoModalidadeContratacao: String(modalidade),
+          pagina: String(pagina),
+          tamanhoPagina: String(PAGE_SIZE),
+        });
+        let body: Json;
+        try {
+          body = await getJson(
+            fetchImpl,
+            `${config.pncpBaseUrl}/v1/contratacoes/${feed}?${query}`,
+            sleep,
+          );
+        } catch (error) {
+          fail(error, `${feed} modalidade ${modalidade} página ${pagina}`);
+          return;
         }
+        result.paginas += 1;
+        const rows = Array.isArray(body.data) ? body.data : [];
+        const normalized = new Map<string, PncpEdital>();
+        for (const row of rows) {
+          const item = normalizePncp(row);
+          if (item) normalized.set(item.id_externo, item);
+          else result.ignorados += 1;
+        }
+        result.lidos += rows.length;
+        if (normalized.size) {
+          try {
+            const saved = await withTenant(pool, { tenantId, userId: NIL_UUID }, async (client) => {
+              const written = await client.query<{ inseridos: number; atualizados: number }>(
+                'SELECT inseridos, atualizados FROM coleta_gravar_editais($1::jsonb)',
+                [JSON.stringify([...normalized.values()])],
+              );
+              return written.rows[0] ?? { inseridos: 0, atualizados: 0 };
+            });
+            result.inseridos += saved.inseridos;
+            result.atualizados += saved.atualizados;
+          } catch (error) {
+            fail(error, `gravação (${feed}, modalidade ${modalidade}, página ${pagina})`);
+            return;
+          }
+        }
+        const totalPaginas = Number(body.totalPaginas ?? 0);
+        const restantes = Number(body.paginasRestantes ?? 0);
+        if (!rows.length || (restantes <= 0 && (!totalPaginas || pagina >= totalPaginas))) return;
         await sleep(pause);
       }
+    };
+
+    // As consultas (feed × modalidade) correm em paralelo, em número limitado, para a rodada
+    // terminar logo sem sobrecarregar o PNCP. Cada uma continua lendo suas páginas em ordem.
+    const tarefas: Array<() => Promise<void>> = [];
+    for (const feed of ['publicacao', 'atualizacao'] as const) {
+      for (const modalidade of modalidades) {
+        tarefas.push(async () => {
+          await coletar(feed, modalidade);
+          await sleep(pause);
+        });
+      }
     }
+    const trabalhadores = Math.max(1, Math.min(deps.concurrency ?? config.pncpSyncConcurrency, 6));
+    let proxima = 0;
+    await Promise.all(
+      Array.from({ length: Math.min(trabalhadores, tarefas.length) }, async () => {
+        while (proxima < tarefas.length) {
+          const tarefa = tarefas[proxima];
+          proxima += 1;
+          await tarefa?.();
+        }
+      }),
+    );
 
     result.status =
       result.erros === 0 ? 'ok' : result.paginas > 0 && result.lidos > 0 ? 'parcial' : 'erro';
@@ -520,18 +541,35 @@ export async function runPncpSync(
   }
 }
 
-/** Agenda a coleta. A primeira rodada sai 1 minuto depois do início; depois, no intervalo. */
+/**
+ * Agenda a coleta em dois ritmos: uma rodada rápida (só hoje, poucas páginas, a cada
+ * `PNCP_SYNC_FAST_MINUTES`) para o sistema acompanhar o PNCP de perto, e uma rodada completa
+ * (janela de vários dias) a cada `PNCP_SYNC_INTERVAL_MINUTES` para fechar qualquer lacuna.
+ * Nunca rodam ao mesmo tempo. A primeira rodada, completa, sai 1 minuto depois do início.
+ */
 export function startPncpSync(deps: PncpSyncDeps, log: (message: string) => void): () => void {
+  const { config } = deps;
+  const rapidaMs = config.pncpSyncFastMinutes * 60_000;
+  const completaMs = config.pncpSyncIntervalMinutes * 60_000;
   let running = false;
+  let ultimaCompleta = 0;
   const tick = (): void => {
     if (running) return;
+    const completa = rapidaMs === 0 || Date.now() - ultimaCompleta >= completaMs;
     running = true;
-    runPncpSync(deps, { origem: 'agendada' })
+    if (completa) ultimaCompleta = Date.now();
+    runPncpSync(
+      deps,
+      completa ? { origem: 'agendada' } : { origem: 'agendada', dias: 1, maxPaginas: 20 },
+    )
       .then((result) => {
         if (!result.skipped) {
-          log(
-            `coleta pncp: ${result.status} — ${result.lidos} lidos, ${result.inseridos} novos, ${result.atualizados} atualizados, ${result.erros} erro(s)${result.ultimo_erro ? ` (${result.ultimo_erro})` : ''}`,
-          );
+          if (result.inseridos > 0 || result.atualizados > 0) deps.onRound?.(result);
+          // Rodada rápida sem novidade não gera linha de log: só aparece quando há algo a contar.
+          if (completa || result.inseridos > 0 || result.atualizados > 0 || result.erros > 0)
+            log(
+              `coleta pncp (${completa ? 'completa' : 'rápida'}): ${result.status} — ${result.lidos} lidos, ${result.inseridos} novos, ${result.atualizados} atualizados, ${result.erros} erro(s)${result.ultimo_erro ? ` (${result.ultimo_erro})` : ''}`,
+            );
         }
       })
       .catch((error: unknown) =>
@@ -542,7 +580,7 @@ export function startPncpSync(deps: PncpSyncDeps, log: (message: string) => void
       });
   };
   const first = setTimeout(tick, 60_000);
-  const timer = setInterval(tick, deps.config.pncpSyncIntervalMinutes * 60_000);
+  const timer = setInterval(tick, rapidaMs > 0 ? Math.min(rapidaMs, completaMs) : completaMs);
   first.unref();
   timer.unref();
   return () => {

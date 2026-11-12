@@ -2,6 +2,8 @@ import { Suspense } from 'react';
 import { requireArea } from '../../lib/session';
 import { PageHeader } from '../components/ui';
 import { AnaliseApp } from './AnaliseApp';
+import { DadosAtualizados } from '../components/DadosAtualizados';
+import { LicitacoesNav } from '../components/LicitacoesNav';
 import './analise.css';
 
 export const dynamic = 'force-dynamic';
@@ -13,9 +15,11 @@ export const metadata = {
 };
 
 export default async function AnalisePage() {
-  await requireArea('empresa', 'administracao', 'colaborador');
+  const session = await requireArea('empresa', 'administracao', 'colaborador', 'aluno', 'mentor');
   return (
     <main className="ui-page an-page">
+      <LicitacoesNav atual="/analise" area={session.area} />
+      <DadosAtualizados />
       <PageHeader
         eyebrow="Ferramentas"
         title="Análise de oportunidades"

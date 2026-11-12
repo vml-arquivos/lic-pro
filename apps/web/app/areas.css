@@ -1483,3 +1483,41 @@
   font-size: 0.8rem;
   margin: 0.1rem 0 0;
 }
+
+/* Navegação única de licitações e frescor dos dados */
+.lic-nav {
+  border-bottom: 1px solid var(--lc-line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+.lic-nav-item {
+  border-bottom: 3px solid transparent;
+  color: var(--lc-ink-soft);
+  font-weight: 700;
+  padding: 0.6rem 1rem;
+  text-decoration: none;
+}
+.lic-nav-item[aria-current='page'] {
+  border-bottom-color: var(--lc-primary);
+  color: var(--lc-primary-strong);
+}
+.dados-atualizados {
+  align-items: center;
+  color: var(--lc-ink-soft);
+  display: flex;
+  font-size: 0.85rem;
+  gap: 0.45rem;
+  margin: 0 0 0.8rem;
+}
+.dados-atualizados i {
+  background: var(--lc-primary);
+  border-radius: 50%;
+  display: inline-block;
+  height: 0.55rem;
+  width: 0.55rem;
+}
+.dados-atualizados-atrasado i {
+  background: #c2410c;
+}

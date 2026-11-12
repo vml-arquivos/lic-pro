@@ -105,6 +105,9 @@ export function databaseRole(role: UserRole): Exclude<UserRole, 'plataforma' | '
 /** Quem usa as ferramentas de busca e acompanhamento (radar, buscas, alertas, oportunidades). */
 export const OPERATION_ROLES = ['plataforma', 'admin', 'operador', 'colaborador'] as const;
 
+/** Quem usa a Análise de oportunidades: a operação e também o aluno e o mentor do curso. */
+export const ANALISE_ROLES = [...OPERATION_ROLES, 'aluno', 'mentor'] as const;
+
 /** Quem precisa ficar dentro dos nichos escolhidos: todos, exceto a equipe da plataforma. */
 export function isNicheRestricted(role: UserRole): boolean {
   return role !== 'plataforma';

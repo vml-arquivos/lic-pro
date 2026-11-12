@@ -316,4 +316,74 @@ suite('coleta do PNCP (PostgreSQL real, fonte simulada)', () => {
     expect(body.catalogo.total).toBeGreaterThanOrEqual(3);
     expect(body.execucoes.length).toBeGreaterThan(0);
   });
+
+  it('consulta várias modalidades em paralelo sem perder nem duplicar registros', async () => {
+    const calls: string[] = [];
+    let ativas = 0;
+    let pico = 0;
+    const source = (async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      calls.push(url.pathname + url.search);
+      ativas += 1;
+      pico = Math.max(pico, ativas);
+      await new Promise((resolve) => setTimeout(resolve, 15));
+      ativas -= 1;
+      if (!url.pathname.endsWith('/publicacao'))
+        return Response.json({ data: [], totalPaginas: 0, paginasRestantes: 0, numeroPagina: 1 });
+      const modalidade = Number(url.searchParams.get('codigoModalidadeContratacao'));
+      return Response.json({
+        data:
+          url.searchParams.get('pagina') === '1'
+            ? [sample(`PNCP-${suffix}-M${modalidade}`, { modalidadeId: modalidade })]
+            : [],
+        totalPaginas: 1,
+        paginasRestantes: 0,
+        numeroPagina: 1,
+      });
+    }) as typeof fetch;
+    const result = await runPncpSync(
+      {
+        pool,
+        config: loadConfig({
+          NODE_ENV: 'test',
+          JWT_SECRET: 'test-secret',
+          PNCP_SYNC_MODALIDADES: '6,8,4,5',
+        }),
+        tenantId: platformTenant,
+        fetchImpl: source,
+        sleep: async () => undefined,
+        pauseMs: 0,
+        concurrency: 3,
+      },
+      { origem: 'manual', dias: 1 },
+    );
+    expect(result).toMatchObject({ status: 'ok', inseridos: 4, erros: 0 });
+    expect(pico).toBeGreaterThan(1);
+    expect(pico).toBeLessThanOrEqual(3);
+    for (const modalidade of [6, 8, 4, 5]) {
+      expect(calls.some((call) => call.includes(`codigoModalidadeContratacao=${modalidade}`))).toBe(
+        true,
+      );
+    }
+  });
+
+  it('qualquer pessoa logada vê quando os dados foram atualizados; sem login não', async () => {
+    const asClient = {
+      authorization: `Bearer ${app.jwt.sign({ sub: clientUser, tenantId: clientTenant, role: 'admin' })}`,
+    };
+    const ok = await app.inject({ method: 'GET', url: '/editais/atualizacao', headers: asClient });
+    expect(ok.statusCode).toBe(200);
+    const body = ok.json() as {
+      fonte: string;
+      ligada: boolean;
+      ultima_atualizacao_em: string | null;
+      rodada_rapida_minutos: number;
+    };
+    expect(body.fonte).toBe('PNCP');
+    expect(body.ligada).toBe(true);
+    expect(body.ultima_atualizacao_em).not.toBeNull();
+    expect(body.rodada_rapida_minutos).toBe(5);
+    const anon = await app.inject({ method: 'GET', url: '/editais/atualizacao' });
+    expect(anon.statusCode).toBe(401);
+  });
 });

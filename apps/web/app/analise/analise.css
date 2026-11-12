@@ -28,6 +28,17 @@
   padding: 0.1rem 0.45rem;
 }
 
+.an-planilha {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin: 0.8rem 0;
+}
+.an-planilha small {
+  color: var(--lc-ink-soft);
+}
+
 .an-focos {
   display: grid;
   gap: 0.7rem;

@@ -156,7 +156,7 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
         { label: 'Certificado', href: '/certificado', icon: 'check' },
       ],
     },
-    { label: 'Ferramentas', items: [radar, published, prices, ana] },
+    { label: 'Ferramentas', items: [radar, analysis, published, prices, ana] },
     { label: 'Conta', items: [account] },
   ],
   mentor: [
@@ -226,7 +226,7 @@ export const PAGE_RULES: readonly PageRule[] = [
   { prefix: '/mentoria', areas: STUDENT },
   { prefix: '/certificado', areas: STUDENT },
   { prefix: '/radar', areas: WORK },
-  { prefix: '/analise', areas: OPERATION },
+  { prefix: '/analise', areas: ['administracao', 'empresa', 'colaborador', 'aluno', 'mentor'] },
   { prefix: '/pregoes', areas: WORK },
   { prefix: '/precos', areas: WORK },
   { prefix: '/assinatura', areas: COMPANY },

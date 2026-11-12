@@ -325,22 +325,28 @@ suite('Análise de oportunidades: ranking, comparação e simulador (PostgreSQL 
     expect(five.statusCode).toBeGreaterThanOrEqual(400);
   });
 
-  it('só quem opera licitações usa a análise', async () => {
-    const student = await app.inject({
-      method: 'GET',
-      url: '/analise/ranking',
-      headers: as(alunoA, tenantA, 'aluno'),
-    });
-    expect(student.statusCode).toBe(403);
-    const anon = await app.inject({ method: 'GET', url: '/analise/ranking' });
-    expect(anon.statusCode).toBe(401);
+  it('aluno e mentor também usam a análise; sem login não', async () => {
+    for (const [id, papel] of [
+      [alunoA, 'aluno'],
+      [alunoA, 'mentor'],
+    ] as const) {
+      const ranking = await app.inject({
+        method: 'GET',
+        url: '/analise/ranking',
+        headers: as(id, tenantA, papel),
+      });
+      expect(ranking.statusCode).toBe(200);
+      expect(Array.isArray(ranking.json().itens)).toBe(true);
+    }
     const sim = await app.inject({
       method: 'POST',
       url: '/analise/simular',
       headers: as(alunoA, tenantA, 'aluno'),
       payload: { quantidade: 1, custo_unitario: 1 },
     });
-    expect(sim.statusCode).toBe(403);
+    expect(sim.statusCode).toBe(200);
+    const anon = await app.inject({ method: 'GET', url: '/analise/ranking' });
+    expect(anon.statusCode).toBe(401);
   });
 
   it('o simulador devolve a mesma conta da tela e recusa números inválidos', async () => {

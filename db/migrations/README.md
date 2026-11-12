@@ -101,3 +101,10 @@ cria a conta da equipe direto.
 
 Todas rodam em ordem pelo `migrate.sh`, cada uma na sua transação. O CI confere que as 31
 foram aplicadas. Migration já aplicada nunca é editada: mudança vira arquivo novo.
+
+## 0032 — limpeza de registros técnicos
+
+Cria `limpar_registros_tecnicos()`, chamada pelo core-api a cada 6 horas (`LOG_RETENTION_DAYS`,
+`HISTORY_RETENTION_DAYS`). Apaga rodadas antigas da coleta do PNCP e do motor de alertas, histórico
+de alterações de edital e avisos já lidos. Guarda sempre as 20 rodadas mais recentes e a última
+coleta concluída. Não apaga editais, preços, auditoria, cobrança nem o registro de entregas dos alertas.

@@ -127,6 +127,8 @@ function AlertEngine() {
 type Coleta = {
   ligada: boolean;
   intervalo_minutos: number;
+  rodada_rapida_minutos?: number;
+  consultas_paralelas?: number;
   dias_por_rodada: number;
   max_paginas: number;
   fonte: string;
@@ -255,8 +257,14 @@ function PncpCollector() {
               <Badge tone={data.ligada ? 'ok' : 'bad'}>
                 {data.ligada ? 'Ligada' : 'Desligada'}
               </Badge>{' '}
-              a cada {data.intervalo_minutos} min, olhando os últimos {data.dias_por_rodada} dia(s).
-              Modalidades: {data.modalidades.map((item) => item.nome).join(', ')}. Fonte:{' '}
+              {data.rodada_rapida_minutos
+                ? `com rodada rápida (só hoje) a cada ${data.rodada_rapida_minutos} min e completa `
+                : ''}
+              a cada {data.intervalo_minutos} min, olhando os últimos {data.dias_por_rodada} dia(s)
+              {data.consultas_paralelas
+                ? `, ${data.consultas_paralelas} consultas em paralelo`
+                : ''}
+              . Modalidades: {data.modalidades.map((item) => item.nome).join(', ')}. Fonte:{' '}
               {data.fonte}.
             </p>
             {data.catalogo.total === 0 && data.execucoes.length === 0 ? (

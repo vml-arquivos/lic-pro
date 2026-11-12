@@ -2,6 +2,7 @@ import { NICHE_CATALOG } from '@licitecomigo/shared';
 import { getSession, requireArea } from '../../lib/session';
 import { PageHeader } from '../components/ui';
 import { PrecosApp } from './PrecosApp';
+import { LicitacoesNav } from '../components/LicitacoesNav';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,7 @@ export default async function PrecosPage() {
   ).map(({ code, label }) => ({ code, label }));
   return (
     <main className="ui-page">
+      <LicitacoesNav atual="/precos" area={session?.area} />
       <PageHeader
         eyebrow="Ferramentas"
         title="Preços pagos"

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { FOCOS_ANALISE, FOCO_ROTULOS, type FocoAnalise } from '@licitecomigo/shared';
 import { api, errorText } from '../../lib/api';
+import { baixarCsv } from '../../lib/csv';
 import { Alert, Empty, Kpi } from '../components/ui';
 import { GuiaDeValores } from '../components/GuiaDeValores';
 import { Pager, paginar, totalDePaginas } from '../components/Pager';
@@ -136,6 +137,40 @@ export function Ranking({
     setValorMin('');
     setValorMax('');
   };
+  const baixarPlanilha = (itens: ItemRanking[]) =>
+    baixarCsv(
+      `melhores-licitacoes-${new Date().toISOString().slice(0, 10)}.csv`,
+      [
+        'Posição',
+        'Nota',
+        'Título',
+        'Órgão',
+        'UF',
+        'Município',
+        'Modalidade',
+        'Prazo para proposta',
+        'Valor estimado (R$)',
+        'Lucro estimado (R$)',
+        'Confiança',
+        'Link no sistema',
+      ],
+      itens.map((item) => [
+        item.posicao,
+        item.analise.nota,
+        item.titulo,
+        item.orgao,
+        item.uf,
+        item.municipio_nome,
+        item.modalidade,
+        item.data_encerramento_proposta
+          ? new Date(item.data_encerramento_proposta).toLocaleString('pt-BR')
+          : null,
+        numero(item.valor_estimado),
+        item.analise.lucro_estimado,
+        item.analise.confianca,
+        `${window.location.origin}/radar/${item.id}`,
+      ]),
+    );
   const filtrado = Boolean(q || ufs.length || valorMin || valorMax || prazo !== 'abertas');
 
   return (
@@ -400,6 +435,18 @@ export function Ranking({
               })}
             </ol>
           )}
+          {estado.data.itens.length > 0 ? (
+            <div className="an-planilha">
+              <button
+                type="button"
+                className="ui-btn ui-btn-ghost ui-btn-small"
+                onClick={() => baixarPlanilha(estado.data.itens)}
+              >
+                Baixar planilha (CSV) dos {estado.data.itens.length} do ranking
+              </button>
+              <small>Abre no Excel, com prazos, valores e o link de cada edital.</small>
+            </div>
+          ) : null}
           <Pager
             page={pagina}
             totalPages={totalDePaginas(estado.data.itens.length)}

@@ -1,0 +1,10 @@
+Sincronização mais rápida, alertas ao vivo, navegação única e limpeza automática
+
+- Coleta do PNCP: rodada rápida (só hoje) a cada 5 min e completa a cada 15 min, com consultas em paralelo
+- Aviso "Dados do PNCP atualizados há X min" no Radar, Pregões e Análise
+- Alertas: motor a cada 2 min e disparado logo após cada coleta com novidades
+- Menu único Licitações: Explorar, Pregões, Análise e Preços
+- Aluno pode usar a Análise (ranking, comparar, simular) e baixar planilha CSV com prazos
+- Limpeza automática a cada 6 h: apaga rodadas antigas da coleta e dos alertas, histórico velho de alterações e avisos já lidos (migração 0032)
+- Rodada rápida sem novidade não escreve mais linha de log
+- Novas variáveis: PNCP_SYNC_FAST_MINUTES, PNCP_SYNC_CONCURRENCY, LOG_RETENTION_DAYS, HISTORY_RETENTION_DAYS (ver .env.example)

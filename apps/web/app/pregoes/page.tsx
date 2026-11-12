@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { getSession } from '../../lib/session';
 import '../radar/radar.css';
 import { PregoesResults } from './PregoesResults';
+import { DadosAtualizados } from '../components/DadosAtualizados';
+import { LicitacoesNav } from '../components/LicitacoesNav';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +17,8 @@ export default async function PregoesPage() {
   const session = await getSession();
   return (
     <div className="ui-page rd-page">
+      <LicitacoesNav atual="/pregoes" area={session?.area} />
+      {session ? <DadosAtualizados /> : null}
       <header className="ui-header">
         <div>
           <p className="eyebrow">Mercado público</p>

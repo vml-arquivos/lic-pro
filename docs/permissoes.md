@@ -109,7 +109,7 @@ não tem esse limite. O colaborador só enxerga os nichos que a Administração 
 - `sessao` avisa 1 hora antes, 15 minutos antes e no começo da sessão, usando a data de
   abertura da disputa do edital. É sempre imediato e não repete. Os lances e o chat ao vivo do
   pregoeiro não são lidos: isso depende de integração com o portal da disputa.
-- O motor roda a cada 5 minutos por padrão (`ALERT_ENGINE_INTERVAL_SECONDS`).
+- O motor roda a cada 2 minutos por padrão (`ALERT_ENGINE_INTERVAL_SECONDS`) e também logo depois de cada coleta do PNCP que trouxe novidades.
 
 ## Páginas por área
 

@@ -19,6 +19,7 @@ export default async function RadarPage() {
         canExport={canWork}
         canSave={canWork}
         nichosTravados={area === 'colaborador'}
+        area={area ?? null}
       />
     </Suspense>
   );

@@ -36,6 +36,16 @@ describe('menus por área', () => {
     expect(flatMenu('mentor').map((item) => item.href)).not.toContain('/radar');
   });
 
+  it('o aluno explora licitações, analisa, compara preços e baixa planilha, sem ferramentas de operação', () => {
+    const hrefs = flatMenu('aluno').map((item) => item.href);
+    for (const href of ['/radar', '/analise', '/pregoes', '/precos'])
+      expect(hrefs, href).toContain(href);
+    for (const href of ['/radar', '/analise', '/pregoes', '/precos'])
+      expect(canOpenPage(['aluno'], href), href).toBe(true);
+    for (const href of ['/oportunidades', '/documentos', '/agenda', '/admin'])
+      expect(canOpenPage(['aluno'], href), href).toBe(false);
+  });
+
   it('não há itens repetidos dentro de um menu', () => {
     for (const area of AREAS) {
       const hrefs = flatMenu(area).map((item) => item.href);

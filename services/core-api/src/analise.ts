@@ -9,7 +9,7 @@ import {
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Pool, PoolClient } from 'pg';
 import { z } from 'zod';
-import { OPERATION_ROLES } from './auth.js';
+import { ANALISE_ROLES } from './auth.js';
 import { withTenant } from './db.js';
 import { readUserNiches } from './niche-scope.js';
 import { scopedFilters, searchContext } from './radar.js';
@@ -240,7 +240,7 @@ function resumo(linha: Linha): Record<string, unknown> {
 export function registerAnaliseRoutes(app: FastifyInstance, { pool }: Deps): void {
   /** Ranking: os editais que mais valem a pena, pelo foco escolhido. */
   app.get('/analise/ranking', async (request, reply) => {
-    if (!requireRoles(reply, request, OPERATION_ROLES)) return reply;
+    if (!requireRoles(reply, request, ANALISE_ROLES)) return reply;
     if (!pool) return sendDatabaseUnavailable(reply);
     const parsed = rankingQuery.parse(request.query);
     const {
@@ -350,7 +350,7 @@ export function registerAnaliseRoutes(app: FastifyInstance, { pool }: Deps): voi
 
   /** Comparação lado a lado de 2 a 4 editais. */
   app.get('/analise/comparar', async (request, reply) => {
-    if (!requireRoles(reply, request, OPERATION_ROLES)) return reply;
+    if (!requireRoles(reply, request, ANALISE_ROLES)) return reply;
     if (!pool) return sendDatabaseUnavailable(reply);
     const { ids, margem_pct: margem } = compararQuery.parse(request.query);
     const result = await withTenant(pool, authContext(request), async (client) => {
@@ -419,7 +419,7 @@ export function registerAnaliseRoutes(app: FastifyInstance, { pool }: Deps): voi
 
   /** Simulador de proposta: custo, preço mínimo, desconto máximo e cenários. */
   app.post('/analise/simular', async (request, reply) => {
-    if (!requireRoles(reply, request, OPERATION_ROLES)) return reply;
+    if (!requireRoles(reply, request, ANALISE_ROLES)) return reply;
     const body = simularBody.parse(request.body);
     return reply.send(simularProposta(body));
   });

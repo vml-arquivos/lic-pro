@@ -751,7 +751,7 @@ export function startAlertEngine(
   deps: EngineDeps,
   intervalSeconds: number,
   log: (message: string) => void,
-): () => void {
+): (() => void) & { runNow: () => void } {
   let running = false;
   const tick = (): void => {
     if (running) return;
@@ -773,11 +773,13 @@ export function startAlertEngine(
       });
   };
   const first = setTimeout(tick, 30_000);
-  const timer = setInterval(tick, Math.max(60, intervalSeconds) * 1000);
+  const timer = setInterval(tick, Math.max(30, intervalSeconds) * 1000);
   first.unref();
   timer.unref();
-  return () => {
+  const stop = (): void => {
     clearTimeout(first);
     clearInterval(timer);
   };
+  /** Dispara uma rodada agora (ex.: logo depois de uma coleta que trouxe novidades). */
+  return Object.assign(stop, { runNow: tick });
 }
