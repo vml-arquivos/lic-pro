@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { passosSemRepeticao } from '@licitecomigo/shared';
 import { NICHE_CATALOG } from '@licitecomigo/shared';
 import {
   Badge,
@@ -62,6 +63,7 @@ export function EmpresaInicio({
           const alteracoes = data.hoje.alteracao ?? 0;
           const pipelineTotal = Object.values(data.pipeline).reduce((sum, value) => sum + value, 0);
           const beginner = pipelineTotal === 0;
+          const avisos = passosSemRepeticao(data.proximos_passos, beginner);
           return (
             <>
               <section className="ui-kpis" aria-label="Resumo">
@@ -94,19 +96,43 @@ export function EmpresaInicio({
               <div className="op-home">
                 <Panel
                   title="O que fazer agora"
-                  description="Sugestões pelo que está na sua conta."
+                  description={
+                    beginner
+                      ? 'Um caminho simples para começar. Some quando você tiver a primeira oportunidade no pipeline.'
+                      : 'Sugestões pelo que está na sua conta.'
+                  }
                 >
-                  {data.proximos_passos.length === 0 ? (
+                  {avisos.length === 0 && !beginner ? (
                     <Empty>Tudo em dia. Quando algo precisar de atenção, aparece aqui.</Empty>
-                  ) : (
+                  ) : null}
+                  {avisos.length > 0 ? (
                     <ul className="op-steps">
-                      {data.proximos_passos.map((step) => (
+                      {avisos.map((step) => (
                         <li key={step.codigo}>
                           <Link href={step.href}>{step.texto}</Link>
                         </li>
                       ))}
                     </ul>
-                  )}
+                  ) : null}
+                  {beginner ? (
+                    <ol className="op-guide">
+                      <li data-done={Boolean(data.empresa)}>
+                        <Link href="/empresas">Cadastre os dados da empresa</Link>
+                      </li>
+                      <li data-done={nichos.length > 0}>
+                        <Link href="/onboarding">Escolha seus nichos</Link>
+                      </li>
+                      <li data-done={data.buscas_ativas > 0}>
+                        <Link href="/radar">Faça uma busca e salve para receber avisos</Link>
+                      </li>
+                      <li data-done={data.documentos.total > 0}>
+                        <Link href="/documentos">Cadastre os documentos e as validades</Link>
+                      </li>
+                      <li data-done={false}>
+                        <Link href="/radar">Salve o primeiro edital no pipeline</Link>
+                      </li>
+                    </ol>
+                  ) : null}
                 </Panel>
 
                 <Panel title="Prazos da semana" actions={<Link href="/agenda">Ver agenda</Link>}>
@@ -177,31 +203,6 @@ export function EmpresaInicio({
                   </p>
                 </Panel>
               </div>
-
-              {beginner ? (
-                <Panel
-                  title="Primeiros passos"
-                  description="Um caminho simples para começar. Some quando você tiver a primeira oportunidade no pipeline."
-                >
-                  <ol className="op-guide">
-                    <li data-done={Boolean(data.empresa)}>
-                      <Link href="/empresas">Cadastre os dados da empresa</Link>
-                    </li>
-                    <li data-done={nichos.length > 0}>
-                      <Link href="/onboarding">Escolha seus nichos</Link>
-                    </li>
-                    <li data-done={data.buscas_ativas > 0}>
-                      <Link href="/radar">Faça uma busca e salve para receber avisos</Link>
-                    </li>
-                    <li data-done={data.documentos.total > 0}>
-                      <Link href="/documentos">Cadastre os documentos e as validades</Link>
-                    </li>
-                    <li data-done={false}>
-                      <Link href="/radar">Salve o primeiro edital no pipeline</Link>
-                    </li>
-                  </ol>
-                </Panel>
-              ) : null}
             </>
           );
         }}

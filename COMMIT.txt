@@ -1,9 +1,8 @@
-Menus organizados por temas em todas as áreas
+Menos botões repetidos nas telas
 
-- Menu de cada área agrupado por tema: Licitações, Acompanhamento, Minha empresa, Aprender e apoio, Conta e financeiro (e equivalentes no admin, mentoria, aluno e mentor)
-- Grupo da página atual abre sozinho; os outros abrem com um clique
-- Licitações reúne Explorar, Pregões, Análise e Preços; Assinatura virou "Assinatura e uso"
-- Painel admin agora também tem Pregões e Preços no menu
-- Nenhuma página saiu de nenhum menu e as permissões não mudaram
-- Inclui as atualizações anteriores (coleta rápida, alertas, limpeza automática, navegação de Licitações)
-- Sem variável nova e sem migração nova (a 0032 já vinha na versão anterior)
+- Início da empresa: "O que fazer agora" e "Primeiros passos" viraram um bloco só, sem sugestão repetida
+- Avisos do dia a dia (documento vencendo, prazo, tarefa atrasada) continuam sempre aparecendo
+- Abas de Licitações (Explorar, Pregões, Análise, Preços) aparecem só em tela estreita, onde o menu lateral é só ícones
+- Teste novo garante que nenhum aviso importante é escondido
+- Inclui as versões anteriores (menus por tema, coleta rápida, alertas, limpeza automática)
+- Sem variável nova e sem migração nova

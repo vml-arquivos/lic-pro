@@ -1559,3 +1559,10 @@
     pointer-events: none;
   }
 }
+
+/* Com o menu lateral visível, as abas de Licitações repetiriam os mesmos quatro destinos. */
+@media (min-width: 58.01rem) {
+  .lic-nav {
+    display: none;
+  }
+}

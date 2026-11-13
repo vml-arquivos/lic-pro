@@ -37,6 +37,9 @@ export {
 } from './areas.js';
 export type { Area, MenuGroup, MenuItem, ModuleName, PageRule } from './areas.js';
 
+export { PASSOS_DE_CONFIGURACAO, passosSemRepeticao } from './inicio.js';
+export type { PassoSugerido } from './inicio.js';
+
 export {
   GRANDE_VULTO_PADRAO,
   REGIAO_LABELS,
