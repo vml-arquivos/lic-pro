@@ -74,6 +74,10 @@ endereço só.
   ficam na própria conta da plataforma.
 - **Leads do site**: só a Administração. O aplicativo não tem leitura direta da tabela;
   a listagem passa por função que confere a sessão.
+- **Menu por temas**: cada área tem o seu menu, agrupado por tema (Licitações, Acompanhamento, Minha empresa,
+  Aprender e apoio, Conta e financeiro etc.). O tema da página atual abre sozinho e os outros abrem com um clique;
+  em tela estreita todos os ícones ficam visíveis. Quem pode abrir cada página continua sendo decidido por
+  `PAGE_RULES` e pelo servidor, nunca pelo menu. Item novo entra em `packages/shared/src/areas.ts`.
 - **Ver como**: troca o menu e as telas para uma das áreas. Não troca a autoridade da
   requisição; a escolha é registrada na auditoria (`acting_as`).
 

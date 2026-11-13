@@ -1521,3 +1521,41 @@
 .dados-atualizados-atrasado i {
   background: #c2410c;
 }
+
+/* Menu lateral por tema: o grupo da página atual abre sozinho; os outros abrem com um clique. */
+.sidebar-toggle {
+  align-items: center;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  justify-content: space-between;
+  letter-spacing: inherit;
+  padding: 0;
+  text-align: left;
+  text-transform: inherit;
+  width: 100%;
+}
+.sidebar-toggle i {
+  border-bottom: 2px solid currentcolor;
+  border-right: 2px solid currentcolor;
+  height: 0.4rem;
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+  width: 0.4rem;
+}
+.sidebar-toggle[aria-expanded='false'] i {
+  transform: rotate(-45deg);
+}
+@media (min-width: 58.01rem) {
+  .sidebar-group.closed .sidebar-link {
+    display: none;
+  }
+}
+@media (max-width: 58rem) {
+  .sidebar-toggle {
+    pointer-events: none;
+  }
+}

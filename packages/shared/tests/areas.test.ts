@@ -53,6 +53,134 @@ describe('menus por área', () => {
     }
   });
 
+  it('a reorganização por temas não tirou nenhuma página de nenhum menu', () => {
+    const antes: Record<string, string[]> = {
+      administracao: [
+        '/admin',
+        '/leads',
+        '/admin/fontes',
+        '/admin/financeiro',
+        '/admin/assinantes',
+        '/admin/cupons',
+        '/admin/planos',
+        '/admin/auditoria',
+        '/admin/empresas',
+        '/admin/colaboradores',
+        '/admin/equipe',
+        '/radar',
+        '/analise',
+        '/academia',
+        '/ana',
+        '/conta',
+      ],
+      curso: [
+        '/gestao',
+        '/gestao/leads',
+        '/gestao/financeiro',
+        '/gestao/cupons',
+        '/gestao/planos',
+        '/gestao/alunos',
+        '/gestao/mentores',
+        '/gestao/materiais',
+        '/mentor/encontros',
+        '/academia',
+        '/ana',
+        '/conta',
+      ],
+      empresa: [
+        '/painel',
+        '/radar',
+        '/analise',
+        '/buscas-salvas',
+        '/alertas',
+        '/oportunidades',
+        '/agenda',
+        '/documentos',
+        '/pregoes',
+        '/precos',
+        '/empresas',
+        '/academia',
+        '/ana',
+        '/assinatura',
+        '/conta',
+      ],
+      aluno: [
+        '/painel',
+        '/diagnostico',
+        '/plano-30-dias',
+        '/academia',
+        '/materiais',
+        '/praticar',
+        '/mentoria',
+        '/encontros',
+        '/certificado',
+        '/radar',
+        '/analise',
+        '/pregoes',
+        '/precos',
+        '/ana',
+        '/conta',
+      ],
+      mentor: [
+        '/painel',
+        '/mentor',
+        '/mentor/devolutivas',
+        '/mentor/sessoes',
+        '/mentor/encontros',
+        '/academia',
+        '/materiais',
+        '/ana',
+        '/conta',
+      ],
+      colaborador: [
+        '/painel',
+        '/radar',
+        '/analise',
+        '/buscas-salvas',
+        '/alertas',
+        '/oportunidades',
+        '/agenda',
+        '/documentos',
+        '/pregoes',
+        '/precos',
+        '/empresas',
+        '/academia',
+        '/ana',
+        '/conta',
+      ],
+    };
+    for (const area of AREAS) {
+      const hrefs = flatMenu(area).map((item) => item.href);
+      for (const href of antes[area] ?? []) expect(hrefs, `${area} ${href}`).toContain(href);
+    }
+  });
+
+  it('cada menu é organizado em temas curtos: só o primeiro grupo é sem título', () => {
+    for (const area of AREAS) {
+      const grupos = AREA_MENUS[area];
+      expect(grupos[0]?.label, area).toBe('');
+      expect(grupos[0]?.items, area).toHaveLength(1);
+      for (const grupo of grupos.slice(1)) {
+        expect(grupo.label.length, `${area} grupo sem título`).toBeGreaterThan(0);
+        expect(grupo.items.length, `${area} ${grupo.label}`).toBeLessThanOrEqual(5);
+      }
+      const titulos = grupos.map((grupo) => grupo.label);
+      expect(new Set(titulos).size, area).toBe(titulos.length);
+    }
+  });
+
+  it('quem trabalha com licitações encontra Explorar, Pregões, Análise e Preços num só grupo', () => {
+    for (const area of ['administracao', 'empresa', 'colaborador', 'aluno'] as const) {
+      const grupo = AREA_MENUS[area].find((item) => item.label === 'Licitações');
+      expect(
+        grupo?.items.map((item) => item.href),
+        area,
+      ).toEqual(['/radar', '/pregoes', '/analise', '/precos']);
+    }
+    expect(flatMenu('curso').map((item) => item.href)).not.toContain('/radar');
+    expect(flatMenu('mentor').map((item) => item.href)).not.toContain('/radar');
+  });
+
   it('todo grupo tem ao menos um item', () => {
     for (const area of AREAS) {
       for (const group of AREA_MENUS[area]) expect(group.items.length).toBeGreaterThan(0);

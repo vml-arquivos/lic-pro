@@ -1,10 +1,9 @@
-Sincronização mais rápida, alertas ao vivo, navegação única e limpeza automática
+Menus organizados por temas em todas as áreas
 
-- Coleta do PNCP: rodada rápida (só hoje) a cada 5 min e completa a cada 15 min, com consultas em paralelo
-- Aviso "Dados do PNCP atualizados há X min" no Radar, Pregões e Análise
-- Alertas: motor a cada 2 min e disparado logo após cada coleta com novidades
-- Menu único Licitações: Explorar, Pregões, Análise e Preços
-- Aluno pode usar a Análise (ranking, comparar, simular) e baixar planilha CSV com prazos
-- Limpeza automática a cada 6 h: apaga rodadas antigas da coleta e dos alertas, histórico velho de alterações e avisos já lidos (migração 0032)
-- Rodada rápida sem novidade não escreve mais linha de log
-- Novas variáveis: PNCP_SYNC_FAST_MINUTES, PNCP_SYNC_CONCURRENCY, LOG_RETENTION_DAYS, HISTORY_RETENTION_DAYS (ver .env.example)
+- Menu de cada área agrupado por tema: Licitações, Acompanhamento, Minha empresa, Aprender e apoio, Conta e financeiro (e equivalentes no admin, mentoria, aluno e mentor)
+- Grupo da página atual abre sozinho; os outros abrem com um clique
+- Licitações reúne Explorar, Pregões, Análise e Preços; Assinatura virou "Assinatura e uso"
+- Painel admin agora também tem Pregões e Preços no menu
+- Nenhuma página saiu de nenhum menu e as permissões não mudaram
+- Inclui as atualizações anteriores (coleta rápida, alertas, limpeza automática, navegação de Licitações)
+- Sem variável nova e sem migração nova (a 0032 já vinha na versão anterior)

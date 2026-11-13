@@ -68,42 +68,77 @@ const analysis: MenuItem = {
 };
 const prices: MenuItem = { label: 'Preços pagos', href: '/precos', icon: 'chart' };
 
-/** Somente páginas que existem e funcionam. Nada de item "em breve". */
+const home: MenuItem = { label: 'Início', href: '/painel', icon: 'home' };
+const subscription: MenuItem = { label: 'Assinatura e uso', href: '/assinatura', icon: 'award' };
+const savedSearches: MenuItem = { label: 'Buscas salvas', href: '/buscas-salvas', icon: 'target' };
+const alerts: MenuItem = { label: 'Alertas', href: '/alertas', icon: 'bell' };
+const pipeline: MenuItem = { label: 'Oportunidades', href: '/oportunidades', icon: 'columns' };
+const agenda: MenuItem = { label: 'Agenda', href: '/agenda', icon: 'calendar' };
+const documents: MenuItem = { label: 'Documentos', href: '/documentos', icon: 'file' };
+const companyData: MenuItem = { label: 'Dados da empresa', href: '/empresas', icon: 'building' };
+const liveMeetings: MenuItem = {
+  label: 'Encontros ao vivo',
+  href: '/mentor/encontros',
+  icon: 'calendar',
+};
+
+/** Os mesmos grupos de tema para quem trabalha com licitações no dia a dia. */
+const biddingGroup: MenuGroup = {
+  label: 'Licitações',
+  items: [radar, published, analysis, prices],
+};
+const trackingGroup: MenuGroup = {
+  label: 'Acompanhamento',
+  items: [savedSearches, alerts, pipeline, agenda],
+};
+const supportGroup: MenuGroup = { label: 'Aprender e apoio', items: [academy, ana] };
+
+/**
+ * Menu por área, agrupado por tema. O primeiro grupo, sem título, traz só a página inicial.
+ * Somente páginas que existem e funcionam. Nada de item "em breve".
+ * Cada área vê apenas o que o seu papel pode abrir; quem manda no acesso são `PAGE_RULES` e o servidor.
+ */
 export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
   administracao: [
+    { label: '', items: [{ label: 'Visão geral', href: '/admin', icon: 'home' }] },
     {
-      label: 'Painel admin',
+      label: 'Vendas e financeiro',
       items: [
-        { label: 'Visão geral', href: '/admin', icon: 'home' },
         { label: 'Leads de empresas', href: '/leads', icon: 'inbox' },
-        { label: 'Fontes de dados', href: '/admin/fontes', icon: 'sync' },
         { label: 'Financeiro', href: '/admin/financeiro', icon: 'chart' },
         { label: 'Assinantes', href: '/admin/assinantes', icon: 'users' },
-        { label: 'Cupons', href: '/admin/cupons', icon: 'award' },
         { label: 'Planos e preços', href: '/admin/planos', icon: 'clipboard' },
-        { label: 'Auditoria', href: '/admin/auditoria', icon: 'list' },
+        { label: 'Cupons', href: '/admin/cupons', icon: 'award' },
       ],
     },
     {
-      label: 'Usuários',
+      label: 'Clientes e equipe',
       items: [
         { label: 'Empresas clientes', href: '/admin/empresas', icon: 'building' },
         { label: 'Colaboradores', href: '/admin/colaboradores', icon: 'users' },
         { label: 'Equipe administrativa', href: '/admin/equipe', icon: 'shield' },
       ],
     },
-    { label: 'Ferramentas', items: [radar, analysis, academy, ana] },
+    biddingGroup,
+    {
+      label: 'Dados e controle',
+      items: [
+        { label: 'Fontes de dados', href: '/admin/fontes', icon: 'sync' },
+        { label: 'Auditoria', href: '/admin/auditoria', icon: 'list' },
+      ],
+    },
+    supportGroup,
     { label: 'Conta', items: [account] },
   ],
   curso: [
+    { label: '', items: [{ label: 'Visão geral', href: '/gestao', icon: 'home' }] },
     {
-      label: 'Painel da mentoria',
+      label: 'Vendas e financeiro',
       items: [
-        { label: 'Visão geral', href: '/gestao', icon: 'home' },
         { label: 'Leads de alunos', href: '/gestao/leads', icon: 'inbox' },
         { label: 'Vendas do curso', href: '/gestao/financeiro', icon: 'chart' },
-        { label: 'Cupons do curso', href: '/gestao/cupons', icon: 'award' },
         { label: 'Preço do curso', href: '/gestao/planos', icon: 'clipboard' },
+        { label: 'Cupons do curso', href: '/gestao/cupons', icon: 'award' },
       ],
     },
     {
@@ -112,87 +147,65 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
         { label: 'Alunos e turmas', href: '/gestao/alunos', icon: 'users' },
         { label: 'Mentores', href: '/gestao/mentores', icon: 'award' },
         { label: 'Materiais', href: '/gestao/materiais', icon: 'file' },
-        { label: 'Encontros ao vivo', href: '/mentor/encontros', icon: 'calendar' },
+        liveMeetings,
       ],
     },
-    { label: 'Ferramentas', items: [academy, ana] },
+    supportGroup,
     { label: 'Conta', items: [account] },
   ],
   empresa: [
-    {
-      label: 'Minha empresa',
-      items: [
-        { label: 'Início', href: '/painel', icon: 'home' },
-        radar,
-        analysis,
-        { label: 'Buscas salvas', href: '/buscas-salvas', icon: 'target' },
-        { label: 'Alertas', href: '/alertas', icon: 'bell' },
-        { label: 'Oportunidades', href: '/oportunidades', icon: 'columns' },
-        { label: 'Agenda', href: '/agenda', icon: 'calendar' },
-        { label: 'Documentos', href: '/documentos', icon: 'file' },
-        published,
-        prices,
-        { label: 'Dados da empresa', href: '/empresas', icon: 'building' },
-      ],
-    },
-    { label: 'Aprender', items: [academy, ana] },
-    {
-      label: 'Conta',
-      items: [{ label: 'Assinatura', href: '/assinatura', icon: 'award' }, account],
-    },
+    { label: '', items: [home] },
+    biddingGroup,
+    trackingGroup,
+    { label: 'Minha empresa', items: [companyData, documents] },
+    supportGroup,
+    { label: 'Conta e financeiro', items: [subscription, account] },
   ],
   aluno: [
+    { label: '', items: [home] },
     {
-      label: 'Meu curso',
+      label: 'Aprendizado',
       items: [
-        { label: 'Início', href: '/painel', icon: 'home' },
         { label: 'Meu diagnóstico', href: '/diagnostico', icon: 'clipboard' },
         { label: 'Plano de 30 dias', href: '/plano-30-dias', icon: 'calendar' },
         academy,
         materials,
+      ],
+    },
+    {
+      label: 'Mentoria e prática',
+      items: [
         { label: 'Praticar com editais', href: '/praticar', icon: 'pen' },
         { label: 'Mentoria', href: '/mentoria', icon: 'chat' },
         { label: 'Encontros ao vivo', href: '/encontros', icon: 'video' },
         { label: 'Certificado', href: '/certificado', icon: 'check' },
       ],
     },
-    { label: 'Ferramentas', items: [radar, analysis, published, prices, ana] },
+    biddingGroup,
+    { label: 'Apoio', items: [ana] },
     { label: 'Conta', items: [account] },
   ],
   mentor: [
+    { label: '', items: [home] },
     {
       label: 'Mentoria',
       items: [
-        { label: 'Início', href: '/painel', icon: 'home' },
         { label: 'Meus alunos', href: '/mentor', icon: 'users' },
         { label: 'Devolutivas', href: '/mentor/devolutivas', icon: 'pen' },
         { label: 'Sessões', href: '/mentor/sessoes', icon: 'video' },
-        { label: 'Encontros ao vivo', href: '/mentor/encontros', icon: 'calendar' },
-        academy,
-        materials,
-        ana,
+        liveMeetings,
       ],
     },
+    { label: 'Conteúdo', items: [academy, materials] },
+    { label: 'Apoio', items: [ana] },
     { label: 'Conta', items: [account] },
   ],
   colaborador: [
-    {
-      label: 'Operação',
-      items: [
-        { label: 'Início', href: '/painel', icon: 'home' },
-        radar,
-        analysis,
-        { label: 'Buscas salvas', href: '/buscas-salvas', icon: 'target' },
-        { label: 'Alertas', href: '/alertas', icon: 'bell' },
-        { label: 'Oportunidades', href: '/oportunidades', icon: 'columns' },
-        { label: 'Agenda', href: '/agenda', icon: 'calendar' },
-        { label: 'Documentos', href: '/documentos', icon: 'file' },
-        published,
-        prices,
-        { label: 'Dados da empresa', href: '/empresas', icon: 'building' },
-      ],
-    },
-    { label: 'Apoio', items: [academy, ana] },
+    { label: '', items: [home] },
+    biddingGroup,
+    trackingGroup,
+    { label: 'Empresa', items: [companyData, documents] },
+    supportGroup,
     { label: 'Conta', items: [account] },
   ],
 };

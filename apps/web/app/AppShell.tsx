@@ -74,9 +74,16 @@ export function AppShell({ session, children }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [abertos, setAbertos] = useState<Record<string, boolean>>({});
 
   const area = session?.area ?? null;
   const groups = area ? AREA_MENUS[area] : ANONYMOUS_MENU;
+  // Abre sozinho o tema da página atual; fora de qualquer tema, abre o primeiro.
+  const grupoAberto = (
+    groups.find(
+      (group) => group.label && group.items.some((item) => isCurrent(pathname, item.href)),
+    ) ?? groups.find((group) => group.label)
+  )?.label;
   const current = area ? flatMenu(area).find((item) => isCurrent(pathname, item.href)) : undefined;
   const blocked = session ? !canOpenPage(session.areas_permitidas, pathname) : false;
   const viewingAs = Boolean(
@@ -159,24 +166,40 @@ export function AppShell({ session, children }: AppShellProps) {
           </div>
         ) : null}
         <nav aria-label="Menu do aplicativo">
-          {groups.map((group) => (
-            <div key={group.label}>
-              <p className="sidebar-label">{group.label}</p>
-              {group.items.map((item) => (
-                <Link
-                  href={item.href}
-                  key={item.href}
-                  className={`sidebar-link ${isCurrent(pathname, item.href) ? 'active' : ''}`}
-                  title={item.label}
-                >
-                  <span className="sidebar-icon" aria-hidden="true">
-                    <Icon name={item.icon} size={18} />
-                  </span>
-                  <span className="sidebar-text">{item.label}</span>
-                </Link>
-              ))}
-            </div>
-          ))}
+          {groups.map((group) => {
+            const padrao = group.label === grupoAberto;
+            const aberto = !group.label || (abertos[group.label] ?? padrao);
+            return (
+              <div key={group.label} className={`sidebar-group${aberto ? '' : ' closed'}`}>
+                {group.label ? (
+                  <p className="sidebar-label">
+                    <button
+                      type="button"
+                      className="sidebar-toggle"
+                      aria-expanded={aberto}
+                      onClick={() => setAbertos((atual) => ({ ...atual, [group.label]: !aberto }))}
+                    >
+                      <span>{group.label}</span>
+                      <i aria-hidden="true" />
+                    </button>
+                  </p>
+                ) : null}
+                {group.items.map((item) => (
+                  <Link
+                    href={item.href}
+                    key={item.href}
+                    className={`sidebar-link ${isCurrent(pathname, item.href) ? 'active' : ''}`}
+                    title={item.label}
+                  >
+                    <span className="sidebar-icon" aria-hidden="true">
+                      <Icon name={item.icon} size={18} />
+                    </span>
+                    <span className="sidebar-text">{item.label}</span>
+                  </Link>
+                ))}
+              </div>
+            );
+          })}
         </nav>
         {session?.plataforma && !session.painel_fixo ? (
           <div className="view-as">
