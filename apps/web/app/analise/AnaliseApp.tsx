@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Comparar } from './Comparar';
 import { Ranking } from './Ranking';
 import { Simulador, type SimulacaoInicial } from './Simulador';
@@ -45,6 +45,17 @@ export function AnaliseApp() {
       return atual.length >= MAX_COMPARAR ? atual : [...atual, item];
     });
   }, []);
+
+  // Vindo do detalhe do edital: /analise?aba=simulador&titulo=...&referencia=...
+  const inicialDaUrl = useMemo<SimulacaoInicial | null>(() => {
+    const titulo = params.get('titulo');
+    const referencia = Number(params.get('referencia'));
+    if (!titulo && !(referencia > 0)) return null;
+    return {
+      titulo: titulo ?? 'Edital',
+      preco_referencia: Number.isFinite(referencia) && referencia > 0 ? referencia : null,
+    };
+  }, [params]);
 
   const margemNumero = Math.min(90, Math.max(0, Number(margem.replace(',', '.')) || 0));
 
@@ -90,7 +101,7 @@ export function AnaliseApp() {
           onVoltar={() => irPara('ranking')}
         />
       ) : null}
-      {aba === 'simulador' ? <Simulador inicial={simulacao} /> : null}
+      {aba === 'simulador' ? <Simulador inicial={simulacao ?? inicialDaUrl} /> : null}
     </>
   );
 }

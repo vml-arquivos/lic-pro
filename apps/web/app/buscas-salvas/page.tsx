@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { PageHeader } from '../components/ui';
 import { BuscasApp } from './BuscasApp';
 
@@ -13,6 +14,11 @@ export default function BuscasSalvasPage() {
         eyebrow="Buscas salvas"
         title="Suas buscas e os avisos de cada uma"
         description="Abra uma busca no Radar, ou escolha quando e como quer ser avisado quando aparecer algo novo."
+        actions={
+          <Link className="ui-btn ui-btn-ghost" href="/alertas">
+            Ver avisos recebidos
+          </Link>
+        }
       />
       <BuscasApp />
     </div>

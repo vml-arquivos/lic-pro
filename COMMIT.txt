@@ -1,8 +1,6 @@
-Menos botões repetidos nas telas
+Atalhos diretos entre telas relacionadas
 
-- Início da empresa: "O que fazer agora" e "Primeiros passos" viraram um bloco só, sem sugestão repetida
-- Avisos do dia a dia (documento vencendo, prazo, tarefa atrasada) continuam sempre aparecendo
-- Abas de Licitações (Explorar, Pregões, Análise, Preços) aparecem só em tela estreita, onde o menu lateral é só ícones
-- Teste novo garante que nenhum aviso importante é escondido
-- Inclui as versões anteriores (menus por tema, coleta rápida, alertas, limpeza automática)
+- Detalhe do edital: botão "Simular proposta" abre o Simulador já com o título e o valor do edital
+- Alertas e Buscas salvas ganharam botão para ir de uma à outra em um clique
+- Inclui as versões anteriores (menus por tema, início sem repetição, coleta rápida, alertas, limpeza automática)
 - Sem variável nova e sem migração nova

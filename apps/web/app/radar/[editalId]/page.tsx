@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { pageAreas, type Area } from '@licitecomigo/shared';
 import { getSession } from '../../../lib/session';
 import { EditalWorkspace } from './EditalWorkspace';
 
@@ -10,6 +11,7 @@ export default async function EditalDetailPage({ params }: DetailPageProps) {
   const session = await getSession();
   const canPipeline = session?.area === 'empresa' || session?.area === 'administracao';
   const canPractice = session?.area === 'aluno';
+  const canAnalyze = Boolean(session && pageAreas('/analise')?.includes(session.area as Area));
   return (
     <div className="ui-page rd-page">
       <Link className="back-link" href="/radar">
@@ -46,6 +48,7 @@ export default async function EditalDetailPage({ params }: DetailPageProps) {
         editalId={params.editalId}
         canPipeline={canPipeline}
         canPractice={canPractice}
+        canAnalyze={canAnalyze}
         signedIn={Boolean(session)}
       />
     </div>

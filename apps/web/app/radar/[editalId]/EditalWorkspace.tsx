@@ -150,11 +150,13 @@ export function EditalWorkspace({
   canPipeline = true,
   canPractice = false,
   signedIn = true,
+  canAnalyze = false,
 }: {
   editalId: string;
   canPipeline?: boolean;
   canPractice?: boolean;
   signedIn?: boolean;
+  canAnalyze?: boolean;
 }) {
   const [detail, setDetail] = useState<Detail | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -389,6 +391,20 @@ export function EditalWorkspace({
                 {interacao.descartado ? 'Restaurar' : 'Descartar'}
               </button>
             </>
+          ) : null}
+          {canAnalyze ? (
+            <Link
+              className="ui-btn ui-btn-ghost ui-btn-small"
+              href={`/analise?${new URLSearchParams({
+                aba: 'simulador',
+                titulo: edital.titulo ?? 'Edital',
+                ...(Number(edital.valor_estimado) > 0
+                  ? { referencia: String(Number(edital.valor_estimado)) }
+                  : {}),
+              }).toString()}`}
+            >
+              Simular proposta
+            </Link>
           ) : null}
           {canPractice ? (
             <Link className="ui-btn ui-btn-small" href={`/praticar/${editalId}`}>
