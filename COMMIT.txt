@@ -1,6 +1,7 @@
-Cards de licitacao com acoes, CNPJ/CEP automaticos e coleta ao acessar
+Acabamento visual: tipografia, espacamentos e celular
 
-- Card da licitacao em secoes (prazo, valor, local, modalidade) com os botoes dentro dele: Abrir edital, Analise, Comparar com outras e Comparar com tudo. Busca rapida: melhores para mim, encerram logo, maior valor, mais recentes e registro de precos.
-- Empresa: ao digitar o CNPJ, preenche razao social, porte, atividade, endereco e contato; ao digitar o CEP, preenche rua, bairro, cidade e UF. CNPJ, CPF e CEP sao validados pelos digitos (tambem no checkout e na assinatura).
-- Coleta ao acessar: ao abrir o sistema, se os dados do PNCP estao velhos, comeca uma rodada rapida (sem empilhar rodadas).
-- Migrations 0034 (endereco da empresa) e 0035 (coleta ao acessar). CI confere 35 migrations.
+- Escala unica de titulos e textos em todas as telas (sem titulos gigantes ou pesados), com fonte Inter embutida no sistema.
+- Campos, botoes, cartoes, tabelas, abas e avisos com o mesmo tamanho, espacamento e foco.
+- Radar: filtros alinhados em grade, indicadores sem caixa extra (faixa deslizante no celular), abas numa linha so.
+- Celular: sem rolagem lateral, campos com 16px (sem zoom no iPhone), botoes e cabecalhos ajustados.
+- Telas de entrada, cadastro e avisos corrigidas (texto que ficava ilegivel).
