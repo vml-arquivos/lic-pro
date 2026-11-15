@@ -1,7 +1,7 @@
 /*
  * A Ana holográfica (figura digital no centro da rede) e a janela de conversa.
  * Cores vêm de duas variáveis registradas (--holo-a, --holo-b): trocam suavemente conforme
- * o atalho em foco. Nada aqui usa imagem real: a figura é desenhada por código (holo-cena.ts).
+ * o atalho em foco. A figura é uma imagem digital abstrata (pixels e luz), sem pessoa real: public/ana/.
  */
 @property --holo-a {
   inherits: true;
@@ -25,34 +25,50 @@
 }
 
 .hub-core-art[data-tone='violet'] {
+  --holo-hue: 50deg;
+  --holo-sat: 1;
   --holo-a: #a78bfa;
   --holo-b: #6366f1;
 }
 .hub-core-art[data-tone='teal'] {
+  --holo-hue: -40deg;
+  --holo-sat: 1;
   --holo-a: #2dd4bf;
   --holo-b: #22d3ee;
 }
 .hub-core-art[data-tone='rose'] {
+  --holo-hue: 135deg;
+  --holo-sat: 1;
   --holo-a: #fb7185;
   --holo-b: #f472b6;
 }
 .hub-core-art[data-tone='amber'] {
+  --holo-hue: 178deg;
+  --holo-sat: 1.05;
   --holo-a: #fbbf24;
   --holo-b: #fb923c;
 }
 .hub-core-art[data-tone='blue'] {
+  --holo-hue: 8deg;
+  --holo-sat: 1;
   --holo-a: #60a5fa;
   --holo-b: #818cf8;
 }
 .hub-core-art[data-tone='green'] {
+  --holo-hue: -78deg;
+  --holo-sat: 1;
   --holo-a: #4ade80;
   --holo-b: #2dd4bf;
 }
 .hub-core-art[data-tone='slate'] {
+  --holo-hue: 0deg;
+  --holo-sat: 0.35;
   --holo-a: #a5b4cf;
   --holo-b: #8b93ff;
 }
 .hub-core-art[data-tone='pink'] {
+  --holo-hue: 112deg;
+  --holo-sat: 1;
   --holo-a: #f472b6;
   --holo-b: #c084fc;
 }
@@ -103,7 +119,7 @@
   letter-spacing: 0.18em;
 }
 
-/* 2. A figura (canvas) ------------------------------------------------------------------ */
+/* 2. A figura: imagem digital pixelada da Ana + movimento por cima ----------------------- */
 .holo {
   background: #050a24;
   border-radius: 50%;
@@ -119,10 +135,139 @@
   width: 100%;
 }
 
-.holo canvas {
+/* A cena respira e flutua devagar; o ponteiro desloca a imagem (variáveis do centro da rede). */
+.holo-cena {
+  animation: holo-flutua 7s ease-in-out infinite;
   display: block;
   height: 100%;
   width: 100%;
+}
+
+.holo-img {
+  display: block;
+  filter: hue-rotate(var(--holo-hue, 0deg)) saturate(var(--holo-sat, 1));
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  transform: translate(calc(var(--look-x, 0) * -1.6%), calc(var(--look-y, 0) * -1.2%)) scale(1.12);
+  transition:
+    filter 0.6s ease,
+    transform 0.25s ease-out;
+  user-select: none;
+  width: 100%;
+}
+
+.holo-sm .holo-img {
+  transform: scale(1.02);
+}
+
+/* Faixa de luz que desce pela figura (varredura) e linhas finas de projeção. */
+.holo-varre {
+  animation: holo-varre 7.5s linear infinite;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--holo-b) 55%, #fff) 50%,
+    transparent
+  );
+  height: 26%;
+  left: 0;
+  mix-blend-mode: screen;
+  opacity: 0.22;
+  pointer-events: none;
+  position: absolute;
+  top: -30%;
+  width: 100%;
+}
+
+.holo::after {
+  background:
+    radial-gradient(circle at 50% 50%, transparent 62%, rgba(2, 4, 18, 0.7) 100%),
+    repeating-linear-gradient(to bottom, rgba(2, 6, 30, 0.16) 0 1px, transparent 1px 3px);
+  content: '';
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.holo canvas {
+  display: block;
+  height: 100%;
+  inset: 0;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  position: absolute;
+  width: 100%;
+}
+
+/* Reações: pensando (varredura rápida e brilho pulsando), falando (pulsa no ritmo da fala),
+   ativando (clarão rápido ao clicar). */
+.holo[data-mood='pensando'] .holo-varre {
+  animation-duration: 1.4s;
+  opacity: 0.5;
+}
+
+.holo[data-mood='pensando'] .holo-cena {
+  animation: holo-pensa 0.9s ease-in-out infinite alternate;
+}
+
+.holo[data-mood='falando'] .holo-cena {
+  animation: holo-fala 0.46s ease-in-out infinite alternate;
+}
+
+.holo[data-mood='ativando'] .holo-cena {
+  animation: holo-clarao 0.75s ease-out 1;
+}
+
+@keyframes holo-flutua {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-1.4%) scale(1.018);
+  }
+}
+
+@keyframes holo-varre {
+  to {
+    transform: translateY(560%);
+  }
+}
+
+@keyframes holo-pensa {
+  from {
+    filter: brightness(1);
+  }
+
+  to {
+    filter: brightness(1.28) saturate(1.2);
+  }
+}
+
+@keyframes holo-fala {
+  from {
+    filter: brightness(1);
+    transform: scale(1);
+  }
+
+  to {
+    filter: brightness(1.18);
+    transform: scale(1.03);
+  }
+}
+
+@keyframes holo-clarao {
+  from {
+    filter: brightness(1.9) saturate(1.3);
+    transform: scale(1.08);
+  }
+
+  to {
+    filter: brightness(1);
+    transform: scale(1);
+  }
 }
 
 .holo-sm {
@@ -377,4 +522,6 @@
 .ana-hero-holo .holo {
   --holo-a: #5b8cff;
   --holo-b: #22d3ee;
+  height: 100%;
+  width: 100%;
 }

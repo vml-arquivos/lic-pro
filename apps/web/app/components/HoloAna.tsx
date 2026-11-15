@@ -2,16 +2,20 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { EVENTO_ESTADO_ANA, type EstadoAna } from '../ana/estado';
-import { criarCena, type HumorHolo, type Rgb } from './holo-cena';
+import { criarPixels, type HumorHolo, type Rgb } from './holo-pixels';
 
 /**
- * A Ana como inteligência artificial holográfica: um rosto digital em malha de luz, com cabelo
- * de fluxos de dados, anéis de órbita e estilhaços (não é uma pessoa nem uma imagem real; é
- * desenhado por código em canvas, ver holo-cena.ts). Ela reage ao que acontece:
- *  - cabeça e olhos seguem o ponteiro (variáveis --look-x e --look-y do centro da rede);
- *  - a cor muda conforme o atalho em foco (--holo-a e --holo-b, definidas por data-tone);
- *  - pensando: varredura rápida e anéis acelerados; falando: a boca e as ondas se movem.
+ * A Ana como inteligência artificial digital: uma figura abstrata e pixelada (não é uma pessoa
+ * nem uma foto), com anéis de luz e dados. A imagem fica em public/ana/. Ela reage ao que acontece:
+ *  - a figura acompanha o ponteiro (variáveis --look-x e --look-y do centro da rede);
+ *  - a cor muda conforme o atalho em foco (--holo-a/--holo-b e --holo-hue, por data-tone);
+ *  - pensando: varredura rápida e brilho pulsando; falando: pulsa e solta ondas;
+ *  - ativando (clique): clarão e explosão de pixels.
+ * Para trocar a imagem, mude IMAGEM (voxel, mosaico ou particulas).
  */
+
+type Imagem = 'voxel' | 'mosaico' | 'particulas';
+const IMAGEM: Imagem = 'voxel';
 
 export type HoloMood = EstadoAna | 'ativando';
 
@@ -28,11 +32,6 @@ function lerCor(el: Element, nome: string, padrao: Rgb): Rgb {
     return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
   }
   return padrao;
-}
-
-function numero(valor: string): number {
-  const n = Number.parseFloat(valor);
-  return Number.isFinite(n) ? n : 0;
 }
 
 export function HoloAna({
@@ -68,10 +67,9 @@ export function HoloAna({
     const cv = tela.current;
     if (!el || !cv) return undefined;
     const caixa = el.getBoundingClientRect();
-    const cena = criarCena(cv, tamanho === 'sm' || caixa.width < 150);
+    const cena = criarPixels(cv, tamanho === 'sm' || caixa.width < 150);
     if (!cena) return undefined;
 
-    const centro = el.closest<HTMLElement>('.hub-core-art');
     const reduzido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let visivel = true;
     let quadro = 0;
@@ -92,8 +90,6 @@ export function HoloAna({
       }
       contador += 1;
       cena!.desenhar(relogio, dt, {
-        olharX: centro ? numero(centro.style.getPropertyValue('--look-x')) : 0,
-        olharY: centro ? numero(centro.style.getPropertyValue('--look-y')) : 0,
         humor: humor.current.valor,
         desdeHumor: agora - humor.current.desde,
         corA: cores.a,
@@ -162,7 +158,19 @@ export function HoloAna({
       aria-label={titulo}
       aria-hidden={titulo ? undefined : true}
     >
-      <canvas ref={tela} />
+      <span className="holo-cena">
+        <img
+          className="holo-img"
+          src={`/ana/ana-${IMAGEM}${tamanho === 'sm' ? '-rosto' : ''}.webp`}
+          alt=""
+          width={tamanho === 'sm' ? 384 : 900}
+          height={tamanho === 'sm' ? 384 : 900}
+          decoding="async"
+          draggable={false}
+        />
+      </span>
+      <span className="holo-varre" aria-hidden="true" />
+      <canvas ref={tela} aria-hidden="true" />
     </span>
   );
 }

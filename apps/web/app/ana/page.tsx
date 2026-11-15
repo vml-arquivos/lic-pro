@@ -21,7 +21,7 @@ export default async function AnaPage() {
     <main className="ui-page ana-page">
       <header className="ana-hero">
         <span className="ana-hero-holo">
-          <HoloAna />
+          <HoloAna tamanho="sm" />
         </span>
         <div>
           <p className="eyebrow">Sua assistente</p>

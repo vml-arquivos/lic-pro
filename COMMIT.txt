@@ -1,7 +1,8 @@
-Ana holografica futurista no centro da rede, conversa livre
+Ana digital pixelada no centro da rede, conversa livre
 
-- No centro da rede de cada painel (admin, gestao, empresa, aluno, mentor, colaborador) e na pagina inicial, a Ana agora e um rosto digital holografico: malha de vidro azul, cabelo de fluxos de luz, aneis de orbita e estilhacos coloridos, sempre em movimento. Nao usa imagem real.
-- Clicar nela abre a conversa. A figura segue o mouse com a cabeca e o olhar, muda de cor ao passar sobre cada atalho e reage quando a Ana esta pensando ou respondendo.
+- No centro da rede de cada painel (admin, gestao, empresa, aluno, mentor, colaborador) e na pagina inicial, a Ana agora e uma figura feminina abstrata, digital e pixelada (blocos de luz e aneis), sem pessoa real.
+- Tem movimento: respira, segue o mouse, solta pixels subindo e muda de cor ao passar sobre cada atalho. Quando a Ana pensa ou responde, a figura reage; ao clicar, abre a conversa com um clarao.
+- Adicionadas tres versoes da imagem em apps/web/public/ana (blocos, mosaico e particulas); a de blocos esta em uso e a troca e uma linha no componente.
 - Removidos o cartao "Use a Ana para conferir..." e os botoes extras para falar com ela; os atalhos laterais continuam.
-- Conversa livre: sem perguntas prontas, o usuario digita a duvida real. No celular a conversa abre de baixo para cima.
+- Conversa livre: sem perguntas prontas. No celular a conversa abre de baixo para cima.
 - A pagina da Ana e a conversa de canto usam a mesma figura.
