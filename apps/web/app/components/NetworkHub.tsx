@@ -1,10 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { pedirAbrirAna } from '../ana/estado';
+import { HoloAna } from './HoloAna';
 import { Icon } from './Icon';
 
-import type { HubNodeData } from '@licitecomigo/shared';
+import type { HubNodeData, HubTone } from '@licitecomigo/shared';
 
 export type { HubTone } from '@licitecomigo/shared';
 
@@ -22,6 +24,11 @@ export type HubProps = {
   photo?: string | undefined;
   head?: { eyebrow: string; lead: string; highlight: string; text: string } | undefined;
   cta?: { label: string; href: string; title: string; text: string } | undefined;
+  /**
+   * Sem sessão não há conversa: o centro vira um link (ex.: para o login). Com sessão (padrão),
+   * clicar na Ana abre a conversa.
+   */
+  coreHref?: string | undefined;
 };
 
 const WIDTH = 1000;
@@ -53,48 +60,6 @@ export function layoutHub(nodes: readonly HubNode[]) {
   );
 }
 
-function Orb() {
-  return (
-    <svg className="hub-orb" viewBox="0 0 200 200" aria-hidden="true">
-      <defs>
-        <radialGradient id="orb-fill" cx="38%" cy="32%" r="75%">
-          <stop offset="0" stopColor="#ffffff" />
-          <stop offset="0.35" stopColor="#c7d2fe" />
-          <stop offset="0.75" stopColor="#6366f1" />
-          <stop offset="1" stopColor="#14b8a6" />
-        </radialGradient>
-        <clipPath id="orb-clip">
-          <circle cx="100" cy="100" r="62" />
-        </clipPath>
-      </defs>
-      <circle className="hub-ring hub-ring-a" cx="100" cy="100" r="92" />
-      <circle className="hub-ring hub-ring-b" cx="100" cy="100" r="78" />
-      <circle cx="100" cy="100" r="62" fill="url(#orb-fill)" />
-      <g clipPath="url(#orb-clip)" className="hub-mesh">
-        <path d="M52 78 L88 52 L128 70 L148 108 L118 140 L76 134 L54 108 Z" />
-        <path d="M88 52 L100 100 L128 70 M100 100 L148 108 M100 100 L118 140 M100 100 L76 134 M100 100 L54 108 M100 100 L52 78" />
-        <circle cx="88" cy="52" r="2.4" />
-        <circle cx="128" cy="70" r="2.4" />
-        <circle cx="148" cy="108" r="2.4" />
-        <circle cx="118" cy="140" r="2.4" />
-        <circle cx="76" cy="134" r="2.4" />
-        <circle cx="54" cy="108" r="2.4" />
-        <circle cx="52" cy="78" r="2.4" />
-        <circle cx="100" cy="100" r="3.6" />
-      </g>
-      <ellipse
-        cx="82"
-        cy="72"
-        rx="20"
-        ry="11"
-        fill="#ffffff"
-        opacity="0.35"
-        transform="rotate(-28 82 72)"
-      />
-    </svg>
-  );
-}
-
 export function NetworkHub({
   nodes,
   coreName = 'Ana',
@@ -102,10 +67,46 @@ export function NetworkHub({
   photo,
   head,
   cta,
+  coreHref,
 }: Readonly<HubProps>) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const [photoOk, setPhotoOk] = useState(Boolean(photo));
+  const [tone, setTone] = useState<HubTone | null>(null);
+  const [ativando, setAtivando] = useState(false);
+  const art = useRef<HTMLDivElement>(null);
+  const quadro = useRef(0);
   const placed = layoutHub(nodes);
+
+  // Onde o centro da rede já é o botão da Ana, o botão flutuante some (ver holo.css).
+  useEffect(() => {
+    if (coreHref) return undefined;
+    document.documentElement.dataset.anaHub = '1';
+    return () => {
+      delete document.documentElement.dataset.anaHub;
+    };
+  }, [coreHref]);
+
+  useEffect(() => () => cancelAnimationFrame(quadro.current), []);
+
+  /** Os olhos da Ana seguem o ponteiro por cima da rede (sem re-render: só variáveis CSS). */
+  function seguir(clientX: number, clientY: number) {
+    const el = art.current;
+    if (!el) return;
+    cancelAnimationFrame(quadro.current);
+    quadro.current = requestAnimationFrame(() => {
+      const caixa = el.getBoundingClientRect();
+      const dx = (clientX - (caixa.left + caixa.width / 2)) / (caixa.width * 2.4);
+      const dy = (clientY - (caixa.top + caixa.height / 2)) / (caixa.height * 2.4);
+      el.style.setProperty('--look-x', Math.max(-1, Math.min(1, dx)).toFixed(3));
+      el.style.setProperty('--look-y', Math.max(-1, Math.min(1, dy)).toFixed(3));
+    });
+  }
+
+  function aoClicarNaAna() {
+    setAtivando(true);
+    window.setTimeout(() => setAtivando(false), 750);
+    pedirAbrirAna();
+  }
 
   return (
     <section className="hub" aria-label="Rede de especialistas do Licite Comigo">
@@ -119,7 +120,11 @@ export function NetworkHub({
         </header>
       ) : null}
 
-      <div className="hub-stage">
+      <div
+        className="hub-stage"
+        onPointerMove={(event) => seguir(event.clientX, event.clientY)}
+        onPointerLeave={() => seguir(window.innerWidth / 2, window.innerHeight / 2)}
+      >
         <svg
           className="hub-lines"
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
@@ -180,7 +185,7 @@ export function NetworkHub({
         </svg>
 
         <div className="hub-core">
-          <div className="hub-core-art">
+          <div className="hub-core-art" ref={art} {...(tone ? { 'data-tone': tone } : {})}>
             {photo && photoOk ? (
               <img
                 className="hub-photo"
@@ -188,8 +193,23 @@ export function NetworkHub({
                 alt={`${coreName}, ${coreRole}`}
                 onError={() => setPhotoOk(false)}
               />
+            ) : coreHref ? (
+              <Link
+                className="holo-btn"
+                href={coreHref}
+                aria-label={`${coreName}: entrar para conversar`}
+              >
+                <HoloAna mood={ativando ? 'ativando' : undefined} />
+              </Link>
             ) : (
-              <Orb />
+              <button
+                className="holo-btn"
+                type="button"
+                onClick={aoClicarNaAna}
+                aria-label={`Conversar com a ${coreName}`}
+              >
+                <HoloAna mood={ativando ? 'ativando' : undefined} />
+              </button>
             )}
           </div>
           <span className="hub-core-label">
@@ -206,7 +226,15 @@ export function NetworkHub({
               data-side={side}
               style={{ ['--y' as string]: `${y}%`, ['--xi' as string]: `${inner}%` }}
             >
-              <Link className="hub-node" data-tone={node.tone} href={node.href}>
+              <Link
+                className="hub-node"
+                data-tone={node.tone}
+                href={node.href}
+                onPointerEnter={() => setTone(node.tone)}
+                onPointerLeave={() => setTone(null)}
+                onFocus={() => setTone(node.tone)}
+                onBlur={() => setTone(null)}
+              >
                 <span className="hub-node-icon">
                   <Icon name={node.icon} size={18} />
                 </span>

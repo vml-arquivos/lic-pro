@@ -4,10 +4,10 @@ import { useEffect, useRef } from 'react';
 import { AnaLinks, AnaResumo } from './AnaResumo';
 import { useAnaChat, useAnaContexto } from './useAnaChat';
 
-/** Caixa de conversa aberta na página da Ana: perguntas sugeridas, histórico e campo de envio. */
-export function AnaChat({ sugestoes }: Readonly<{ sugestoes: readonly string[] }>) {
+/** Caixa de conversa aberta na página da Ana: histórico e campo de pergunta livre. */
+export function AnaChat() {
   const { message, setMessage, messages, loading, askAna } = useAnaChat(
-    'Oi! Sou a Ana. Pergunte sobre licitações, um edital ou quanto o governo pagou por um item.',
+    'Oi! Sou a Ana. Pergunte o que quiser sobre licitações, um edital ou o sistema.',
   );
   const contexto = useAnaContexto(true);
   const end = useRef<HTMLDivElement>(null);
@@ -26,30 +26,15 @@ export function AnaChat({ sugestoes }: Readonly<{ sugestoes: readonly string[] }
             {item.links?.length ? <AnaLinks links={item.links} /> : null}
           </div>
         ))}
-        {contexto && messages.length < 2 ? (
-          <AnaResumo
-            contexto={contexto}
-            onPerguntar={(texto) => void askAna(texto)}
-            desabilitado={loading}
-          />
-        ) : null}
+        {contexto && messages.length < 2 ? <AnaResumo contexto={contexto} /> : null}
         {loading ? (
           <div className="ana-message assistente">
             <small>Ana</small>
-            <p>Consultando o contexto autorizado…</p>
+            <p>Pensando…</p>
           </div>
         ) : null}
         <div ref={end} />
       </div>
-      {messages.length < 2 && !contexto?.sugestoes.length ? (
-        <div className="ana-box-suggestions">
-          {sugestoes.map((text) => (
-            <button key={text} type="button" onClick={() => void askAna(text)} disabled={loading}>
-              {text}
-            </button>
-          ))}
-        </div>
-      ) : null}
       <form
         className="ana-box-input"
         onSubmit={(event) => {
@@ -60,7 +45,7 @@ export function AnaChat({ sugestoes }: Readonly<{ sugestoes: readonly string[] }
         <input
           value={message}
           onChange={(event) => setMessage(event.target.value)}
-          placeholder="Pergunte alguma coisa à Ana…"
+          placeholder="Pergunte o que quiser…"
           aria-label="Mensagem para Ana"
           disabled={loading}
           maxLength={2000}

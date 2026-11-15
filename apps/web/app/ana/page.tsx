@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Area } from '@licitecomigo/shared';
 import { getSessionResult } from '../../lib/session';
 import { HUB_NODES } from '../components/hubs';
+import { HoloAna } from '../components/HoloAna';
 import { Icon } from '../components/Icon';
 import { AnaChat } from './AnaChat';
 
@@ -12,43 +13,6 @@ export const metadata = {
   description: 'Sua assistente no Licite Comigo.',
 };
 
-const SUGESTOES: Record<Area, readonly string[]> = {
-  empresa: [
-    'Quanto o governo pagou por itens do meu nicho?',
-    'Quais documentos devo conferir antes de disputar?',
-    'Qual é o próximo passo na minha oportunidade?',
-    'Como analisar um edital?',
-  ],
-  colaborador: [
-    'Quanto o governo pagou por itens do meu nicho?',
-    'Quais documentos devo conferir antes de disputar?',
-    'Como analisar um edital?',
-    'O que é sessão de disputa?',
-  ],
-  curso: [
-    'Como explicar o plano de 30 dias a um aluno?',
-    'Como analisar um edital?',
-    'Quais dúvidas os alunos costumam ter no início?',
-    'O que é sessão de disputa?',
-  ],
-  administracao: [
-    'Como analisar um edital?',
-    'Quanto o governo pagou por itens de um nicho?',
-    'Qual é o próximo passo?',
-  ],
-  aluno: [
-    'O que é habilitação?',
-    'Como analisar um edital?',
-    'Qual é o próximo passo do meu plano?',
-    'Como funciona o pregão eletrônico?',
-  ],
-  mentor: [
-    'Como explicar a fase de proposta?',
-    'Quais erros comuns revisar com o aluno?',
-    'Como analisar um edital?',
-  ],
-};
-
 export default async function AnaPage() {
   const result = await getSessionResult();
   const area: Area = result.status === 'ok' ? result.session.area : 'empresa';
@@ -56,13 +20,15 @@ export default async function AnaPage() {
   return (
     <main className="ui-page ana-page">
       <header className="ana-hero">
-        <span className="ana-hero-orb" aria-hidden="true" />
+        <span className="ana-hero-holo">
+          <HoloAna />
+        </span>
         <div>
           <p className="eyebrow">Sua assistente</p>
           <h1>Ana</h1>
         </div>
       </header>
-      <AnaChat sugestoes={SUGESTOES[area]} />
+      <AnaChat />
       {atalhos.length ? (
         <nav className="ana-shortcuts" aria-label="Atalhos">
           {atalhos.map((node) => (

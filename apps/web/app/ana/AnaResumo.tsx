@@ -5,20 +5,12 @@ import type { AnaContexto } from './useAnaChat';
 
 /**
  * "Resumo da Ana": o que importa agora para quem está no painel (empresa, aluno, mentoria ou
- * administração), com links para agir e perguntas sugeridas. Só aparece quando a Ana conseguiu
+ * administração), com links para agir. A pergunta é sempre livre: não há perguntas prontas. Só aparece quando a Ana conseguiu
  * ler a conta.
  */
-export function AnaResumo({
-  contexto,
-  onPerguntar,
-  desabilitado,
-}: Readonly<{
-  contexto: AnaContexto;
-  onPerguntar: (pergunta: string) => void;
-  desabilitado: boolean;
-}>) {
+export function AnaResumo({ contexto }: Readonly<{ contexto: AnaContexto }>) {
   const temConteudo = contexto.resumo.length > 0 || contexto.destaques.length > 0;
-  if (!temConteudo && contexto.sugestoes.length === 0) return null;
+  if (!temConteudo) return null;
   return (
     <section className="ana-resumo" aria-label="Resumo da Ana">
       <strong>
@@ -39,20 +31,6 @@ export function AnaResumo({
             </li>
           ))}
         </ul>
-      ) : null}
-      {contexto.sugestoes.length ? (
-        <div className="ana-box-suggestions">
-          {contexto.sugestoes.slice(0, 4).map((texto) => (
-            <button
-              key={texto}
-              type="button"
-              disabled={desabilitado}
-              onClick={() => onPerguntar(texto)}
-            >
-              {texto}
-            </button>
-          ))}
-        </div>
       ) : null}
     </section>
   );

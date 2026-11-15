@@ -73,12 +73,7 @@ export default async function HomePage() {
           highlight: 'Inteligência conectada.',
           text: 'A Ana é o núcleo vivo do sistema: entende o seu contexto, abre a ferramenta certa e transforma os dados públicos das licitações em clareza.',
         }}
-        cta={{
-          label: 'Entrar',
-          href: '/login',
-          title: 'Ana',
-          text: 'Entre para conversar com a Ana. As respostas trazem a fonte e dizem quando faltar informação.',
-        }}
+        coreHref="/login"
       />
 
       <section className="landing-pillars" aria-label="Para quem é">

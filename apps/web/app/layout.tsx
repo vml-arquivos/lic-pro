@@ -13,6 +13,7 @@ import './globals.css';
 import './areas.css';
 import './theme.css';
 import './commerce.css';
+import './holo.css';
 import './polish.css';
 
 export const dynamic = 'force-dynamic';

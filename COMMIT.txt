@@ -1,7 +1,7 @@
-Acabamento visual: tipografia, espacamentos e celular
+Ana holografica no centro da rede, conversa livre
 
-- Escala unica de titulos e textos em todas as telas (sem titulos gigantes ou pesados), com fonte Inter embutida no sistema.
-- Campos, botoes, cartoes, tabelas, abas e avisos com o mesmo tamanho, espacamento e foco.
-- Radar: filtros alinhados em grade, indicadores sem caixa extra (faixa deslizante no celular), abas numa linha so.
-- Celular: sem rolagem lateral, campos com 16px (sem zoom no iPhone), botoes e cabecalhos ajustados.
-- Telas de entrada, cadastro e avisos corrigidas (texto que ficava ilegivel).
+- No centro da rede de cada painel (admin, gestao, empresa, aluno, mentor, colaborador) agora ha uma figura digital da Ana, em estilo holografico. Clicar nela abre a conversa.
+- A figura acompanha o mouse com o olhar, muda de cor ao passar sobre cada atalho e reage quando a Ana esta pensando ou respondendo.
+- Removidos o cartao "Use a Ana para conferir..." e os botoes extras para falar com ela; os atalhos laterais continuam.
+- Conversa livre: sem perguntas prontas, o usuario digita a duvida real. No celular a conversa abre de baixo para cima.
+- A pagina da Ana e a conversa de canto usam a mesma figura e o mesmo campo livre.

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
+import { avisarEstadoAna } from './estado';
 
 export type AnaLink = { texto: string; href: string };
 
@@ -60,6 +61,8 @@ export function useAnaChat(greeting: string) {
     if (!question || loading) return;
     setLoading(true);
     setMessage('');
+    avisarEstadoAna('pensando');
+    let respondeu = false;
     setMessages((current) => [...current, { role: 'usuario', text: question }]);
     try {
       const response = await fetch('/api/ana/chat', {
@@ -94,6 +97,7 @@ export function useAnaChat(greeting: string) {
         ?.replace(/^data: /, '');
       const data = dataLine ? (JSON.parse(dataLine) as AnaResponse) : {};
       if (data.conversa_id) setConversationId(data.conversa_id);
+      respondeu = true;
       setMessages((current) => [
         ...current,
         {
@@ -110,6 +114,9 @@ export function useAnaChat(greeting: string) {
       ]);
     } finally {
       setLoading(false);
+      // A figura "fala" um instante quando a resposta chega; depois volta ao repouso.
+      avisarEstadoAna(respondeu ? 'falando' : 'ocioso');
+      if (respondeu) window.setTimeout(() => avisarEstadoAna('ocioso'), 2800);
     }
   }
 
