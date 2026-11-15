@@ -1,24 +1,24 @@
 /*
  * A Ana holográfica (figura digital no centro da rede) e a janela de conversa.
  * Cores vêm de duas variáveis registradas (--holo-a, --holo-b): trocam suavemente conforme
- * o atalho em foco. Nada aqui usa imagem real: é tudo desenho vetorial.
+ * o atalho em foco. Nada aqui usa imagem real: a figura é desenhada por código (holo-cena.ts).
  */
 @property --holo-a {
   inherits: true;
-  initial-value: #8b93ff;
+  initial-value: #5b8cff;
   syntax: '<color>';
 }
 
 @property --holo-b {
   inherits: true;
-  initial-value: #2dd4bf;
+  initial-value: #22d3ee;
   syntax: '<color>';
 }
 
 /* 1. Núcleo da rede --------------------------------------------------------------------- */
 .hub-core-art {
-  --holo-a: #8b93ff;
-  --holo-b: #2dd4bf;
+  --holo-a: #5b8cff;
+  --holo-b: #22d3ee;
   transition:
     --holo-a 0.6s ease,
     --holo-b 0.6s ease;
@@ -58,14 +58,18 @@
 }
 
 .hub-core-art {
-  height: 11.5rem;
-  width: 11.5rem;
+  height: 12.5rem;
+  width: 12.5rem;
 }
 
 @container hub (min-width: 56rem) {
   .hub-core-art {
-    height: 15rem;
-    width: 15rem;
+    height: 16.5rem;
+    width: 16.5rem;
+  }
+
+  .hub-core-label {
+    margin-top: 0.9rem;
   }
 }
 
@@ -99,12 +103,25 @@
   letter-spacing: 0.18em;
 }
 
-/* 2. A figura --------------------------------------------------------------------------- */
+/* 2. A figura (canvas) ------------------------------------------------------------------ */
 .holo {
-  color: var(--holo-a);
+  background: #050a24;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--holo-a) 55%, transparent),
+    0 0 26px color-mix(in srgb, var(--holo-a) 38%, transparent),
+    inset 0 0 22px color-mix(in srgb, var(--holo-a) 30%, transparent);
   display: block;
   height: 100%;
-  overflow: visible;
+  isolation: isolate;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.holo canvas {
+  display: block;
+  height: 100%;
   width: 100%;
 }
 
@@ -114,283 +131,30 @@
   width: 2.9rem;
 }
 
-.holo-stop-a {
-  stop-color: var(--holo-a);
-}
-.holo-stop-b {
-  stop-color: var(--holo-b);
-}
-
-.holo-anel {
-  fill: none;
-  stroke: var(--holo-a);
-  stroke-linecap: round;
-  stroke-width: 1.3;
-  transform-origin: 120px 120px;
-}
-.holo-anel-a {
-  animation: holo-gira 40s linear infinite;
-  opacity: 0.75;
-  stroke-dasharray: 3 9;
-}
-.holo-anel-b {
-  animation: holo-gira 28s linear infinite reverse;
-  opacity: 0.6;
-  stroke: var(--holo-b);
-  stroke-dasharray: 1 6;
-  stroke-width: 1;
-}
-.holo-onda {
-  fill: none;
-  opacity: 0;
-  stroke: var(--holo-a);
-  stroke-width: 2;
-  transform-origin: 120px 120px;
-}
-
-.holo-brilho {
-  animation: holo-respira 4.5s ease-in-out infinite;
-}
-
-.holo-chao path {
-  fill: none;
-  opacity: 0.4;
-  stroke: var(--holo-a);
-  stroke-width: 0.6;
-}
-
-.holo-particula {
-  animation: holo-sobe 6s linear infinite;
-  fill: var(--holo-b);
-  opacity: 0;
-}
-
-.holo-figura {
-  animation: holo-flutua 6s ease-in-out infinite;
-  filter: drop-shadow(0 0 3px var(--holo-a));
-  transform-origin: 120px 140px;
-}
-
-.holo-fio {
-  fill: none;
-  stroke: var(--holo-a);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 0.8;
-}
-.holo-malha {
-  opacity: 0.85;
-  stroke-width: 0.5;
-}
-.holo-fio-fino {
-  opacity: 0.55;
-  stroke-width: 0.5;
-}
-.holo-fio-forte {
-  stroke-width: 1.7;
-}
-
-.holo-corpo {
-  opacity: 0.5;
-  stroke: var(--holo-a);
-  stroke-width: 0.7;
-}
-.holo-cabelo {
-  opacity: 0.7;
-  stroke: var(--holo-b);
-  stroke-width: 0.9;
-}
-.holo-rosto {
-  opacity: 0.42;
-  stroke: var(--holo-a);
-  stroke-width: 0.9;
-}
-.holo-no {
-  fill: #fff;
-  opacity: 0.95;
-}
-.holo-franja {
-  fill: var(--holo-b);
-  opacity: 0.5;
-}
-
-.holo-cabeca {
-  transform: rotate(calc(var(--look-x, 0) * 2.6deg)) translateX(calc(var(--look-x, 0) * 1.8px));
-  transform-origin: 120px 152px;
-  transition: transform 0.4s ease-out;
-}
-
-.holo-olhos {
-  transform: translate(calc(var(--look-x, 0) * 3.2px), calc(var(--look-y, 0) * 2.2px));
-  transition: transform 0.15s ease-out;
-}
-.holo-olho {
-  animation: holo-pisca 6.5s infinite;
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: transform 0.25s ease;
-}
-.holo-pupila-borda {
-  fill: rgba(255, 255, 255, 0.1);
-  stroke: #fff;
-  stroke-width: 0.9;
-}
-.holo-iris {
-  fill: var(--holo-a);
-  filter: drop-shadow(0 0 2px var(--holo-a));
-}
-.holo-brilho-olho {
-  fill: #fff;
-}
-
-.holo-sobrancelhas {
-  stroke: var(--holo-a);
-  transition: transform 0.3s ease;
-}
-
-.holo-labio {
-  fill: var(--holo-b);
-  opacity: 0.55;
-  stroke: #fff;
-  stroke-width: 0.5;
-  transition: opacity 0.2s ease;
-}
-.holo-boca-aberta {
-  fill: #090b25;
-  opacity: 0;
-  stroke: #fff;
-  stroke-width: 0.6;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-.holo-varredura {
-  animation: holo-varre 4.2s linear infinite;
-  mix-blend-mode: screen;
-  opacity: 0.45;
-}
-.holo-linhas {
+/* Anéis finos ao redor do portal (só no botão grande do centro da rede). */
+.holo-btn::before,
+.holo-btn::after {
+  border-radius: 50%;
+  content: '';
+  inset: -0.55rem;
   pointer-events: none;
-}
-.holo-borda {
-  fill: none;
-  opacity: 0.85;
-  stroke: var(--holo-a);
-  stroke-width: 1.3;
+  position: absolute;
 }
 
-/* 3. Reações ---------------------------------------------------------------------------- */
-.hub-core-art[data-tone] .holo-sobrancelhas {
-  transform: translateY(-1.2px);
+.holo-btn::before {
+  animation: holo-gira 46s linear infinite;
+  border: 1.5px dashed color-mix(in srgb, var(--holo-a) 60%, transparent);
 }
 
-.holo[data-mood='pensando'] .holo-olho {
-  animation: none;
-  transform: scaleY(0.42);
-}
-.holo[data-mood='pensando'] .holo-sobrancelhas {
-  transform: translateY(-1.8px);
-}
-.holo[data-mood='pensando'] .holo-varredura {
-  animation-duration: 1.2s;
-  opacity: 0.8;
-}
-.holo[data-mood='pensando'] .holo-anel-a {
-  animation-duration: 5s;
-}
-.holo[data-mood='pensando'] .holo-brilho {
-  animation-duration: 1.2s;
+.holo-btn::after {
+  animation: holo-gira 30s linear infinite reverse;
+  border: 1px dotted color-mix(in srgb, var(--holo-b) 70%, transparent);
+  inset: -1rem;
 }
 
-.holo[data-mood='falando'] .holo-labio {
-  opacity: 0.25;
-}
-.holo[data-mood='falando'] .holo-boca-aberta {
-  animation: holo-fala 0.26s ease-in-out infinite alternate;
-  opacity: 1;
-}
-.holo[data-mood='falando'] .holo-onda {
-  animation: holo-onda 1.4s ease-out infinite;
-}
-
-.holo[data-mood='ativando'] .holo-onda {
-  animation: holo-onda 0.7s ease-out 1;
-}
-.holo[data-mood='ativando'] .holo-figura {
-  filter: drop-shadow(0 0 8px var(--holo-a)) brightness(1.25);
-}
-
-/* 4. Quadros de animação ---------------------------------------------------------------- */
 @keyframes holo-gira {
   to {
     transform: rotate(360deg);
-  }
-}
-@keyframes holo-respira {
-  0%,
-  100% {
-    opacity: 0.7;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-@keyframes holo-flutua {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-2.5px);
-  }
-}
-@keyframes holo-pisca {
-  0%,
-  93%,
-  100% {
-    transform: scaleY(1);
-  }
-  96% {
-    transform: scaleY(0.08);
-  }
-}
-@keyframes holo-varre {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(290px);
-  }
-}
-@keyframes holo-sobe {
-  0% {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  20% {
-    opacity: 0.9;
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-46px);
-  }
-}
-@keyframes holo-fala {
-  from {
-    transform: scaleY(0.35);
-  }
-  to {
-    transform: scaleY(1.25);
-  }
-}
-@keyframes holo-onda {
-  0% {
-    opacity: 0.9;
-    transform: scale(0.82);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.16);
   }
 }
 
@@ -593,6 +357,8 @@
 @media (prefers-reduced-motion: reduce) {
   .holo *,
   .holo-btn,
+  .holo-btn::before,
+  .holo-btn::after,
   .ana-overlay,
   .ana-dialogo {
     animation: none !important;
@@ -609,6 +375,6 @@
 }
 
 .ana-hero-holo .holo {
-  --holo-a: #8b93ff;
-  --holo-b: #2dd4bf;
+  --holo-a: #5b8cff;
+  --holo-b: #22d3ee;
 }
