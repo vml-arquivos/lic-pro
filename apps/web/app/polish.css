@@ -1,0 +1,1134 @@
+/*
+ * Acabamento premium: escala tipográfica, ritmo de espaçamento, campos, botões, cartões,
+ * tabelas e telas pequenas. Carregado por último (layout.tsx), só refina o que os outros
+ * arquivos definem: não muda cores, identidade nem comportamento.
+ *
+ * Escala (base 16px): 12 · 13 · 14 · 15 (texto) · 16 · 18 · 20 · 24 · 30.
+ * Pesos: 400 texto · 500 apoio · 600 rótulos/botões/títulos · 700 só destaques.
+ * Os seletores :root:root(:root) existem só para vencer a especificidade dos arquivos anteriores.
+ */
+
+/* 1. Fonte e fundamentos ------------------------------------------------------------------ */
+:root {
+  --lc-font-sans: 'Inter Variable', Inter, 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+  --lc-font-display: var(--lc-font-sans);
+
+  --t-xs: 0.75rem;
+  --t-sm: 0.8125rem;
+  --t-md: 0.875rem;
+  --t-base: 0.9375rem;
+  --t-lg: 1rem;
+  --t-xl: 1.125rem;
+  --t-2xl: 1.25rem;
+
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.25rem;
+  --sp-6: 1.5rem;
+  --sp-8: 2rem;
+
+  --ctl-h: 2.6rem;
+  --ctl-h-sm: 2.15rem;
+  --ctl-radius: 0.7rem;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--lc-font-sans);
+  font-size: var(--t-base);
+  font-weight: 400;
+  line-height: 1.55;
+  text-rendering: optimizeLegibility;
+}
+
+:root button,
+:root input,
+:root select,
+:root textarea {
+  font-family: inherit;
+}
+
+:root strong,
+:root b,
+:root th {
+  font-weight: 600;
+}
+
+:root p {
+  text-wrap: pretty;
+}
+
+:root h1,
+:root h2,
+:root h3,
+:root h4 {
+  text-wrap: balance;
+}
+
+/* 2. Títulos: um tamanho por nível, sem peso extra ---------------------------------------- */
+:root:root:root h1 {
+  font-family: var(--lc-font-display);
+  font-size: clamp(1.5rem, 1.25rem + 0.9vw, 1.875rem);
+  font-weight: 650;
+  letter-spacing: -0.022em;
+  line-height: 1.2;
+  max-width: none;
+}
+
+:root:root:root h2 {
+  font-size: clamp(1.0625rem, 1rem + 0.35vw, 1.25rem);
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+}
+
+:root:root:root h3 {
+  font-size: var(--t-lg);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
+:root:root:root h4 {
+  font-size: var(--t-base);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* Títulos de abertura (curso, boas-vindas, entrada, Ana): um pouco maiores, mesmo peso. */
+:root:root:root .shop-hero h1,
+:root:root:root .auth-card h1,
+:root:root:root .welcome h1,
+:root:root:root .ana-hero h1,
+:root:root:root .account-heading h1,
+:root:root:root .module-heading h1,
+:root:root:root .workspace-heading h1 {
+  font-size: clamp(1.625rem, 1.3rem + 1.3vw, 2.125rem);
+  font-weight: 650;
+  line-height: 1.18;
+}
+
+:root:root:root .shop-hero h1 {
+  font-size: clamp(1.75rem, 1.35rem + 1.7vw, 2.375rem);
+  font-weight: 700;
+}
+
+:root:root:root .hub-head h2 {
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+:root:root:root .ui-denied h1,
+:root:root:root .invite-page h1 {
+  font-size: clamp(1.4rem, 1.2rem + 0.8vw, 1.75rem);
+}
+
+:root:root:root .cs-cert h2,
+:root:root:root .an-nota strong {
+  font-size: var(--t-xl);
+}
+
+:root .eyebrow,
+:root:root .hub-eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  line-height: 1.4;
+}
+
+:root .ui-header p:not(.eyebrow),
+:root .page-heading p:not(.eyebrow),
+:root .module-heading p:not(.eyebrow),
+:root .shop-hero p:not(.eyebrow),
+:root .rd-hint {
+  color: var(--lc-ink-soft, #4a5170);
+  font-size: var(--t-base);
+  line-height: 1.6;
+}
+
+:root .ui-header .eyebrow {
+  margin: 0 0 var(--sp-2);
+}
+
+:root:root .ui-header h1 {
+  margin: 0 0 var(--sp-2);
+}
+
+/* 3. Números e destaques ------------------------------------------------------------------ */
+:root:root .ui-kpi strong,
+:root:root .metric-card strong,
+:root:root .module-metric {
+  font-size: clamp(1.5rem, 1.3rem + 0.7vw, 1.875rem);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+:root:root .an-kpis .ui-kpi strong {
+  font-size: clamp(1.15rem, 1.05rem + 0.5vw, 1.5rem);
+}
+
+:root:root .plan-price strong,
+:root:root .video-placeholder strong {
+  font-size: 1.75rem;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+
+:root:root .ui-kpi span {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+:root:root .ui-kpi small {
+  font-size: var(--t-xs);
+  line-height: 1.4;
+}
+
+/* 4. Peso: nada passa de 700 (gerado a partir dos seletores com 800/900) ------------------- */
+/* Rótulos, botões, etiquetas e legendas: 700 no máximo. */
+:root .auth-fieldset legend,
+:root .sidebar-brand,
+:root .sidebar-label,
+:root .ana-recommendation-badge,
+:root .ana-recommendation a,
+:root .sidebar-wordmark,
+:root .audience-select,
+:root .audience-toggle,
+:root .audience-pill,
+:root .user-avatar,
+:root .hero-kicker,
+:root .button-light,
+:root .button-primary,
+:root .button-secondary,
+:root .module-link,
+:root .step-number,
+:root .tag,
+:root .module-form label,
+:root .form-grid label,
+:root .module-metric,
+:root .ana-message small,
+:root .ana-fab,
+:root .account-status-ok,
+:root .account-status-warning,
+:root .account-form label,
+:root .account-fieldset legend,
+:root .account-inline-link,
+:root .account-panel-link small,
+:root .account-links-row a,
+:root .ui-badge,
+:root .ui-btn,
+:root .ui-tab,
+:root .area-pill,
+:root .bell-count,
+:root .bell-link,
+:root .ui-form legend,
+:root .cs-day-num,
+:root .cs-ok,
+:root .cs-bad,
+:root .op-col header span,
+:root .op-card-title,
+:root .op-facts dt,
+:root .op-guide li::before,
+:root .ana-box-input button,
+:root .uf-chip,
+:root .ui-guia summary,
+:root .ui-guia dt,
+:root .ui-header h1,
+:root .ui-panel h2,
+:root .hub-eyebrow,
+:root .hub-head h2,
+:root .hub-node-text strong,
+:root .hub-node-badge,
+:root .hub-cta-btn,
+:root .rd-profile summary,
+:root .rd-advanced summary,
+:root .rd-ufs legend,
+:root .rd-facet small,
+:root .rd-facet-on,
+:root .rd-order,
+:root .rd-facts dt,
+:root .rd-info dt,
+:root .rd-info-destaque dd,
+:root .rd-nota,
+:root .rd-painel-dados dt,
+:root .rd-atalhos-rotulo,
+:root .an-pos,
+:root .an-nota-mini {
+  font-weight: 700;
+}
+
+/* 5. Cartões, painéis e ritmo vertical ------------------------------------------------------ */
+:root .ui-page {
+  padding: var(--sp-8) clamp(1rem, 3vw, 2.25rem) 3.5rem;
+}
+
+:root .ui-header {
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-6);
+}
+
+:root .ui-kpis {
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
+}
+
+:root .ui-kpi {
+  gap: var(--sp-1);
+  padding: var(--sp-4) 1.1rem;
+}
+
+:root .ui-panel {
+  margin-bottom: var(--sp-5);
+  padding: 1.15rem 1.3rem;
+}
+
+:root .ui-panel-head {
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+:root:root .ui-panel h2,
+:root:root .ui-panel-head h2 {
+  font-size: var(--t-lg);
+  font-weight: 650;
+  margin: 0;
+}
+
+:root .ui-panel-head p,
+:root .ui-panel > p {
+  color: var(--lc-ink-soft, #4a5170);
+  font-size: var(--t-md);
+  line-height: 1.55;
+}
+
+:root .ui-grid {
+  gap: var(--sp-4);
+}
+
+/* 6. Campos de formulário: mesma altura, mesma fonte, mesmo foco ---------------------------- */
+:root label,
+:root .ui-form label,
+:root .auth-form label,
+:root .rd-filters label,
+:root .module-form label,
+:root .form-grid label,
+:root .account-form label,
+:root .filter-card label {
+  color: var(--lc-ink, #141a33);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.35;
+}
+
+:root
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not(
+    [type='hidden']
+  ):not([type='color']),
+:root select,
+:root textarea {
+  background-color: #fff;
+  border: 1px solid var(--lc-line-strong, #d3d8ea);
+  border-radius: var(--ctl-radius);
+  color: var(--lc-ink, #141a33);
+  font-family: inherit;
+  font-size: var(--t-base);
+  font-weight: 400;
+  line-height: 1.4;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0.55rem 0.8rem;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+:root
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not(
+    [type='hidden']
+  ):not([type='color']),
+:root select:not([multiple]):not([size]) {
+  min-height: var(--ctl-h);
+}
+
+:root select:not([multiple]):not([size]) {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7390' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1rem;
+  padding-right: 2.3rem;
+  text-overflow: ellipsis;
+}
+
+:root textarea {
+  line-height: 1.5;
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+:root input::placeholder,
+:root textarea::placeholder {
+  color: #8b92ad;
+  opacity: 1;
+}
+
+:root input:not([type='checkbox']):not([type='radio']):hover:not(:disabled):not(:focus),
+:root select:hover:not(:disabled):not(:focus),
+:root textarea:hover:not(:disabled):not(:focus) {
+  border-color: #b9c0dc;
+}
+
+:root input:not([type='checkbox']):not([type='radio']):focus,
+:root select:focus,
+:root textarea:focus {
+  border-color: var(--lc-primary, #4f46e5);
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.13);
+  outline: none;
+}
+
+:root input:disabled,
+:root select:disabled,
+:root textarea:disabled {
+  background-color: #f4f5fa;
+  color: #7a819c;
+  cursor: not-allowed;
+}
+
+:root input[type='checkbox'],
+:root input[type='radio'] {
+  accent-color: var(--lc-primary, #4f46e5);
+  height: 1.05rem;
+  width: 1.05rem;
+}
+
+:root .rd-filters input:not([type='checkbox']),
+:root .rd-filters select {
+  border-radius: var(--ctl-radius);
+  padding: 0.55rem 0.8rem;
+}
+
+:root .rd-filters select:not([multiple]):not([size]) {
+  padding-right: 2.3rem;
+}
+
+:root fieldset {
+  min-width: 0;
+}
+
+:root legend {
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+
+/* 7. Botões --------------------------------------------------------------------------------- */
+:root .ui-btn,
+:root .button-light,
+:root .button-primary,
+:root .button-secondary,
+:root .auth-form button,
+:root .ana-box-input button,
+:root .hub-cta-btn {
+  align-items: center;
+  display: inline-flex;
+  font-family: inherit;
+  font-size: var(--t-md);
+  font-weight: 600;
+  gap: var(--sp-2);
+  justify-content: center;
+  letter-spacing: 0;
+  line-height: 1.2;
+  min-height: var(--ctl-h);
+  padding: 0.55rem 1.1rem;
+  text-align: center;
+  text-decoration: none;
+}
+
+:root .auth-form button {
+  width: 100%;
+}
+
+:root .ui-btn-small,
+:root .rd-link-btn,
+:root .ui-table-actions .ui-btn {
+  font-size: var(--t-sm);
+  min-height: var(--ctl-h-sm);
+  padding: 0.35rem 0.8rem;
+}
+
+:root .ui-btn:active:not(:disabled),
+:root .button-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+:root .ui-btn:disabled,
+:root button:disabled {
+  cursor: not-allowed;
+}
+
+/* 8. Etiquetas, abas e chips --------------------------------------------------------------- */
+:root .ui-badge,
+:root .tag,
+:root .area-pill,
+:root .rd-chip span,
+:root .uf-chip {
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+
+:root .ui-tab {
+  font-size: var(--t-md);
+  font-weight: 600;
+}
+
+/* 9. Tabelas -------------------------------------------------------------------------------- */
+:root .ui-table {
+  font-size: var(--t-md);
+}
+
+:root .ui-table th,
+:root .ui-table td {
+  padding: 0.7rem 0.8rem;
+}
+
+:root .ui-table th {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+}
+
+:root .ui-table-wrap {
+  -webkit-overflow-scrolling: touch;
+  border-radius: calc(var(--lc-radius, 1rem) - 0.2rem);
+}
+
+/* 10. Ana (conversa) ------------------------------------------------------------------------ */
+:root .ana-hero,
+:root .ana-box,
+:root .ana-shortcuts {
+  min-width: 0;
+}
+
+:root .ana-box-input {
+  align-items: stretch;
+}
+
+:root .ana-box-input input {
+  font-size: var(--t-base);
+  min-height: var(--ctl-h);
+  padding: 0.55rem 0.9rem;
+}
+
+:root .ana-box-input button {
+  flex: none;
+}
+
+:root .ana-box-suggestions button,
+:root .ana-shortcuts a {
+  font-size: var(--t-md);
+  line-height: 1.3;
+}
+
+:root .ana-box .ana-message {
+  font-size: var(--t-base);
+  line-height: 1.55;
+}
+
+/* 11. Estrutura geral: nada passa da largura da tela ----------------------------------------- */
+:root .app-shell-content,
+:root .app-shell-body,
+:root .ui-page,
+:root .ui-panel,
+:root .ui-grid > *,
+:root .ui-kpis > * {
+  min-width: 0;
+}
+
+:root img,
+:root svg,
+:root video,
+:root canvas {
+  max-width: 100%;
+}
+
+:root .ui-panel,
+:root .rd-card,
+:root .ui-kpi {
+  overflow-wrap: anywhere;
+}
+
+:root .ui-table,
+:root .ui-table td,
+:root .ui-table th {
+  overflow-wrap: normal;
+}
+
+/* 12. Tablet -------------------------------------------------------------------------------- */
+@media (max-width: 58rem) {
+  :root .ui-page {
+    padding-top: var(--sp-6);
+  }
+}
+
+/* 13. Celular ------------------------------------------------------------------------------- */
+@media (max-width: 42rem) {
+  body {
+    font-size: var(--t-base);
+  }
+
+  /* 16px nos campos evita o zoom automático do iPhone ao tocar. */
+  :root input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  :root select,
+  :root textarea,
+  :root .ana-box-input input,
+  :root .rd-filters input:not([type='checkbox']),
+  :root .rd-filters select {
+    font-size: 1rem;
+  }
+
+  :root:root:root h1 {
+    font-size: 1.5rem;
+    line-height: 1.22;
+  }
+
+  :root:root:root .shop-hero h1,
+  :root:root:root .auth-card h1,
+  :root:root:root .welcome h1,
+  :root:root:root .ana-hero h1,
+  :root:root:root .account-heading h1,
+  :root:root:root .module-heading h1,
+  :root:root:root .workspace-heading h1 {
+    font-size: 1.625rem;
+  }
+
+  :root:root:root .hub-head h2 {
+    font-size: 1.375rem;
+  }
+
+  :root:root:root h2 {
+    font-size: 1.125rem;
+  }
+
+  :root .ui-page {
+    padding: 1.25rem 1rem 5.75rem;
+  }
+
+  :root .ui-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-5);
+  }
+
+  :root .ui-header-actions {
+    width: 100%;
+  }
+
+  :root .ui-header-actions > * {
+    flex: 1 1 auto;
+  }
+
+  :root .ui-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-2);
+  }
+
+  :root .ui-kpi {
+    padding: 0.85rem 0.9rem;
+  }
+
+  :root:root .ui-kpi strong {
+    font-size: 1.5rem;
+  }
+
+  :root .ui-panel {
+    border-radius: 0.9rem;
+    margin-bottom: var(--sp-4);
+    padding: 1rem;
+  }
+
+  :root .ui-panel-head {
+    align-items: stretch;
+  }
+
+  :root .ui-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-3);
+  }
+
+  :root .ui-table th,
+  :root .ui-table td {
+    padding: 0.6rem 0.65rem;
+  }
+
+  :root .ui-table {
+    font-size: var(--t-sm);
+  }
+
+  :root .app-topbar {
+    min-height: 3.6rem;
+    padding: 0.55rem 1rem;
+  }
+
+  :root .ana-box {
+    padding: 0.9rem;
+  }
+
+  :root .ana-box-input {
+    flex-direction: column;
+  }
+
+  :root .ana-box-input button {
+    width: 100%;
+  }
+
+  :root .ana-hero-orb {
+    height: 2.6rem;
+    width: 2.6rem;
+  }
+
+  :root .auth-form button,
+  :root .ui-btn,
+  :root .button-primary,
+  :root .button-secondary {
+    min-height: 2.75rem;
+  }
+
+  :root .ui-btn-small,
+  :root .rd-link-btn {
+    min-height: 2.35rem;
+  }
+}
+
+@media (max-width: 24rem) {
+  :root .ui-kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :root .ui-page {
+    padding-inline: 0.85rem;
+  }
+}
+
+/* 14. Ajustes finos por tela ----------------------------------------------------------------- */
+:root .uf-picker {
+  gap: 0.4rem;
+}
+
+:root .uf-picker-lista {
+  min-height: 0;
+}
+
+:root .uf-picker-lista:empty {
+  display: none;
+}
+
+:root .uf-chip {
+  font-weight: 600;
+  padding-block: 0.2rem;
+}
+
+:root .rd-filters {
+  gap: var(--sp-4);
+  padding: 1.2rem 1.3rem;
+}
+
+:root .rd-filters-main,
+:root .rd-filters-grid {
+  gap: var(--sp-4) var(--sp-4);
+}
+
+/* Indicadores do Radar: no máximo 4 por linha, linhas completas e alinhadas à esquerda. */
+:root .rd-painel .ui-kpis {
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(max(10.5rem, calc((100% - 3 * var(--sp-3)) / 4)), 1fr)
+  );
+}
+
+:root .ui-tabs {
+  gap: var(--sp-1);
+}
+
+:root .ui-tab {
+  padding: 0.6rem 0.95rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 42rem) {
+  :root .rd-painel .ui-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  :root .rd-painel .ui-kpi {
+    padding: 0.8rem 0.85rem;
+  }
+
+  :root .ui-tabs {
+    flex-wrap: nowrap;
+    margin-inline: -1rem;
+    overflow-x: auto;
+    padding-inline: 1rem;
+    scrollbar-width: none;
+  }
+
+  :root .ui-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  :root .ui-tab {
+    flex: none;
+  }
+
+  :root .rd-filters {
+    padding: 1rem;
+  }
+}
+
+/* Filtros do Radar: grade de 12 colunas (3 + 4 por linha) no computador; 2 por linha no celular. */
+@media (min-width: 62rem) {
+  :root .rd-filters-main {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  :root .rd-filters-main > * {
+    grid-column: span 3;
+  }
+
+  :root .rd-filters-main > :nth-child(-n + 3) {
+    grid-column: span 4;
+  }
+}
+
+@media (max-width: 42rem) {
+  :root .rd-filters-main {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-3) var(--sp-3);
+  }
+
+  :root .rd-filters-main > * {
+    grid-column: 1 / -1;
+  }
+
+  :root .rd-filters-main > :nth-child(6),
+  :root .rd-filters-main > :nth-child(7) {
+    grid-column: span 1;
+  }
+}
+
+/* Abas: mesma aparência em Licitações, Análise e painéis; no celular rolam para o lado. */
+:root :is(.lic-nav, .ui-tabs, .an-tabs) {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-5);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+:root :is(.lic-nav, .ui-tabs, .an-tabs)::-webkit-scrollbar {
+  display: none;
+}
+
+:root :is(.lic-nav-item, .ui-tab, .an-tab) {
+  flex: none;
+  font-size: var(--t-md);
+  font-weight: 600;
+  padding: 0.65rem 1rem;
+  white-space: nowrap;
+}
+
+:root :is(.lic-nav-item, .ui-tab, .an-tab):focus-visible {
+  outline-offset: -3px;
+}
+
+:root .an-tab-count {
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+/* Resumo do Radar: os indicadores ficam soltos, sem caixa extra por fora. */
+:root .rd-painel {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+@media (max-width: 42rem) {
+  :root :is(.lic-nav, .an-tabs) {
+    margin-inline: -1rem;
+    padding-inline: 1rem;
+  }
+
+  /* Indicadores em uma faixa que rola para o lado: ocupa pouca altura e cabe tudo. */
+  :root .rd-painel .ui-kpis {
+    grid-auto-columns: minmax(9.75rem, 44%);
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    margin-inline: -1rem;
+    overflow-x: auto;
+    padding: 0.2rem 1rem 0.5rem;
+    scroll-padding-inline: 1rem;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  :root .rd-painel .ui-kpis::-webkit-scrollbar {
+    display: none;
+  }
+
+  :root .rd-painel .rd-kpi-button {
+    scroll-snap-align: start;
+  }
+}
+
+/* Telas mais antigas (Empresas, Conta, módulos): mesma largura, respiro e cabeçalho do restante. */
+:root .dashboard-page,
+:root .module-page,
+:root .workspace-page {
+  margin-inline: auto;
+  max-width: 80rem;
+  padding: var(--sp-8) clamp(1rem, 3vw, 2.25rem) 4rem;
+}
+
+:root .page-heading,
+:root .dashboard-heading,
+:root .workspace-heading,
+:root .module-heading,
+:root .account-heading {
+  margin: var(--sp-5) 0 var(--sp-6);
+}
+
+:root .page-heading p:not(.eyebrow),
+:root .dashboard-heading p:not(.eyebrow),
+:root .account-heading p:not(.eyebrow) {
+  font-size: var(--t-base);
+  line-height: 1.6;
+  max-width: 46rem;
+}
+
+:root .page-heading .eyebrow,
+:root .dashboard-heading .eyebrow,
+:root .workspace-heading .eyebrow,
+:root .module-heading .eyebrow,
+:root .account-heading .eyebrow {
+  color: var(--lc-primary, #4f46e5);
+  margin: 0 0 var(--sp-2);
+}
+
+:root .page-heading h1,
+:root .dashboard-heading h1,
+:root .account-heading h1 {
+  margin: 0 0 var(--sp-2);
+}
+
+:root .back-link {
+  align-items: center;
+  color: var(--lc-ink-soft, #4a5170);
+  display: inline-flex;
+  font-size: var(--t-md);
+  font-weight: 500;
+  gap: var(--sp-1);
+  text-decoration: none;
+}
+
+:root .back-link:hover {
+  color: var(--lc-primary-strong, #3730a3);
+  text-decoration: underline;
+}
+
+:root .dashboard-columns {
+  align-items: start;
+  gap: var(--sp-4);
+}
+
+:root .metric-card,
+:root .dashboard-card,
+:root .dashboard-empty {
+  padding: 1.15rem 1.3rem;
+}
+
+:root .dashboard-card h2 {
+  font-size: var(--t-lg);
+  margin: 0 0 var(--sp-3);
+}
+
+@media (max-width: 42rem) {
+  :root .dashboard-page,
+  :root .module-page,
+  :root .workspace-page {
+    padding: 1.25rem 1rem 5.75rem;
+  }
+
+  :root .page-heading,
+  :root .dashboard-heading,
+  :root .workspace-heading,
+  :root .module-heading,
+  :root .account-heading {
+    margin: var(--sp-4) 0 var(--sp-5);
+  }
+
+  :root .dashboard-card,
+  :root .metric-card,
+  :root .dashboard-empty {
+    padding: 1rem;
+  }
+}
+
+/* Botões das telas antigas seguem o mesmo padrão dos novos (principal em degradê, secundário claro). */
+:root .button-primary {
+  background: var(--lc-grad);
+  border: 0;
+  box-shadow: 0 10px 22px -12px rgba(79, 70, 229, 0.75);
+  color: #fff;
+}
+
+:root .button-primary:hover:not(:disabled) {
+  box-shadow: 0 14px 26px -12px rgba(79, 70, 229, 0.9);
+  filter: brightness(1.05);
+}
+
+:root .button-secondary {
+  background: #fff;
+  border: 1px solid var(--lc-line-strong, #d3d8ea);
+  box-shadow: none;
+  color: var(--lc-ink, #141a33);
+}
+
+:root .button-secondary:hover:not(:disabled) {
+  background: var(--lc-primary-soft, #eef0ff);
+  box-shadow: none;
+}
+
+:root .button-primary:disabled,
+:root .button-secondary:disabled {
+  cursor: not-allowed;
+  filter: none;
+  opacity: 0.55;
+  transform: none;
+}
+
+/* Campos ocupam a largura da coluna em todos os formulários. */
+:root
+  :is(.account-form, .ui-form, .module-form, .form-grid, .auth-form, .empresa-form)
+  :is(input:not([type='checkbox']):not([type='radio']), select, textarea) {
+  width: 100%;
+}
+
+/* Botão solto dentro de um painel fica na própria linha, com respiro. */
+:root .ui-panel > small {
+  display: block;
+  margin-top: var(--sp-2);
+}
+
+:root .ui-panel > .ui-btn {
+  display: flex;
+  margin-top: var(--sp-3);
+  width: fit-content;
+}
+
+:root .ui-panel > .ui-progress {
+  margin-top: var(--sp-3);
+}
+
+/* Botão flutuante da Ana: mesmo peso visual dos demais botões. */
+:root .ana-fab {
+  font-size: var(--t-md);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+@media (max-width: 42rem) {
+  :root .ana-fab {
+    font-size: var(--t-sm);
+    padding: 0.6rem 0.95rem;
+  }
+}
+
+/* Avisos: texto de apoio, nunca no tamanho de abertura de página. */
+:root .ui-alert {
+  font-size: var(--t-md);
+  line-height: 1.55;
+  max-width: none;
+}
+
+:root .ui-alert-info,
+:root .ui-alert-success,
+:root .ui-alert-error {
+  border-radius: 0.8rem;
+  padding: 0.75rem 1rem;
+}
+
+/* Topo das páginas públicas: botões sempre numa linha só. */
+:root .landing-actions .ui-btn {
+  white-space: nowrap;
+}
+
+@media (max-width: 42rem) {
+  :root .landing-bar {
+    gap: var(--sp-3);
+  }
+
+  :root .landing-actions {
+    flex: none;
+    gap: var(--sp-2);
+  }
+
+  :root .landing-actions .ui-btn {
+    font-size: var(--t-sm);
+    min-height: 2.35rem;
+    padding: 0.4rem 0.8rem;
+  }
+}
+
+/* Entrada, cadastro e recuperação de senha: cartão claro e avisos legíveis. */
+:root .auth-page {
+  max-width: 30rem;
+  padding: var(--sp-8) clamp(1rem, 4vw, 1.5rem) 3rem;
+}
+
+:root .auth-form,
+:root .radar-example,
+:root .ana-answer {
+  background: #fff;
+  border: 1px solid var(--lc-line, #e4e7f2);
+  border-radius: 1.1rem;
+  box-shadow: var(--lc-shadow-card, 0 10px 30px -22px rgba(30, 41, 90, 0.35));
+  color: var(--lc-ink, #141a33);
+}
+
+:root .auth-form {
+  gap: var(--sp-4);
+  margin-top: var(--sp-5);
+  padding: 1.35rem;
+}
+
+:root .notice {
+  background: #fff;
+  border: 1px solid var(--lc-line, #e4e7f2);
+  border-radius: 0.9rem;
+  color: var(--lc-ink-soft, #4a5170);
+  display: block;
+  font-size: var(--t-md);
+  line-height: 1.55;
+  margin-top: var(--sp-5);
+  padding: 0.85rem 1rem;
+}
+
+:root .auth-page > p:not(.eyebrow):not(.notice) {
+  font-size: var(--t-base);
+}

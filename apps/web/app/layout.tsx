@@ -8,10 +8,12 @@ import { AnaWidget } from './ana/AnaWidget';
 import { AppShell } from './AppShell';
 import { WrongPanel } from './WrongPanel';
 import { SincronizarAoAcessar } from './components/SincronizarAoAcessar';
+import '@fontsource-variable/inter/wght.css';
 import './globals.css';
 import './areas.css';
 import './theme.css';
 import './commerce.css';
+import './polish.css';
 
 export const dynamic = 'force-dynamic';
 
