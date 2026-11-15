@@ -2,16 +2,19 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { EVENTO_ESTADO_ANA, type EstadoAna } from '../ana/estado';
-import { criarPixels, type HumorHolo, type Rgb } from './holo-pixels';
+import { type HumorHolo, type Rgb } from './holo-pixels';
+import { criarCena, lerVolume, type Volume } from './holo-voxel';
 
 /**
- * A Ana como inteligência artificial digital: uma figura abstrata e pixelada (não é uma pessoa
- * nem uma foto), com anéis de luz e dados. A imagem fica em public/ana/. Ela reage ao que acontece:
- *  - a figura acompanha o ponteiro (variáveis --look-x e --look-y do centro da rede);
+ * A Ana como inteligência artificial digital: uma figura feminina abstrata e pixelada (não é uma
+ * pessoa nem uma foto), em 3D de blocos de luz, com anéis e chuva de dados. A arte fica em
+ * public/ana/ (a imagem e o volume ana-voxels.bin, que dá a ela profundidade para girar).
+ * Ela está viva:
+ *  - vira o rosto para o ponteiro e para o atalho em foco (--look-x e --look-y do centro da rede),
+ *    inclusive virando de lado quando o atalho está do outro lado;
  *  - a cor muda conforme o atalho em foco (--holo-a/--holo-b e --holo-hue, por data-tone);
- *  - pensando: varredura rápida e brilho pulsando; falando: pulsa e solta ondas;
- *  - ativando (clique): clarão e explosão de pixels.
- * Para trocar a imagem, mude IMAGEM (voxel, mosaico ou particulas).
+ *  - pensando: balança a cabeça e acelera; falando: balança ao ritmo da fala; clique: aceno e clarão.
+ * Se o volume não carregar, fica a imagem estática com os efeitos de CSS.
  */
 
 type Imagem = 'voxel' | 'mosaico' | 'particulas';
@@ -21,6 +24,15 @@ export type HoloMood = EstadoAna | 'ativando';
 
 const COR_A: Rgb = [91, 140, 255];
 const COR_B: Rgb = [34, 211, 238];
+
+let volumeEmCache: Promise<Volume | null> | null = null;
+function carregarVolume(): Promise<Volume | null> {
+  volumeEmCache ??= fetch('/ana/ana-voxels.bin')
+    .then((r) => (r.ok ? r.arrayBuffer() : null))
+    .then((b) => (b ? lerVolume(b) : null))
+    .catch(() => null);
+  return volumeEmCache;
+}
 
 function lerCor(el: Element, nome: string, padrao: Rgb): Rgb {
   const valor = getComputedStyle(el).getPropertyValue(nome).trim();
@@ -32,6 +44,11 @@ function lerCor(el: Element, nome: string, padrao: Rgb): Rgb {
     return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
   }
   return padrao;
+}
+
+function numero(valor: string): number {
+  const n = Number.parseFloat(valor);
+  return Number.isFinite(n) ? n : 0;
 }
 
 export function HoloAna({
@@ -66,86 +83,100 @@ export function HoloAna({
     const el = raiz.current;
     const cv = tela.current;
     if (!el || !cv) return undefined;
-    const caixa = el.getBoundingClientRect();
-    const cena = criarPixels(cv, tamanho === 'sm' || caixa.width < 150);
-    if (!cena) return undefined;
+    let vivo = true;
+    let limpar: (() => void) | undefined;
 
-    const reduzido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let visivel = true;
-    let quadro = 0;
-    let anterior = 0;
-    let relogio = 3;
-    let cores: { a: Rgb; b: Rgb } = { a: COR_A, b: COR_B };
-    let contador = 0;
+    void carregarVolume().then((volume) => {
+      if (!vivo || !volume) return;
+      const caixa = el.getBoundingClientRect();
+      const cena = criarCena(cv, volume, { pequeno: tamanho === 'sm' || caixa.width < 150 });
+      if (!cena) return;
 
-    function medir() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const r = el!.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0) cena!.redimensionar(r.width, r.height, dpr);
-    }
+      const centro = el.closest<HTMLElement>('.hub-core-art');
+      const reduzido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let visivel = true;
+      let quadro = 0;
+      let anterior = 0;
+      let relogio = 3;
+      let cores: { a: Rgb; b: Rgb } = { a: COR_A, b: COR_B };
+      let contador = 0;
 
-    function pintar(agora: number, dt: number) {
-      if (contador % 6 === 0) {
-        cores = { a: lerCor(el!, '--holo-a', COR_A), b: lerCor(el!, '--holo-b', COR_B) };
+      function medir() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const r = el!.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) cena!.redimensionar(r.width, r.height, dpr);
       }
-      contador += 1;
-      cena!.desenhar(relogio, dt, {
-        humor: humor.current.valor,
-        desdeHumor: agora - humor.current.desde,
-        corA: cores.a,
-        corB: cores.b,
-      });
-    }
 
-    function passo(ms: number) {
-      quadro = 0;
-      if (!visivel || document.hidden) {
+      function pintar(agora: number, dt: number, assentar: boolean) {
+        if (contador % 6 === 0) {
+          cores = { a: lerCor(el!, '--holo-a', COR_A), b: lerCor(el!, '--holo-b', COR_B) };
+        }
+        contador += 1;
+        cena!.desenhar(relogio, dt, {
+          olharX: centro ? numero(centro.style.getPropertyValue('--look-x')) : 0,
+          olharY: centro ? numero(centro.style.getPropertyValue('--look-y')) : 0,
+          humor: humor.current.valor,
+          desdeHumor: agora - humor.current.desde,
+          corA: cores.a,
+          corB: cores.b,
+          assentar,
+        });
+      }
+
+      function passo(ms: number) {
+        quadro = 0;
+        if (!visivel || document.hidden) {
+          anterior = 0;
+          return;
+        }
+        const dt = anterior ? Math.min(0.05, (ms - anterior) / 1000) : 1 / 60;
+        anterior = ms;
+        relogio += dt;
+        pintar(ms / 1000, dt, false);
+        quadro = requestAnimationFrame(passo);
+      }
+
+      function iniciar() {
+        if (reduzido || quadro || !visivel || document.hidden) return;
         anterior = 0;
-        return;
+        quadro = requestAnimationFrame(passo);
       }
-      const dt = anterior ? Math.min(0.05, (ms - anterior) / 1000) : 1 / 60;
-      anterior = ms;
-      relogio += dt;
-      pintar(ms / 1000, dt);
-      quadro = requestAnimationFrame(passo);
-    }
 
-    function iniciar() {
-      if (reduzido || quadro || !visivel || document.hidden) return;
-      anterior = 0;
-      quadro = requestAnimationFrame(passo);
-    }
+      redesenhar.current = () => {
+        if (reduzido) pintar(performance.now() / 1000, 1 / 60, true);
+      };
 
-    redesenhar.current = () => {
-      if (reduzido) {
-        cores = { a: lerCor(el, '--holo-a', COR_A), b: lerCor(el, '--holo-b', COR_B) };
-        pintar(performance.now() / 1000, 1 / 60);
-      }
-    };
-
-    medir();
-    pintar(performance.now() / 1000, 1 / 60);
-    iniciar();
-
-    const observaTamanho = new ResizeObserver(() => {
       medir();
-      if (reduzido) redesenhar.current?.();
+      pintar(performance.now() / 1000, 1 / 60, true);
+      el.dataset.pronto = '1';
+      iniciar();
+
+      const observaTamanho = new ResizeObserver(() => {
+        medir();
+        if (reduzido) redesenhar.current?.();
+      });
+      observaTamanho.observe(el);
+      const observaVisivel = new IntersectionObserver(([entrada]) => {
+        visivel = entrada?.isIntersecting ?? true;
+        if (visivel) iniciar();
+      });
+      observaVisivel.observe(el);
+      const aoMudarAba = () => iniciar();
+      document.addEventListener('visibilitychange', aoMudarAba);
+
+      limpar = () => {
+        cancelAnimationFrame(quadro);
+        observaTamanho.disconnect();
+        observaVisivel.disconnect();
+        document.removeEventListener('visibilitychange', aoMudarAba);
+        redesenhar.current = null;
+        delete el.dataset.pronto;
+      };
     });
-    observaTamanho.observe(el);
-    const observaVisivel = new IntersectionObserver(([entrada]) => {
-      visivel = entrada?.isIntersecting ?? true;
-      if (visivel) iniciar();
-    });
-    observaVisivel.observe(el);
-    const aoMudarAba = () => iniciar();
-    document.addEventListener('visibilitychange', aoMudarAba);
 
     return () => {
-      cancelAnimationFrame(quadro);
-      observaTamanho.disconnect();
-      observaVisivel.disconnect();
-      document.removeEventListener('visibilitychange', aoMudarAba);
-      redesenhar.current = null;
+      vivo = false;
+      limpar?.();
     };
   }, [tamanho]);
 
@@ -169,8 +200,8 @@ export function HoloAna({
           draggable={false}
         />
       </span>
-      <span className="holo-varre" aria-hidden="true" />
       <canvas ref={tela} aria-hidden="true" />
+      <span className="holo-varre" aria-hidden="true" />
     </span>
   );
 }

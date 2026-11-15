@@ -194,10 +194,24 @@
   display: block;
   height: 100%;
   inset: 0;
-  mix-blend-mode: screen;
+  opacity: 0;
   pointer-events: none;
   position: absolute;
+  transition: opacity 0.5s ease;
   width: 100%;
+}
+
+.holo[data-pronto] {
+  background: radial-gradient(circle at 50% 42%, #0b1c63 0%, #050a24 72%);
+}
+
+.holo[data-pronto] canvas {
+  filter: hue-rotate(var(--holo-hue, 0deg)) saturate(var(--holo-sat, 1));
+  opacity: 1;
+}
+
+.holo[data-pronto] .holo-cena {
+  opacity: 0;
 }
 
 /* Reações: pensando (varredura rápida e brilho pulsando), falando (pulsa no ritmo da fala),

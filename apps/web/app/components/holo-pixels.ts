@@ -15,8 +15,14 @@ export interface Entrada {
 }
 
 export interface Pixels {
-  redimensionar(largura: number, altura: number, dpr: number): void;
-  desenhar(t: number, dt: number, entrada: Entrada): void;
+  desenhar(
+    c: CanvasRenderingContext2D,
+    largura: number,
+    altura: number,
+    t: number,
+    dt: number,
+    entrada: Entrada,
+  ): void;
 }
 
 const TAU = Math.PI * 2;
@@ -47,10 +53,7 @@ interface Particula {
   deriva: number;
 }
 
-export function criarPixels(canvas: HTMLCanvasElement, leve: boolean): Pixels | null {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return null;
-  const c = ctx;
+export function criarPixels(leve: boolean): Pixels {
   const aleatorio = semente(20261115);
   const total = leve ? 14 : 44;
   const particulas: Particula[] = Array.from({ length: total }, () => ({
@@ -63,20 +66,17 @@ export function criarPixels(canvas: HTMLCanvasElement, leve: boolean): Pixels | 
     deriva: (aleatorio() - 0.5) * 0.02,
   }));
 
-  let L = 0;
-  let H = 0;
   let energia = 0;
   let onda = 0;
 
-  function redimensionar(largura: number, altura: number, dpr: number) {
-    L = largura;
-    H = altura;
-    canvas.width = Math.max(1, Math.round(largura * dpr));
-    canvas.height = Math.max(1, Math.round(altura * dpr));
-    c.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-
-  function desenhar(t: number, dt: number, e: Entrada) {
+  function desenhar(
+    c: CanvasRenderingContext2D,
+    L: number,
+    H: number,
+    t: number,
+    dt: number,
+    e: Entrada,
+  ) {
     if (L < 4 || H < 4) return;
     const lado = Math.min(L, H);
     const pensando = e.humor === 'pensando';
@@ -86,7 +86,6 @@ export function criarPixels(canvas: HTMLCanvasElement, leve: boolean): Pixels | 
     energia += ((pensando ? 1 : falando ? 0.7 : ativando ? 1 : 0) - energia) * k;
     onda = falando ? Math.min(1, onda + dt * 3) : Math.max(0, onda - dt * 2);
 
-    c.clearRect(0, 0, L, H);
     c.globalCompositeOperation = 'lighter';
     const paleta: Rgb[] = [e.corB, BRANCO, AMBAR, ROSA];
 
@@ -137,7 +136,8 @@ export function criarPixels(canvas: HTMLCanvasElement, leve: boolean): Pixels | 
         );
       }
     }
+    c.globalCompositeOperation = 'source-over';
   }
 
-  return { redimensionar, desenhar };
+  return { desenhar };
 }
