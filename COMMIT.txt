@@ -1,0 +1,6 @@
+Cards de licitacao com acoes, CNPJ/CEP automaticos e coleta ao acessar
+
+- Card da licitacao em secoes (prazo, valor, local, modalidade) com os botoes dentro dele: Abrir edital, Analise, Comparar com outras e Comparar com tudo. Busca rapida: melhores para mim, encerram logo, maior valor, mais recentes e registro de precos.
+- Empresa: ao digitar o CNPJ, preenche razao social, porte, atividade, endereco e contato; ao digitar o CEP, preenche rua, bairro, cidade e UF. CNPJ, CPF e CEP sao validados pelos digitos (tambem no checkout e na assinatura).
+- Coleta ao acessar: ao abrir o sistema, se os dados do PNCP estao velhos, comeca uma rodada rapida (sem empilhar rodadas).
+- Migrations 0034 (endereco da empresa) e 0035 (coleta ao acessar). CI confere 35 migrations.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hashPassword, verifyPassword } from '../src/password.js';
+import { assertStrongPassword, hashPassword, verifyPassword } from '../src/password.js';
 
 describe('passwords', () => {
   it('verifies a scrypt hash without storing plaintext', () => {
@@ -11,5 +11,16 @@ describe('passwords', () => {
 
   it('rejects malformed hashes', () => {
     expect(verifyPassword('anything', 'dev-only-no-login')).toBe(false);
+  });
+
+  it('aceita senha de 8 caracteres ou mais, sem exigir símbolos, e sem limite prático', () => {
+    expect(() => assertStrongPassword('abcdefgh')).not.toThrow();
+    expect(() => assertStrongPassword('12345678')).not.toThrow();
+    expect(() => assertStrongPassword('a'.repeat(300))).not.toThrow();
+  });
+
+  it('recusa senha com menos de 8 caracteres', () => {
+    expect(() => assertStrongPassword('Ab1!xyz')).toThrow('senha_forte_obrigatoria');
+    expect(() => assertStrongPassword('')).toThrow('senha_forte_obrigatoria');
   });
 });

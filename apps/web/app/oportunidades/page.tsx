@@ -1,10 +1,10 @@
-import { ProtectedRemoteDashboard } from '../components/ProtectedRemoteDashboard';
+import { OportunidadesApp } from './OportunidadesApp';
 
 export const metadata = {
   title: 'Oportunidades | Licite Comigo',
-  description: 'Oportunidades salvas pela sua conta e retornadas pelo Core API.',
+  description: 'Seu pipeline de licitações, da busca à decisão.',
 };
 
 export default function OportunidadesPage() {
-  return <ProtectedRemoteDashboard kind="oportunidades" />;
+  return <OportunidadesApp />;
 }

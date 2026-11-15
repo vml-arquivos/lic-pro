@@ -8,21 +8,33 @@ Não há acesso ao Coolify ou ao servidor nesta tarefa. Os comandos abaixo são 
 
 Todos os recursos de aplicação usam **Base Directory `/`** e o repositório como contexto de build.
 
-| Recurso          | Dockerfile / imagem                    | Base Directory |        Porta | Domínio              | Health                                       | Variáveis principais                                                      |
-| ---------------- | -------------------------------------- | -------------: | -----------: | -------------------- | -------------------------------------------- | ------------------------------------------------------------------------- |
-| PostgreSQL       | `pgvector/pgvector:pg16`               |              — | 5432 privado | —                    | `pg_isready`                                 | `POSTGRES_DB`, `POSTGRES_ADMIN_USER`, `POSTGRES_ADMIN_PASSWORD`           |
-| Redis            | `redis:7.4-alpine` com AOF             |              — | 6379 privado | —                    | `redis-cli ping`                             | `REDIS_PASSWORD`                                                          |
-| RabbitMQ         | `rabbitmq:3.13-management-alpine`      |              — | 5672 privado | —                    | `rabbitmq-diagnostics -q ping`               | `RABBITMQ_USER`, `RABBITMQ_PASSWORD`, `RABBITMQ_VHOST=licite_comigo`      |
-| migrate          | `db/Dockerfile.migrate`                |            `/` |            — | —                    | one-shot, sem HTTP                           | `MIGRATION_DATABASE_URL`, cinco `*_DB_PASSWORD`, `MIGRATE_IDLE_AFTER`     |
-| core-api         | `services/core-api/Dockerfile`         |            `/` |         3001 | opcional `API_URL`   | `/health`, `/ready`                          | JWT, `DATABASE_URL`, Redis, signup e SMTP                                 |
-| ai               | `services/ai/Dockerfile`               |            `/` |         8000 | somente rede privada | `/health`, `/ready`                          | JWT AI, providers, limites, `AI_DATABASE_URL` mapeada para `DATABASE_URL` |
-| ingest HTTP      | `services/ingest/Dockerfile`           |            `/` |         8100 | somente rede privada | `/health`, `/ready`                          | banco, Redis, RabbitMQ e fontes oficiais                                  |
-| ingest worker    | `services/ingest/Dockerfile.worker`    |            `/` |            — | —                    | sem HTTP; observar logs/processo Celery      | banco, Redis, RabbitMQ, retry                                             |
-| ingest scheduler | `services/ingest/Dockerfile.scheduler` |            `/` |            — | —                    | sem HTTP; observar logs/processo Celery Beat | banco, Redis, RabbitMQ, janela                                            |
-| site             | `apps/site/Dockerfile`                 |            `/` |         3100 | `SITE_URL`           | `/health`, `/ready`                          | `SITE_URL`, `APP_URL`, `CORE_API_INTERNAL_URL`, branding                  |
-| web/app          | `apps/web/Dockerfile`                  |            `/` |         3000 | `APP_URL`            | `/health`, `/ready`                          | `APP_URL`, core/AI internos, sessão                                       |
+| Recurso          | Dockerfile / imagem                    | Base Directory |        Porta | Domínio              | Health                                       | Variáveis principais                                                                                                                                          |
+| ---------------- | -------------------------------------- | -------------: | -----------: | -------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PostgreSQL       | `pgvector/pgvector:pg16`               |              — | 5432 privado | —                    | `pg_isready`                                 | `POSTGRES_DB`, `POSTGRES_ADMIN_USER`, `POSTGRES_ADMIN_PASSWORD`                                                                                               |
+| Redis            | `redis:7.4-alpine` com AOF             |              — | 6379 privado | —                    | `redis-cli ping`                             | `REDIS_PASSWORD`                                                                                                                                              |
+| RabbitMQ         | `rabbitmq:3.13-management-alpine`      |              — | 5672 privado | —                    | `rabbitmq-diagnostics -q ping`               | `RABBITMQ_USER`, `RABBITMQ_PASSWORD`, `RABBITMQ_VHOST=licite_comigo`                                                                                          |
+| migrate          | `db/Dockerfile.migrate`                |            `/` |            — | —                    | one-shot, sem HTTP                           | `MIGRATION_DATABASE_URL`, cinco `*_DB_PASSWORD`, `MIGRATE_IDLE_AFTER`                                                                                         |
+| core-api         | `services/core-api/Dockerfile`         |            `/` |         3001 | opcional `API_URL`   | `/health`, `/ready`                          | JWT, `DATABASE_URL`, Redis, signup e SMTP                                                                                                                     |
+| ai               | `services/ai/Dockerfile`               |            `/` |         8000 | somente rede privada | `/health`, `/ready`                          | JWT AI, providers, limites, `AI_DATABASE_URL` mapeada para `DATABASE_URL`, `CORE_API_INTERNAL_URL` (a Ana lê a conta e busca editais com a sessão do usuário) |
+| ingest HTTP      | `services/ingest/Dockerfile`           |            `/` |         8100 | somente rede privada | `/health`, `/ready`                          | banco, Redis, RabbitMQ e fontes oficiais                                                                                                                      |
+| ingest worker    | `services/ingest/Dockerfile.worker`    |            `/` |            — | —                    | sem HTTP; observar logs/processo Celery      | banco, Redis, RabbitMQ, retry                                                                                                                                 |
+| ingest scheduler | `services/ingest/Dockerfile.scheduler` |            `/` |            — | —                    | sem HTTP; observar logs/processo Celery Beat | banco, Redis, RabbitMQ, janela                                                                                                                                |
+| site             | `apps/site/Dockerfile`                 |            `/` |         3100 | `SITE_URL`           | `/health`, `/ready`                          | `SITE_URL`, `APP_URL`, `CORE_API_INTERNAL_URL`, branding                                                                                                      |
+| web/app          | `apps/web/Dockerfile`                  |            `/` |         3000 | `APP_URL`            | `/health`, `/ready`                          | `APP_URL`, core/AI internos, sessão                                                                                                                           |
 
 `bid-engine` e `realtime-gw` continuam recursos futuros e não fazem parte do deploy ativo do MVP 1. Seus Dockerfiles permanecem disponíveis para uma parada posterior.
+
+## Endereços por painel (Administração, Empresa, Aluno e Curso)
+
+O mesmo recurso `web` atende os painéis, cada um com o seu domínio. O **módulo Curso** (alunos, mentores e a Administração da mentoria) usa o endereço do Aluno, por exemplo `mentoria.seudominio`; o **módulo Profissional** usa `admin.` e `app.` (veja `docs/produto/modulos-curso-e-profissional.md`). Para dar endereço próprio à Administração da mentoria, acrescente `PANEL_URL_CURSO` e o domínio dele em **Domains**. Nenhum recurso novo no Coolify é necessário.
+
+1. No DNS, crie um registro `A` para cada subdomínio (por exemplo `admin`, `app` e `aluno`) apontando para o IP do servidor.
+2. No recurso `web`, em **Domains**, informe os três separados por vírgula (`https://admin.seudominio,https://app.seudominio,https://aluno.seudominio`). Retire o domínio antigo.
+3. Nos recursos `web`, `core-api` e `site`, defina `PANEL_URL_ADMIN`, `PANEL_URL_EMPRESA` e `PANEL_URL_ALUNO` com esses endereços (mesmos valores nos três). `APP_URL` pode ficar como está.
+4. Redeploy de `web`, `core-api` e `site`.
+5. Confira: cada endereço mostra a própria entrada; `/admin` no endereço da empresa responde 404; uma conta de empresa no endereço do aluno é recusada com o link certo.
+
+Sem as variáveis `PANEL_URL_*` o sistema segue com um endereço só.
 
 ## Ordem de criação
 

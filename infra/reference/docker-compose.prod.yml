@@ -102,6 +102,7 @@ services:
     environment:
       NODE_ENV: production
       AI_PORT: 8000
+      CORE_API_INTERNAL_URL: http://core-api:3001
       DATABASE_URL: ${AI_DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
       RABBITMQ_URL: ${RABBITMQ_URL}

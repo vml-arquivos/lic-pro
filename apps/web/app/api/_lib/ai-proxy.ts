@@ -1,4 +1,6 @@
 import { cookies } from 'next/headers';
+import { areasForPanel, isArea } from '@licitecomigo/shared';
+import { configuredPanels, currentPanel } from '../../../lib/panel';
 
 export async function proxyAi(request: Request, path: string): Promise<Response> {
   const baseUrl = process.env.AI_INTERNAL_URL?.replace(/\/$/, '');
@@ -11,6 +13,9 @@ export async function proxyAi(request: Request, path: string): Promise<Response>
   if (contentType) headers.set('content-type', contentType);
   const authorization = request.headers.get('authorization') ?? sessionAuthorization();
   if (authorization) headers.set('authorization', authorization);
+  // Painel de origem: a Ana adapta o tom e o resumo a ele (não muda nenhuma permissão).
+  const actingAs = actingArea();
+  if (actingAs) headers.set('x-acting-as', actingAs);
 
   const body =
     request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.arrayBuffer();
@@ -34,4 +39,11 @@ export async function proxyAi(request: Request, path: string): Promise<Response>
 function sessionAuthorization(): string | null {
   const token = cookies().get('lc_access_token')?.value;
   return token ? `Bearer ${token}` : null;
+}
+
+function actingArea(): string | null {
+  const panel = currentPanel();
+  if (panel) return areasForPanel(configuredPanels(), panel)[0] ?? panel;
+  const viewAs = cookies().get('lc_view_as')?.value;
+  return viewAs && isArea(viewAs) ? viewAs : null;
 }

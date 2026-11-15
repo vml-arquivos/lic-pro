@@ -5,6 +5,8 @@ export type TenantContext = {
   userId: string;
   empresaId?: string;
   role?: string;
+  /** Liga a leitura entre contas. Só a camada de rotas da plataforma deve informar `true`. */
+  platform?: boolean;
 };
 
 export function createPool(connectionString: string): Pool {
@@ -23,6 +25,9 @@ export async function withTenant<T>(
     await client.query("SELECT set_config('app.user_id', $1, true)", [context.userId]);
     await client.query("SELECT set_config('app.empresa_id', $1, true)", [context.empresaId ?? '']);
     await client.query("SELECT set_config('app.role', $1, true)", [context.role ?? '']);
+    await client.query("SELECT set_config('app.platform', $1, true)", [
+      context.platform ? 'true' : '',
+    ]);
     const result = await callback(client);
     await client.query('COMMIT');
     return result;

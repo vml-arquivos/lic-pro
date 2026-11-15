@@ -58,7 +58,7 @@ Ele executa no máximo uma requisição por fonte, compara campos observados com
 
 `apps/web` contém o Next.js com App Router, incluindo Radar, onboarding, Academia, análise com evidências e o widget flutuante da Ana. `packages/ui` contém tokens e adaptação de jornada compartilhada. `services/core-api` contém autenticação, RBAC, CRUD, auditoria, busca do Radar e rotas de Academia/histórico da Ana. `services/ingest` contém os clientes oficiais do PNCP e Compras.gov.br, normalizador, upsert e eventos. `services/ai` contém extração estrutural de PDF, embeddings, Reader, provider boundary, Ana e skeletons de agentes futuros. `services/bid-engine` e `services/realtime-gw` continuam como fundações para fases posteriores.
 
-A arquitetura detalhada está em [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), os riscos e controles em [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md), a especificação da Ana em [`docs/ANA.md`](docs/ANA.md), as fontes da Fase 2 em [`docs/research/fase2-apis-oficiais.md`](docs/research/fase2-apis-oficiais.md), as decisões em [`docs/DECISIONS.md`](docs/DECISIONS.md) e o caminho de deploy em [`infra/coolify/README.md`](infra/coolify/README.md).
+Para alterar o sistema sem regressão, siga [`docs/PROMPT-MESTRE-ENGENHARIA.md`](docs/PROMPT-MESTRE-ENGENHARIA.md). A arquitetura detalhada está em [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), os riscos e controles em [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md), a especificação da Ana em [`docs/ANA.md`](docs/ANA.md), as fontes da Fase 2 em [`docs/research/fase2-apis-oficiais.md`](docs/research/fase2-apis-oficiais.md), as decisões em [`docs/DECISIONS.md`](docs/DECISIONS.md) e o caminho de deploy em [`infra/coolify/README.md`](infra/coolify/README.md).
 
 ## Avisos de segurança
 

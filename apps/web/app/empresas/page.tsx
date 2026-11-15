@@ -1,22 +1,17 @@
 'use client';
 
+import { formatarCnpj } from '@licitecomigo/shared';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { EmpresaForm, type EmpresaDados } from '../components/EmpresaForm';
 
-type Company = {
-  id: string;
-  cnpj: string;
-  razao_social: string;
-  nome_fantasia?: string | null;
-  segmento?: string | null;
-  usuarios?: number;
-};
+type Company = EmpresaDados & { id: string; usuarios?: number };
 
 export default function CompaniesPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [cnpj, setCnpj] = useState('');
-  const [name, setName] = useState('');
-  const [segment, setSegment] = useState('');
+  const [editing, setEditing] = useState<Company | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [formVersion, setFormVersion] = useState(0);
   const [message, setMessage] = useState('');
 
   async function load() {
@@ -33,26 +28,31 @@ export default function CompaniesPage() {
     void load();
   }, []);
 
-  async function createCompany(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function saveCompany(body: Record<string, string>) {
     setMessage('');
-    const response = await fetch('/api/core/companies', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ cnpj, razao_social: name, segmento: segment || undefined }),
-    });
+    setSaving(true);
+    const response = await fetch(
+      editing ? `/api/core/companies/${editing.id}` : '/api/core/companies',
+      {
+        method: editing ? 'PATCH' : 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      },
+    );
+    setSaving(false);
     if (!response.ok) {
       setMessage(
         response.status === 403
-          ? 'Somente admin ou operador pode criar empresas.'
-          : 'Revise o CNPJ e os dados informados.',
+          ? 'Somente admin ou operador pode salvar empresas.'
+          : response.status === 409
+            ? 'Esse CNPJ já está cadastrado nesta conta.'
+            : 'Revise o CNPJ e os dados informados.',
       );
       return;
     }
-    setCnpj('');
-    setName('');
-    setSegment('');
-    setMessage('Empresa criada.');
+    setMessage(editing ? 'Empresa atualizada.' : 'Empresa criada.');
+    setEditing(null);
+    setFormVersion((value) => value + 1);
     await load();
   }
 
@@ -69,33 +69,14 @@ export default function CompaniesPage() {
         </p>
       </div>
       <section className="dashboard-columns">
-        <form className="dashboard-card auth-form" onSubmit={createCompany}>
-          <h2>Nova empresa</h2>
-          <label>
-            CNPJ
-            <input
-              value={cnpj}
-              onChange={(event) => setCnpj(event.target.value.replace(/\D/g, ''))}
-              maxLength={14}
-              placeholder="somente 14 dígitos"
-              required
-            />
-          </label>
-          <label>
-            Razão social
-            <input value={name} onChange={(event) => setName(event.target.value)} required />
-          </label>
-          <label>
-            Segmento
-            <input
-              value={segment}
-              onChange={(event) => setSegment(event.target.value)}
-              placeholder="ex.: serviços"
-            />
-          </label>
-          <button type="submit">Salvar empresa</button>
-          {message ? <p className="success-message">{message}</p> : null}
-        </form>
+        <EmpresaForm
+          key={`${editing?.id ?? 'nova'}-${formVersion}`}
+          empresa={editing}
+          salvando={saving}
+          mensagem={message}
+          onSalvar={(body) => void saveCompany(body)}
+          {...(editing ? { onCancelar: () => setEditing(null) } : {})}
+        />
         <section className="dashboard-card">
           <p className="eyebrow">Acessíveis</p>
           <h2>{companies.length} empresa(s)</h2>
@@ -105,8 +86,16 @@ export default function CompaniesPage() {
                 <li key={company.id}>
                   <strong>{company.nome_fantasia || company.razao_social}</strong>
                   <span>
-                    {company.cnpj} · {company.segmento || 'segmento não informado'}
+                    {formatarCnpj(company.cnpj)} · {company.segmento || 'segmento não informado'}
+                    {company.cidade ? ` · ${company.cidade}/${company.uf ?? ''}` : ''}
                   </span>
+                  <button
+                    type="button"
+                    className="empresa-editar"
+                    onClick={() => setEditing(company)}
+                  >
+                    Editar
+                  </button>
                 </li>
               ))}
             </ul>

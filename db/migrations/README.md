@@ -11,3 +11,116 @@ done
 ```
 
 O teste de integração `services/core-api/tests/rls.integration.test.ts` é executado quando `TEST_DATABASE_URL` está configurada. Sem essa variável, ele fica explicitamente marcado como skipped, evitando que testes locais dependam de um banco externo.
+
+## Fase A — áreas e acessos (0015 e 0016)
+
+- `0015_platform_role.sql` só acrescenta o valor `plataforma` ao enum `papel_usuario`. Fica em
+  arquivo próprio porque o PostgreSQL não deixa usar um valor novo de enum na mesma transação.
+- `0016_platform_access.sql` cria `plataforma_tenants`, as políticas de leitura da plataforma,
+  o catálogo compartilhado, `turmas`, `matriculas`, `convites` e a proteção dos leads.
+
+Depois de aplicar as duas, promova o administrador existente:
+
+```bash
+MIGRATION_DATABASE_URL=... PLATFORM_ADMIN_EMAIL=voce@exemplo.com pnpm admin:promote-platform
+```
+
+A pessoa precisa sair e entrar de novo. Em banco novo, `BOOTSTRAP_PLATFORM=true` no bootstrap
+cria a conta da equipe direto.
+
+## Fases B a E e coleta (0017 a 0022)
+
+- `0017_radar_completo.sql`: campos do órgão, histórico de mudanças do edital, estado do usuário
+  por edital e perfil do Radar (compatibilidade explicável).
+- `0018_municipios_ibge_dados.sql`: carga dos municípios (código IBGE, UF, região, coordenadas
+  aproximadas) para busca por proximidade.
+- `0019_alertas_completos.sql`: frequência, tipos e destinatários dos alertas, preferências,
+  registro das rodadas do motor e função `alertas_motor_alvos()`.
+- `0020_aluno_mentor_completo.sql`: plano de 30 dias, práticas com edital, devolutivas, notas,
+  sessões e certificados internos.
+- `0021_empresa_completo.sql`: decisão e histórico das oportunidades, documentos da empresa
+  com validade, lembretes enviados e função `lembretes_alvos()`.
+
+- `0022_coleta_pncp.sql`: registro das execuções da coleta nativa do PNCP e a função
+  `coleta_gravar_editais(jsonb)` (SECURITY DEFINER, só para a empresa-catálogo da plataforma).
+
+## Cobrança e detalhes do edital (0023 e 0024)
+
+- `0023_cobranca.sql`: planos com preço/ciclo/benefícios/limites (curso e assinaturas, nascem
+  desativados), cobranças, pagamentos e eventos do Asaas (RLS pelo sinalizador `app.billing_flow`),
+  e as funções `billing_liberar_curso()` e `billing_definir_assinatura()` (SECURITY DEFINER, só
+  para o `licite_core`). Assinatura passa a poder existir antes do cadastro da empresa.
+- `0024_detalhes_edital.sql`: benefício ME/EPP e situação do item, data da última coleta de
+  detalhes e a função `coleta_gravar_detalhes()` (itens e documentos do edital do catálogo).
+
+## Teste grátis, cupons e assinantes (0025)
+
+- `planos.trial_dias` e os planos de exemplo ainda desativados passam a ter só o que o sistema
+  entrega hoje, com 7 dias de teste.
+- Tabela `cupons` (RLS: leitura no fluxo de cobrança, escrita só da plataforma); `cobrancas`
+  guarda `cupom_codigo` e `desconto_centavos`.
+- `billing_iniciar_teste()` (a empresa começa o teste, uma vez por conta) e
+  `admin_ajustar_assinatura()` (a equipe estende, cancela ou reativa). Leitura de `assinaturas`
+  para a plataforma.
+
+## Aluno: materiais e encontros (0026)
+
+- Materiais de apoio, diagnóstico do aluno e encontros ao vivo da turma, com prazo de acesso.
+
+## Colaboradores da Licite Comigo (0027 e 0028)
+
+- `0027`: novo valor `colaborador` no tipo `papel_usuario`. Fica em arquivo próprio porque um
+  valor novo de enum só pode ser usado depois de confirmado (cada migration roda numa transação).
+- `0028`: o convite e o "ver como" aceitam `colaborador`; a trava que mantém a equipe na conta
+  da plataforma passa a valer para `plataforma` e `colaborador`; as regras de alerta aceitam o
+  tipo `sessao` (aviso de sessão de disputa ao vivo), e as entregas também.
+- O colaborador usa as mesmas políticas de linha (RLS) do operador, dentro da conta da
+  plataforma. Os nichos dele ficam em `usuarios.nicho_preferencias` e só a Administração altera.
+
+## Usuários e registro de uso (0029)
+
+- O convite aceita o tipo `equipe` (administrador do sistema, papel `plataforma` na conta da
+  plataforma).
+- `atividade_usuario` e `atividade_buscas`: o que cada usuário usou e buscou, para a ficha da
+  Administração. Isolamento por conta (RLS) e leitura liberada à sessão da plataforma.
+
+## Módulos Curso e Profissional (0030)
+
+- `usuarios.visualizar_como` passa a aceitar `curso` (Administração da mentoria, só para a equipe
+  "ver como"). Nenhum dado muda: o financeiro, os leads e os cupons de cada módulo são separados
+  nas consultas, por `cobrancas.tipo`, `planos.tipo` e `leads.perfil`.
+- `licite_core` ganha leitura de `schema_migrations`: a Administração mostra um aviso quando há
+  migrations por aplicar (`GET /platform/migracoes`).
+
+## Escopo da equipe (0031)
+
+- `usuarios.escopo_equipe` (`tudo`, `curso` ou `profissional`) e `convites.escopo`: a equipe
+  administrativa pode ser só do Painel admin ou só do Painel da mentoria. Contas e convites
+  existentes ficam em `tudo`, como sempre foi. O escopo vale na API (`escopo-equipe.ts`), não só
+  na tela.
+
+Todas rodam em ordem pelo `migrate.sh`, cada uma na sua transação. O CI confere que as 35
+foram aplicadas. Migration já aplicada nunca é editada: mudança vira arquivo novo.
+
+## 0032 — limpeza de registros técnicos
+
+Cria `limpar_registros_tecnicos()`, chamada pelo core-api a cada 6 horas (`LOG_RETENTION_DAYS`,
+`HISTORY_RETENTION_DAYS`). Apaga rodadas antigas da coleta do PNCP e do motor de alertas, histórico
+de alterações de edital e avisos já lidos. Guarda sempre as 20 rodadas mais recentes e a última
+coleta concluída. Não apaga editais, preços, auditoria, cobrança nem o registro de entregas dos alertas.
+
+## 0033 — segmentos no perfil
+
+`perfis_radar.segmentos` e `perfis_radar.itens` (listas, vazias por padrão): segmentos e
+produtos/serviços escolhidos no perfil do Radar. Só acrescenta colunas; nada existente muda.
+
+## 0034 — endereço da empresa
+
+`empresas` ganha cep, logradouro, numero, complemento, bairro, telefone, email_contato, cnae_principal,
+cnae_descricao, situacao_cadastral, data_abertura e natureza_juridica (todas opcionais). Servem ao
+preenchimento automático por CNPJ e CEP. Só acrescenta colunas; nada existente muda.
+
+## 0035 — coleta ao acessar
+
+`coleta_pncp_execucoes.origem` passa a aceitar também `acesso`: rodada rápida do PNCP disparada quando
+alguém entra no sistema e os dados estão velhos. Só amplia os valores aceitos.

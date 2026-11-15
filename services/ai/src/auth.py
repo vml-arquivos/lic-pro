@@ -20,6 +20,9 @@ class AuthContext:
     tenant_id: str
     role: str
     empresa_id: str | None = None
+    # Sessão e painel de origem: a Ana os repassa ao core-api para ler só o que a pessoa pode ver.
+    token: str = ""
+    acting_as: str | None = None
 
 
 class JwtSettings:
@@ -66,7 +69,10 @@ class JwtSettings:
 settings = JwtSettings()
 
 
-def require_auth(authorization: Annotated[str | None, Header()] = None) -> AuthContext:
+def require_auth(
+    authorization: Annotated[str | None, Header()] = None,
+    x_acting_as: Annotated[str | None, Header()] = None,
+) -> AuthContext:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="missing_bearer_token")
     token = authorization.removeprefix("Bearer ").strip()
@@ -82,7 +88,14 @@ def require_auth(authorization: Annotated[str | None, Header()] = None) -> AuthC
         empresa_id = _optional_uuid_claim(claims, "empresaId")
     except (jwt.InvalidTokenError, KeyError, TypeError, ValueError) as error:
         raise HTTPException(status_code=401, detail="invalid_session_token") from error
-    return AuthContext(user_id=user_id, tenant_id=tenant_id, role=role, empresa_id=empresa_id)
+    return AuthContext(
+        user_id=user_id,
+        tenant_id=tenant_id,
+        role=role,
+        empresa_id=empresa_id,
+        token=token,
+        acting_as=x_acting_as.strip() if x_acting_as else None,
+    )
 
 
 def _uuid_claim(claims: dict[str, Any], key: str) -> str:

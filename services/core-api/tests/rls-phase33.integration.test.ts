@@ -154,9 +154,18 @@ suite('RLS Fase 3.3 por empresa e concessão', () => {
           ])
         ).rows[0]?.count,
       ).toBe(0);
+      // Notificação é pessoal: o mentor só vê a que foi endereçada a ele, nunca a de outra pessoa.
+      expect(
+        (
+          await client.query(
+            'SELECT count(*)::int AS count FROM notificacoes WHERE usuario_id <> $1',
+            [mentorId],
+          )
+        ).rows[0]?.count,
+      ).toBe(0);
       expect(
         (await client.query('SELECT count(*)::int AS count FROM notificacoes')).rows[0]?.count,
-      ).toBe(0);
+      ).toBe(1);
       await client.query('COMMIT');
     } finally {
       client.release();

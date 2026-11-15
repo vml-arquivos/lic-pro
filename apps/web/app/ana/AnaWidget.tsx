@@ -1,80 +1,21 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-
-type ChatMessage = {
-  role: 'usuario' | 'assistente';
-  text: string;
-};
-
-type AnaResponse = {
-  conversa_id?: string;
-  texto?: string;
-};
-
-function assistantMessage(text: string): ChatMessage {
-  return { role: 'assistente', text };
-}
+import { AnaLinks, AnaResumo } from './AnaResumo';
+import { useAnaChat, useAnaContexto } from './useAnaChat';
 
 export function AnaWidget() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [message, setMessage] = useState('');
-  const [conversationId, setConversationId] = useState<string | undefined>();
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    assistantMessage('Pergunte sobre licitações, um edital ou o próximo ponto para conferir.'),
-  ]);
-  const [loading, setLoading] = useState(false);
+  const { message, setMessage, messages, loading, askAna } = useAnaChat(
+    'Pergunte sobre licitações, um edital ou o próximo ponto para conferir.',
+  );
 
-  async function askAna(questionOverride?: string) {
-    const question = (questionOverride ?? message).trim();
-    if (!question || loading) return;
-    setLoading(true);
-    setMessage('');
-    setMessages((current) => [...current, { role: 'usuario', text: question }]);
-    try {
-      const response = await fetch('/api/ana/chat', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ mensagem: question, conversa_id: conversationId }),
-      });
-      if (response.status === 401) {
-        setMessages((current) => [
-          ...current,
-          assistantMessage('Entre na sua conta para conversar com a Ana.'),
-        ]);
-        return;
-      }
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => ({}))) as { detail?: string };
-        const text =
-          payload.detail === 'llm_unavailable'
-            ? 'A Ana está sem conexão com o provider de IA neste momento.'
-            : 'Não consegui concluir esta resposta agora. Tente novamente em instantes.';
-        setMessages((current) => [...current, assistantMessage(text)]);
-        return;
-      }
-      const raw = await response.text();
-      const dataLine = raw
-        .split('\n')
-        .find((line) => line.startsWith('data: {'))
-        ?.replace(/^data: /, '');
-      const data = dataLine ? (JSON.parse(dataLine) as AnaResponse) : {};
-      if (data.conversa_id) setConversationId(data.conversa_id);
-      setMessages((current) => [
-        ...current,
-        assistantMessage(data.texto ?? 'A Ana não retornou uma resposta legível.'),
-      ]);
-    } catch {
-      setMessages((current) => [
-        ...current,
-        assistantMessage(
-          'Não consegui conectar à Ana agora. Confirme sua sessão e tente novamente.',
-        ),
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const contexto = useAnaContexto(open);
+
+  // Na página da Ana a conversa já está aberta: sem botão flutuante repetido.
+  if (pathname === '/ana') return null;
 
   return (
     <aside className={`ana-widget ${open ? 'open' : ''}`} aria-label="Assistente Ana">
@@ -92,22 +33,31 @@ export function AnaWidget() {
             Respostas de apoio, com limites claros. A fonte final continua sendo o edital oficial e
             seus anexos.
           </p>
-          <div className="ana-quick-actions">
-            <button type="button" onClick={() => void askAna('Qual é o próximo passo?')}>
-              Próximo passo
-            </button>
-            <button type="button" onClick={() => void askAna('Quais documentos devo conferir?')}>
-              Documentos
-            </button>
-            <button type="button" onClick={() => void askAna('Como analisar uma oportunidade?')}>
-              Analisar oportunidade
-            </button>
-          </div>
+          {contexto && messages.length < 2 ? (
+            <AnaResumo
+              contexto={contexto}
+              onPerguntar={(texto) => void askAna(texto)}
+              desabilitado={loading}
+            />
+          ) : (
+            <div className="ana-quick-actions">
+              <button type="button" onClick={() => void askAna('Qual é o próximo passo?')}>
+                Próximo passo
+              </button>
+              <button type="button" onClick={() => void askAna('Quais documentos devo conferir?')}>
+                Documentos
+              </button>
+              <button type="button" onClick={() => void askAna('Como analisar uma oportunidade?')}>
+                Analisar oportunidade
+              </button>
+            </div>
+          )}
           <div className="ana-messages" aria-live="polite">
             {messages.map((item, index) => (
               <div className={`ana-message ${item.role}`} key={`${item.role}-${index}`}>
                 <small>{item.role === 'usuario' ? 'Você' : 'Ana'}</small>
                 <p>{item.text}</p>
+                {item.links?.length ? <AnaLinks links={item.links} /> : null}
               </div>
             ))}
             {loading ? (

@@ -1,0 +1,314 @@
+import { describe, expect, it } from 'vitest';
+import {
+  AREAS,
+  AREA_MENUS,
+  MODULE_AREAS,
+  PAGE_RULES,
+  canOpenPage,
+  flatMenu,
+  moduleOfArea,
+  pageAreas,
+  requiresSession,
+  type Area,
+} from '../src/areas.js';
+
+describe('menus por área', () => {
+  it('cada item de menu leva a uma página que a própria área pode abrir', () => {
+    for (const area of AREAS) {
+      for (const item of flatMenu(area)) {
+        expect(canOpenPage([area], item.href), `${area} → ${item.href}`).toBe(true);
+      }
+    }
+  });
+
+  it('nenhum menu mistura itens de outra área', () => {
+    const adminOnly = flatMenu('administracao')
+      .map((item) => item.href)
+      .filter((href) => href.startsWith('/admin') || href === '/leads');
+    for (const area of ['empresa', 'aluno', 'mentor'] as const) {
+      const hrefs = flatMenu(area).map((item) => item.href);
+      for (const href of adminOnly)
+        expect(hrefs, `${area} não deve listar ${href}`).not.toContain(href);
+    }
+    expect(flatMenu('empresa').map((item) => item.href)).not.toContain('/mentor');
+    expect(flatMenu('aluno').map((item) => item.href)).not.toContain('/buscas-salvas');
+    expect(flatMenu('aluno').map((item) => item.href)).not.toContain('/alertas');
+    expect(flatMenu('mentor').map((item) => item.href)).not.toContain('/radar');
+  });
+
+  it('o aluno explora licitações, analisa, compara preços e baixa planilha, sem ferramentas de operação', () => {
+    const hrefs = flatMenu('aluno').map((item) => item.href);
+    for (const href of ['/radar', '/analise', '/pregoes', '/precos'])
+      expect(hrefs, href).toContain(href);
+    for (const href of ['/radar', '/analise', '/pregoes', '/precos'])
+      expect(canOpenPage(['aluno'], href), href).toBe(true);
+    for (const href of ['/oportunidades', '/documentos', '/agenda', '/admin'])
+      expect(canOpenPage(['aluno'], href), href).toBe(false);
+  });
+
+  it('não há itens repetidos dentro de um menu', () => {
+    for (const area of AREAS) {
+      const hrefs = flatMenu(area).map((item) => item.href);
+      expect(new Set(hrefs).size, area).toBe(hrefs.length);
+    }
+  });
+
+  it('a reorganização por temas não tirou nenhuma página de nenhum menu', () => {
+    const antes: Record<string, string[]> = {
+      administracao: [
+        '/admin',
+        '/leads',
+        '/admin/fontes',
+        '/admin/financeiro',
+        '/admin/assinantes',
+        '/admin/cupons',
+        '/admin/planos',
+        '/admin/auditoria',
+        '/admin/empresas',
+        '/admin/colaboradores',
+        '/admin/equipe',
+        '/radar',
+        '/analise',
+        '/academia',
+        '/ana',
+        '/conta',
+      ],
+      curso: [
+        '/gestao',
+        '/gestao/leads',
+        '/gestao/financeiro',
+        '/gestao/cupons',
+        '/gestao/planos',
+        '/gestao/alunos',
+        '/gestao/mentores',
+        '/gestao/materiais',
+        '/mentor/encontros',
+        '/academia',
+        '/ana',
+        '/conta',
+      ],
+      empresa: [
+        '/painel',
+        '/radar',
+        '/analise',
+        '/buscas-salvas',
+        '/alertas',
+        '/oportunidades',
+        '/agenda',
+        '/documentos',
+        '/pregoes',
+        '/precos',
+        '/empresas',
+        '/academia',
+        '/ana',
+        '/assinatura',
+        '/conta',
+      ],
+      aluno: [
+        '/painel',
+        '/diagnostico',
+        '/plano-30-dias',
+        '/academia',
+        '/materiais',
+        '/praticar',
+        '/mentoria',
+        '/encontros',
+        '/certificado',
+        '/radar',
+        '/analise',
+        '/pregoes',
+        '/precos',
+        '/ana',
+        '/conta',
+      ],
+      mentor: [
+        '/painel',
+        '/mentor',
+        '/mentor/devolutivas',
+        '/mentor/sessoes',
+        '/mentor/encontros',
+        '/academia',
+        '/materiais',
+        '/ana',
+        '/conta',
+      ],
+      colaborador: [
+        '/painel',
+        '/radar',
+        '/analise',
+        '/buscas-salvas',
+        '/alertas',
+        '/oportunidades',
+        '/agenda',
+        '/documentos',
+        '/pregoes',
+        '/precos',
+        '/empresas',
+        '/academia',
+        '/ana',
+        '/conta',
+      ],
+    };
+    for (const area of AREAS) {
+      const hrefs = flatMenu(area).map((item) => item.href);
+      for (const href of antes[area] ?? []) expect(hrefs, `${area} ${href}`).toContain(href);
+    }
+  });
+
+  it('cada menu é organizado em temas curtos: só o primeiro grupo é sem título', () => {
+    for (const area of AREAS) {
+      const grupos = AREA_MENUS[area];
+      expect(grupos[0]?.label, area).toBe('');
+      expect(grupos[0]?.items, area).toHaveLength(1);
+      for (const grupo of grupos.slice(1)) {
+        expect(grupo.label.length, `${area} grupo sem título`).toBeGreaterThan(0);
+        expect(grupo.items.length, `${area} ${grupo.label}`).toBeLessThanOrEqual(5);
+      }
+      const titulos = grupos.map((grupo) => grupo.label);
+      expect(new Set(titulos).size, area).toBe(titulos.length);
+    }
+  });
+
+  it('quem trabalha com licitações encontra Explorar, Pregões, Análise e Preços num só grupo', () => {
+    for (const area of ['administracao', 'empresa', 'colaborador', 'aluno'] as const) {
+      const grupo = AREA_MENUS[area].find((item) => item.label === 'Licitações');
+      expect(
+        grupo?.items.map((item) => item.href),
+        area,
+      ).toEqual(['/radar', '/pregoes', '/analise', '/precos']);
+    }
+    expect(flatMenu('curso').map((item) => item.href)).not.toContain('/radar');
+    expect(flatMenu('mentor').map((item) => item.href)).not.toContain('/radar');
+  });
+
+  it('todo grupo tem ao menos um item', () => {
+    for (const area of AREAS) {
+      for (const group of AREA_MENUS[area]) expect(group.items.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('Empresa: agenda e documentos', () => {
+  it('estão no menu da Empresa e fechadas para Aluno e Mentor', () => {
+    const hrefs = flatMenu('empresa').map((item) => item.href);
+    expect(hrefs).toEqual(expect.arrayContaining(['/agenda', '/documentos', '/oportunidades']));
+    for (const path of ['/agenda', '/documentos', '/oportunidades/abc']) {
+      expect(canOpenPage(['empresa'], path), path).toBe(true);
+      expect(canOpenPage(['administracao'], path), path).toBe(true);
+      expect(canOpenPage(['aluno'], path), path).toBe(false);
+      expect(canOpenPage(['mentor'], path), path).toBe(false);
+    }
+  });
+});
+
+describe('regras de página', () => {
+  it('a regra mais específica vence e /mentor não captura /mentorado', () => {
+    expect(pageAreas('/academia')).toEqual(AREAS);
+    expect(pageAreas('/academia/mentor')).toEqual(['administracao', 'curso', 'mentor']);
+    expect(pageAreas('/academia/trilhas/x/aulas/y')).toEqual(AREAS);
+    expect(pageAreas('/mentorado')).toBeNull();
+    expect(pageAreas('/mentor')).toEqual(['administracao', 'curso', 'mentor']);
+  });
+
+  it('só a Administração abre /admin e /leads', () => {
+    for (const path of ['/admin', '/admin/empresas', '/leads']) {
+      expect(canOpenPage(['administracao'], path)).toBe(true);
+      for (const area of ['curso', 'empresa', 'aluno', 'mentor'] as const) {
+        expect(canOpenPage([area], path), `${area} ${path}`).toBe(false);
+      }
+    }
+  });
+
+  it('quem tem todas as áreas (equipe) abre qualquer página protegida', () => {
+    for (const rule of PAGE_RULES) expect(canOpenPage([...AREAS], rule.prefix)).toBe(true);
+  });
+
+  it('empresa e aluno enxergam o Radar; mentor não', () => {
+    expect(canOpenPage(['empresa'], '/radar/abc')).toBe(true);
+    expect(canOpenPage(['aluno'], '/radar')).toBe(true);
+    expect(canOpenPage(['mentor'], '/radar')).toBe(false);
+  });
+
+  it('páginas sem regra ficam abertas e o Radar não exige sessão', () => {
+    expect(canOpenPage(['aluno'], '/login')).toBe(true);
+    expect(requiresSession('/login')).toBe(false);
+    expect(requiresSession('/radar')).toBe(false);
+    expect(requiresSession('/admin')).toBe(true);
+    expect(requiresSession('/conta')).toBe(true);
+  });
+});
+
+describe('páginas do curso e da mentoria', () => {
+  it('só o aluno (e a equipe) abre plano, prática, mentoria e certificado', () => {
+    for (const path of [
+      '/plano-30-dias',
+      '/praticar',
+      '/praticar/abc',
+      '/mentoria',
+      '/certificado',
+    ]) {
+      expect(canOpenPage(['aluno'], path), path).toBe(true);
+      expect(canOpenPage(['administracao'], path), path).toBe(true);
+      expect(canOpenPage(['empresa'], path), path).toBe(false);
+      expect(canOpenPage(['mentor'], path), path).toBe(false);
+    }
+  });
+
+  it('devolutivas e sessões são do mentor, não do aluno', () => {
+    for (const path of ['/mentor/devolutivas', '/mentor/sessoes', '/mentor/alunos/abc']) {
+      expect(canOpenPage(['mentor'], path), path).toBe(true);
+      expect(canOpenPage(['aluno'], path), path).toBe(false);
+    }
+  });
+
+  it('a página pública de cancelar e-mails não pede login nem área', () => {
+    expect(requiresSession('/cancelar-alertas')).toBe(false);
+    expect(canOpenPage([], '/cancelar-alertas')).toBe(true);
+  });
+});
+
+describe('módulos Curso e Profissional', () => {
+  it('cada área pertence a um único módulo', () => {
+    const doCurso = MODULE_AREAS.curso;
+    const doProfissional = MODULE_AREAS.profissional;
+    expect([...doCurso, ...doProfissional].sort()).toEqual([...AREAS].sort());
+    for (const area of doCurso) expect(moduleOfArea(area)).toBe('curso');
+    for (const area of doProfissional) expect(moduleOfArea(area)).toBe('profissional');
+  });
+
+  it('a Administração da mentoria abre /gestao e a profissional não', () => {
+    for (const path of [
+      '/gestao',
+      '/gestao/alunos',
+      '/gestao/financeiro',
+      '/gestao/usuarios/abc',
+    ]) {
+      expect(canOpenPage(['curso'], path), path).toBe(true);
+      for (const area of ['administracao', 'empresa', 'aluno', 'mentor', 'colaborador'] as const) {
+        expect(canOpenPage([area], path), `${area} ${path}`).toBe(false);
+      }
+    }
+  });
+
+  it('dinheiro, leads e cadastros do curso não aparecem no menu profissional (e vice-versa)', () => {
+    const hrefs = (area: Area) => flatMenu(area).map((item) => item.href);
+    for (const path of ['/admin/alunos', '/admin/mentores', '/admin/materiais']) {
+      expect(hrefs('administracao'), path).not.toContain(path);
+      expect(hrefs('curso'), path).not.toContain(path);
+    }
+    for (const path of ['/admin/financeiro', '/admin/assinantes', '/admin/empresas', '/leads']) {
+      expect(hrefs('curso'), path).not.toContain(path);
+    }
+    for (const path of ['/gestao/financeiro', '/gestao/alunos', '/gestao/leads']) {
+      expect(hrefs('administracao'), path).not.toContain(path);
+    }
+  });
+
+  it('todo item do menu leva a uma página que a própria área pode abrir', () => {
+    for (const area of AREAS) {
+      for (const item of flatMenu(area)) {
+        expect(canOpenPage([area], item.href), `${area} → ${item.href}`).toBe(true);
+      }
+    }
+  });
+});

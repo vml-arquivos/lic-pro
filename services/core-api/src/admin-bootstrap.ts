@@ -27,6 +27,10 @@ const run = async (): Promise<void> => {
   assertStrongPassword(adminPassword);
   if (!tenantName || !adminEmail.includes('@')) throw new Error('tenant ou e-mail inválido');
 
+  // BOOTSTRAP_PLATFORM=true cria a conta da equipe do produto (papel `plataforma`). Sem isso,
+  // o usuário criado é o dono de uma conta de empresa (`admin`).
+  const platform = process.env.BOOTSTRAP_PLATFORM === 'true';
+  const role = platform ? 'plataforma' : 'admin';
   const termsVersion = process.env.TERMS_VERSION ?? '2026-10-17-draft';
   const privacyVersion = process.env.PRIVACY_VERSION ?? '2026-10-17-draft';
   const pool = new Pool({ connectionString: databaseUrl });
@@ -49,6 +53,12 @@ const run = async (): Promise<void> => {
       ]);
     }
 
+    if (platform) {
+      await client.query('INSERT INTO plataforma_tenants (id) VALUES ($1) ON CONFLICT DO NOTHING', [
+        tenantId,
+      ]);
+    }
+
     const credential = await client.query<{ usuario_id: string }>(
       'SELECT usuario_id FROM auth_credentials WHERE tenant_id = $1 AND lower(email) = lower($2) LIMIT 1',
       [tenantId, adminEmail],
@@ -61,12 +71,13 @@ const run = async (): Promise<void> => {
            (id, tenant_id, email, nome, papel, perfil_jornada, onboarding_concluido,
             password_hash, publico, email_verificado_em, termos_versao, termos_aceitos_em,
             politica_versao, politica_aceita_em)
-         VALUES ($1, $2, $3, $4, 'admin', 'profissional', true, $5, 'empresa', now(), $6, now(), $7, now())`,
+         VALUES ($1, $2, $3, $4, $5, 'profissional', true, $6, 'empresa', now(), $7, now(), $8, now())`,
         [
           userId,
           tenantId,
           adminEmail,
           'Administrador',
+          role,
           hashPassword(adminPassword),
           termsVersion,
           privacyVersion,
@@ -85,13 +96,15 @@ const run = async (): Promise<void> => {
         [tenantId, userId, hashPassword(adminPassword)],
       );
       await client.query(
-        `UPDATE usuarios SET papel = 'admin', ativo = true, email_verificado_em = COALESCE(email_verificado_em, now()), updated_at = now()
+        `UPDATE usuarios SET papel = $3, ativo = true, email_verificado_em = COALESCE(email_verificado_em, now()), updated_at = now()
           WHERE tenant_id = $1 AND id = $2`,
-        [tenantId, userId],
+        [tenantId, userId, role],
       );
     }
     await client.query('COMMIT');
-    process.stdout.write(`bootstrap concluído para ${adminEmail} no tenant ${tenantId}\n`);
+    process.stdout.write(
+      `bootstrap concluído para ${adminEmail} (${role}) no tenant ${tenantId}\n`,
+    );
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;

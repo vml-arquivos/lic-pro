@@ -37,6 +37,13 @@ class AnaChatRequest(BaseModel):
 
     conversa_id: str | None = None
     mensagem: str = Field(min_length=1, max_length=4000)
+    # Tela em que a pessoa está (só para a Ana saber o contexto; não altera permissões).
+    pagina: str | None = Field(default=None, max_length=200)
+
+
+class AnaLink(BaseModel):
+    texto: str
+    href: str
 
 
 class AnaChatResponse(BaseModel):
@@ -44,6 +51,7 @@ class AnaChatResponse(BaseModel):
     texto: str
     fontes: list[Evidence] = Field(default_factory=list)
     ferramentas: list[str] = Field(default_factory=list)
+    links: list[AnaLink] = Field(default_factory=list)
     somente_leitura: Literal[True] = True
 
 

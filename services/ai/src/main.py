@@ -13,8 +13,9 @@ from uuid import UUID
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from .ana import AnaService, InMemoryConversationStore, InMemoryToolCallAuditor
+from .ana import AnaService, AnaSession, InMemoryConversationStore, InMemoryToolCallAuditor
 from .auth import AuthDependency
+from .core_client import CoreClient
 from .dependencies import check_dependencies
 from .ingestion import chunk_pages, embed_chunks, extract_pdf_pages
 from .limits import InMemoryUsageStore, LimitExceeded, RateLimiter, ServiceLimits, estimate_tokens
@@ -68,7 +69,7 @@ embedding_provider = build_embedding_provider(
 )
 history = PostgresConversationStore(database_url) if database_url else InMemoryConversationStore()
 auditor = PostgresToolCallAuditor(database_url) if database_url else InMemoryToolCallAuditor()
-ana = AnaService(analyses, history, auditor, llm_provider)
+ana = AnaService(analyses, history, auditor, llm_provider, CoreClient.from_env())
 usage = PostgresUsageStore(database_url, limits) if database_url else InMemoryUsageStore(limits)
 app = FastAPI(title="Licite Comigo AI", version="0.3.2")
 
@@ -131,7 +132,8 @@ def ana_chat_stream(request: AnaChatRequest, auth: AuthDependency) -> StreamingR
     _guard_rate(auth.tenant_id, auth.user_id)
     _consume_usage(auth.tenant_id, auth.user_id, request.mensagem, 1)
     try:
-        response = ana.chat(auth.tenant_id, auth.user_id, request.conversa_id, request.mensagem)
+        session = AnaSession(role=auth.role, token=auth.token, acting_as=auth.acting_as, page=request.pagina)
+        response = ana.chat(auth.tenant_id, auth.user_id, request.conversa_id, request.mensagem, session)
     except LLMProviderError as error:
         raise HTTPException(status_code=503, detail="llm_unavailable") from error
 

@@ -52,7 +52,7 @@ export function DashboardCards() {
     return (
       <section className="dashboard-empty">
         <h2>Entre para ver sua operação</h2>
-        <p>A conta, o pipeline e os prazos ficam isolados por tenant e empresa.</p>
+        <p>Seu painel mostra apenas os dados da sua empresa.</p>
         <Link className="button-secondary" href="/login">
           Entrar
         </Link>
@@ -64,16 +64,14 @@ export function DashboardCards() {
     <>
       <section className="dashboard-welcome">
         <div>
-          <p className="eyebrow">Conta</p>
-          <h2>{me?.nome ?? 'Carregando sua conta…'}</h2>
+          <p className="eyebrow">Minha empresa</p>
+          <h2>{me?.nome ?? 'Carregando…'}</h2>
           <p>
-            {me
-              ? `${me.publico ?? 'empresa'} · ${me.nivel_diagnostico ?? 'sem diagnóstico'}`
-              : 'Sessão protegida por JWT.'}
+            {companies[0]?.razao_social ?? 'Complete os dados da empresa para melhorar o Radar.'}
           </p>
         </div>
         <Link className="button-secondary" href="/onboarding">
-          Atualizar diagnóstico
+          Atualizar preferências
         </Link>
       </section>
       <section className="dashboard-card dashboard-scope-card">
@@ -88,7 +86,10 @@ export function DashboardCards() {
             ))}
           </div>
         ) : (
-          <p>Defina de um a três nichos para limitar Radar, buscas salvas e alertas.</p>
+          <p>
+            Defina de um a três nichos. Eles definem o que o Radar, as buscas salvas e os alertas
+            mostram.
+          </p>
         )}
         <Link href="/onboarding">Atualizar nichos</Link>
       </section>
@@ -116,35 +117,33 @@ export function DashboardCards() {
       </section>
       <section className="dashboard-columns">
         <div className="dashboard-card">
-          <p className="eyebrow">Empresas</p>
-          <h2>Contas atendidas</h2>
+          <p className="eyebrow">Empresa</p>
+          <h2>Dados cadastrados</h2>
           {companies.length ? (
             <ul className="simple-list">
               {companies.map((company) => (
                 <li key={company.id}>
                   <strong>{company.razao_social}</strong>
-                  <span>
-                    {company.cnpj} · {company.usuarios ?? 0} usuários
-                  </span>
+                  <span>{company.cnpj}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p>Nenhuma empresa acessível ainda.</p>
+            <p>Nenhuma empresa cadastrada ainda.</p>
           )}
-          <Link href="/empresas">Gerenciar empresas</Link>
+          <Link href="/empresas">Editar dados da empresa</Link>
         </div>
         <div className="dashboard-card">
-          <p className="eyebrow">Próximos fluxos</p>
+          <p className="eyebrow">Próximos passos</p>
           <h2>Decida com evidência</h2>
           <p>
-            Use o Radar para encontrar oportunidades, salve no pipeline e abra o Reader apenas
-            quando houver fonte para conferir.
+            Use o Radar para encontrar oportunidades, salve as que interessam e confira sempre o
+            edital original.
           </p>
           <div className="dashboard-links">
             <Link href="/radar">Abrir Radar</Link>
             <Link href="/academia">Ir para Academia</Link>
-            <Link href="/ana">Falar com Ana</Link>
+            <Link href="/ana">Falar com a Ana</Link>
           </div>
         </div>
       </section>

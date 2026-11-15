@@ -1,10 +1,24 @@
-import { ProtectedRemoteDashboard } from '../components/ProtectedRemoteDashboard';
+import { requireArea } from '../../lib/session';
+import { AreaHub } from '../components/AreaHub';
+import { PageHeader } from '../components/ui';
+import { AdminOverview } from './AdminOverview';
 
 export const metadata = {
-  title: 'Admin | Licite Comigo',
-  description: 'Operação e governança protegidas do Licite Comigo.',
+  title: 'Painel admin | Licite Comigo',
+  description: 'Visão geral da operação: empresas, assinaturas e coleta de editais.',
 };
 
-export default function AdminPage() {
-  return <ProtectedRemoteDashboard kind="admin" />;
+export default async function AdminPage() {
+  await requireArea('administracao');
+  return (
+    <main className="ui-page">
+      <PageHeader
+        eyebrow="Painel admin"
+        title="Visão geral"
+        description="Como está a operação hoje: empresas clientes, assinaturas e coleta de editais."
+      />
+      <AreaHub area="administracao" />
+      <AdminOverview modulo="profissional" />
+    </main>
+  );
 }

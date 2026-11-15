@@ -76,3 +76,22 @@ def test_ingest_uses_start_page_and_reports_next_page() -> None:
 
     assert transport.calls[0][1]["pagina"] == 4
     assert stats.next_page == 5
+
+
+def test_upsert_statement_and_parameters_stay_in_sync() -> None:
+    import json
+    import re
+    from pathlib import Path
+
+    from src.normalizer import normalize_pncp_publication
+    from src.storage import UPSERT_EDITAL_SQL, _parameters
+
+    payload = json.loads(
+        (Path(__file__).parent / "fixtures" / "pncp_publicacao_page_1.json").read_text()
+    )
+    tender = normalize_pncp_publication(payload["data"][0], "tenant")
+    placeholders = set(re.findall(r"%\((\w+)\)s", UPSERT_EDITAL_SQL))
+
+    assert placeholders == set(_parameters(tender))
+    for column in ("orgao_cnpj", "numero_compra", "processo", "amparo_legal"):
+        assert column in placeholders
