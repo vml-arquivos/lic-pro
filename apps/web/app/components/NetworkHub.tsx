@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useId, useRef, useState } from 'react';
 import { pedirAbrirAna } from '../ana/estado';
-import { HoloAna } from './HoloAna';
+import { AnaAvatar } from './AnaAvatar';
 import { Icon } from './Icon';
 
 import type { HubNodeData, HubTone } from '@licitecomigo/shared';
@@ -75,6 +75,7 @@ export function NetworkHub({
   const [ativando, setAtivando] = useState(false);
   const art = useRef<HTMLDivElement>(null);
   const quadro = useRef(0);
+  const pausaAceno = useRef(0);
   const placed = layoutHub(nodes);
 
   // Onde o centro da rede já é o botão da Ana, o botão flutuante some (ver holo.css).
@@ -86,12 +87,18 @@ export function NetworkHub({
     };
   }, [coreHref]);
 
-  useEffect(() => () => cancelAnimationFrame(quadro.current), []);
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(quadro.current);
+      window.clearTimeout(pausaAceno.current);
+    },
+    [],
+  );
 
-  /** Os olhos da Ana seguem o ponteiro por cima da rede (sem re-render: só variáveis CSS). */
+  /** Inclina levemente o retrato conforme o ponteiro passa pela rede. */
   function seguir(clientX: number, clientY: number) {
     const el = art.current;
-    if (!el) return;
+    if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     cancelAnimationFrame(quadro.current);
     quadro.current = requestAnimationFrame(() => {
       const caixa = el.getBoundingClientRect();
@@ -104,7 +111,8 @@ export function NetworkHub({
 
   function aoClicarNaAna() {
     setAtivando(true);
-    window.setTimeout(() => setAtivando(false), 750);
+    window.clearTimeout(pausaAceno.current);
+    pausaAceno.current = window.setTimeout(() => setAtivando(false), 750);
     pedirAbrirAna();
   }
 
@@ -122,8 +130,14 @@ export function NetworkHub({
 
       <div
         className="hub-stage"
-        onPointerMove={(event) => seguir(event.clientX, event.clientY)}
-        onPointerLeave={() => seguir(window.innerWidth / 2, window.innerHeight / 2)}
+        onPointerMove={(event) => {
+          if (event.pointerType === 'mouse') seguir(event.clientX, event.clientY);
+        }}
+        onPointerLeave={() => {
+          cancelAnimationFrame(quadro.current);
+          art.current?.style.removeProperty('--look-x');
+          art.current?.style.removeProperty('--look-y');
+        }}
       >
         <svg
           className="hub-lines"
@@ -199,7 +213,7 @@ export function NetworkHub({
                 href={coreHref}
                 aria-label={`${coreName}: entrar para conversar`}
               >
-                <HoloAna mood={ativando ? 'ativando' : undefined} />
+                <AnaAvatar ativando={ativando} />
               </Link>
             ) : (
               <button
@@ -208,7 +222,7 @@ export function NetworkHub({
                 onClick={aoClicarNaAna}
                 aria-label={`Conversar com a ${coreName}`}
               >
-                <HoloAna mood={ativando ? 'ativando' : undefined} />
+                <AnaAvatar ativando={ativando} />
               </button>
             )}
           </div>

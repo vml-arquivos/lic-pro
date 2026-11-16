@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Area } from '@licitecomigo/shared';
 import { getSessionResult } from '../../lib/session';
 import { HUB_NODES } from '../components/hubs';
-import { HoloAna } from '../components/HoloAna';
+import { AnaAvatar } from '../components/AnaAvatar';
 import { Icon } from '../components/Icon';
 import { AnaChat } from './AnaChat';
 
@@ -21,7 +21,7 @@ export default async function AnaPage() {
     <main className="ui-page ana-page">
       <header className="ana-hero">
         <span className="ana-hero-holo">
-          <HoloAna tamanho="sm" />
+          <AnaAvatar tamanho="sm" />
         </span>
         <div>
           <p className="eyebrow">Sua assistente</p>

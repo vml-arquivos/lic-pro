@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { HoloAna } from '../components/HoloAna';
+import { AnaAvatar } from '../components/AnaAvatar';
 import { AnaLinks, AnaResumo } from './AnaResumo';
 import { EVENTO_ABRIR_ANA } from './estado';
 import { useAnaChat, useAnaContexto } from './useAnaChat';
@@ -73,7 +73,7 @@ export function AnaWidget() {
             aria-label="Conversa com a Ana"
           >
             <header className="ana-dialogo-topo">
-              <HoloAna tamanho="sm" />
+              <AnaAvatar tamanho="sm" />
               <div>
                 <strong>Ana</strong>
                 <small>Sua assistente</small>
@@ -134,6 +134,7 @@ export function AnaWidget() {
         <div className="ana-panel">
           <div className="ana-panel-heading">
             <div>
+              <AnaAvatar tamanho="sm" />
               <strong>✦ ANA · sua assistente</strong>
             </div>
             <button type="button" onClick={() => setOpen(false)} aria-label="Minimizar Ana">
@@ -183,7 +184,13 @@ export function AnaWidget() {
         </div>
       ) : null}
       <button className="ana-fab" type="button" onClick={() => setOpen((value) => !value)}>
-        {open ? 'Minimizar Ana' : '✦ ANA · sua assistente'}
+        {open ? (
+          'Minimizar Ana'
+        ) : (
+          <>
+            <AnaAvatar tamanho="mini" />✦ ANA · sua assistente
+          </>
+        )}
       </button>
     </aside>
   );

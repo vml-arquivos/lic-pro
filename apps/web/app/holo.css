@@ -366,7 +366,7 @@
   padding: 0.8rem 1rem;
 }
 
-.ana-dialogo-topo .holo-sm {
+.ana-dialogo-topo .ana-avatar-sm {
   height: 3.2rem;
   width: 3.2rem;
 }
@@ -533,9 +533,113 @@
   width: 4.4rem;
 }
 
-.ana-hero-holo .holo {
+.ana-hero-holo .ana-avatar {
   --holo-a: #5b8cff;
   --holo-b: #22d3ee;
   height: 100%;
   width: 100%;
+}
+
+/* Retrato ilustrado que acompanha a atividade da conversa. */
+.ana-avatar {
+  --ana-contorno: var(--holo-a, #5548e8);
+  position: relative;
+  display: inline-block;
+  flex: none;
+  vertical-align: middle;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #f0eeff;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ana-contorno) 45%, transparent);
+}
+
+.ana-avatar-sm {
+  width: 2.9rem;
+  height: 2.9rem;
+}
+
+.ana-avatar-mini {
+  width: 1.65rem;
+  height: 1.65rem;
+}
+
+.ana-avatar-recorte {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.ana-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.07) rotate(calc(var(--look-x, 0) * 4deg))
+    translateY(calc(var(--look-y, 0) * 3%));
+  transition: transform 350ms ease;
+}
+
+.ana-avatar-lg .ana-avatar-recorte {
+  animation: ana-respirar 7s ease-in-out infinite;
+}
+
+.ana-avatar[data-estado='ativando'] .ana-avatar-recorte,
+.ana-avatar[data-estado='respondendo'] .ana-avatar-recorte {
+  animation: ana-aceno 700ms ease both;
+}
+
+.ana-avatar:is([data-estado='pensando'])::after {
+  position: absolute;
+  inset: -4px;
+  border: 2px solid var(--ana-contorno);
+  border-radius: inherit;
+  content: '';
+  pointer-events: none;
+  animation: ana-contorno 1.8s ease-out infinite;
+}
+
+.ana-panel-heading > div,
+.ana-fab:has(.ana-avatar) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@keyframes ana-respirar {
+  50% {
+    transform: scale(0.986);
+  }
+}
+
+@keyframes ana-aceno {
+  40% {
+    transform: translateY(2%) scale(0.975);
+  }
+}
+
+@keyframes ana-contorno {
+  from {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ana-avatar .ana-avatar-recorte,
+  .ana-avatar[data-estado] .ana-avatar-recorte,
+  .ana-avatar[data-estado]::after {
+    animation: none;
+  }
+
+  .ana-avatar img {
+    transform: scale(1.07);
+    transition: none;
+  }
 }
