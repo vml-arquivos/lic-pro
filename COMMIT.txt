@@ -1,8 +1,8 @@
-Ana em 3D de pixels no centro da rede, com movimento de verdade
+Ana com linguagem simples e de pessoa de verdade
 
-- No centro da rede de cada painel (admin, gestao, empresa, aluno, mentor, colaborador) e na pagina inicial, a Ana agora e uma figura feminina abstrata, digital e pixelada, em 3D de blocos de luz (sem pessoa real).
-- Ela esta viva: gira o rosto para o mouse e para o atalho em foco, fica de 3/4, vira de lado quando o atalho esta do outro lado, balanca parada, balanca a cabeca ao responder e faz um aceno ao clicar. Cor muda por atalho, com aneis de luz e chuva de dados.
-- Clicar nela abre a conversa livre. Se o volume nao carregar, aparece a imagem fixa.
-- Adicionados em apps/web/public/ana: as tres imagens (blocos, mosaico, particulas) e o volume da figura (ana-voxels.bin).
-- Removidos o cartao "Use a Ana para conferir..." e os botoes extras para falar com ela; os atalhos laterais continuam.
-- A pagina da Ana e a conversa de canto usam a mesma figura.
+- A conversa abre com "Olá! Eu sou a Ana. Como posso te ajudar hoje?" e o campo pede "Escreva sua dúvida aqui…".
+- O resumo do painel agora diz "se preferir, comece por aqui" e usa frases curtas e fáceis (sem termos como pipeline e habilitação sem explicação).
+- Avisos de erro mais humanos e aviso curto: "Confira sempre no edital oficial antes de decidir."
+- O serviço de IA responde em tom de pessoa: frases curtas, trata por você, explica os termos difíceis em uma frase.
+- Textos das licitações mais simples: "termina 20/11" e "combina 91% com você".
+- Testes atualizados para as frases novas.

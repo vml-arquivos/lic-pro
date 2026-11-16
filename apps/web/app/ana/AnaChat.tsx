@@ -2,13 +2,11 @@
 
 import { useEffect, useRef } from 'react';
 import { AnaLinks, AnaResumo } from './AnaResumo';
-import { useAnaChat, useAnaContexto } from './useAnaChat';
+import { SAUDACAO_ANA, useAnaChat, useAnaContexto } from './useAnaChat';
 
 /** Caixa de conversa aberta na página da Ana: histórico e campo de pergunta livre. */
 export function AnaChat() {
-  const { message, setMessage, messages, loading, askAna } = useAnaChat(
-    'Oi! Sou a Ana. Pergunte o que quiser sobre licitações, um edital ou o sistema.',
-  );
+  const { message, setMessage, messages, loading, askAna } = useAnaChat(SAUDACAO_ANA);
   const contexto = useAnaContexto(true);
   const end = useRef<HTMLDivElement>(null);
 
@@ -30,7 +28,7 @@ export function AnaChat() {
         {loading ? (
           <div className="ana-message assistente">
             <small>Ana</small>
-            <p>Pensando…</p>
+            <p>Um instante…</p>
           </div>
         ) : null}
         <div ref={end} />
@@ -45,19 +43,17 @@ export function AnaChat() {
         <input
           value={message}
           onChange={(event) => setMessage(event.target.value)}
-          placeholder="Pergunte o que quiser…"
+          placeholder="Escreva sua dúvida aqui…"
           aria-label="Mensagem para Ana"
           disabled={loading}
           maxLength={2000}
           autoFocus
         />
         <button type="submit" disabled={loading || !message.trim()}>
-          {loading ? '…' : 'Perguntar'}
+          {loading ? '…' : 'Enviar'}
         </button>
       </form>
-      <p className="ana-box-note">
-        Respostas de apoio. A fonte final é sempre o edital oficial e seus anexos.
-      </p>
+      <p className="ana-box-note">Confira sempre no edital oficial antes de decidir.</p>
     </section>
   );
 }

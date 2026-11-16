@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AnaAvatar } from '../components/AnaAvatar';
 import { AnaLinks, AnaResumo } from './AnaResumo';
 import { EVENTO_ABRIR_ANA } from './estado';
-import { useAnaChat, useAnaContexto } from './useAnaChat';
+import { SAUDACAO_ANA, useAnaChat, useAnaContexto } from './useAnaChat';
 
 type Modo = 'canto' | 'centro';
 
@@ -15,9 +15,7 @@ export function AnaWidget() {
   const [modo, setModo] = useState<Modo>('canto');
   const campo = useRef<HTMLInputElement>(null);
   const fim = useRef<HTMLDivElement>(null);
-  const { message, setMessage, messages, loading, askAna } = useAnaChat(
-    'Oi! Sou a Ana. Pergunte o que quiser sobre licitações, um edital ou o sistema.',
-  );
+  const { message, setMessage, messages, loading, askAna } = useAnaChat(SAUDACAO_ANA);
 
   const contexto = useAnaContexto(open);
 
@@ -94,7 +92,7 @@ export function AnaWidget() {
               {loading ? (
                 <div className="ana-message assistente">
                   <small>Ana</small>
-                  <p>Pensando…</p>
+                  <p>Um instante…</p>
                 </div>
               ) : null}
               <div ref={fim} />
@@ -110,7 +108,7 @@ export function AnaWidget() {
                 ref={campo}
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
-                placeholder="Pergunte o que quiser…"
+                placeholder="Escreva sua dúvida aqui…"
                 aria-label="Mensagem para a Ana"
                 disabled={loading}
                 maxLength={2000}
@@ -119,9 +117,7 @@ export function AnaWidget() {
                 {loading ? '…' : 'Enviar'}
               </button>
             </form>
-            <p className="ana-dialogo-nota">
-              Respostas de apoio. A fonte final é sempre o edital oficial e seus anexos.
-            </p>
+            <p className="ana-dialogo-nota">Confira sempre no edital oficial antes de decidir.</p>
           </section>
         </div>
       </aside>
@@ -135,16 +131,13 @@ export function AnaWidget() {
           <div className="ana-panel-heading">
             <div>
               <AnaAvatar tamanho="sm" />
-              <strong>✦ ANA · sua assistente</strong>
+              <strong>✦ Fale com a Ana</strong>
             </div>
             <button type="button" onClick={() => setOpen(false)} aria-label="Minimizar Ana">
               −
             </button>
           </div>
-          <p className="ana-intro">
-            Respostas de apoio, com limites claros. A fonte final continua sendo o edital oficial e
-            seus anexos.
-          </p>
+          <p className="ana-intro">Confira sempre no edital oficial antes de decidir.</p>
           {contexto && messages.length < 2 ? <AnaResumo contexto={contexto} /> : null}
           <div className="ana-messages" aria-live="polite">
             {messages.map((item, index) => (
@@ -157,7 +150,7 @@ export function AnaWidget() {
             {loading ? (
               <div className="ana-message assistente">
                 <small>Ana</small>
-                <p>Pensando…</p>
+                <p>Um instante…</p>
               </div>
             ) : null}
           </div>
@@ -168,7 +161,7 @@ export function AnaWidget() {
               onKeyDown={(event) => {
                 if (event.key === 'Enter') void askAna();
               }}
-              placeholder="Pergunte o que quiser…"
+              placeholder="Escreva sua dúvida aqui…"
               aria-label="Mensagem para Ana"
               disabled={loading}
               maxLength={2000}
@@ -188,7 +181,7 @@ export function AnaWidget() {
           'Minimizar Ana'
         ) : (
           <>
-            <AnaAvatar tamanho="mini" />✦ ANA · sua assistente
+            <AnaAvatar tamanho="mini" />✦ Fale com a Ana
           </>
         )}
       </button>

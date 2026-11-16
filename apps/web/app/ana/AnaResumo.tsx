@@ -12,9 +12,11 @@ export function AnaResumo({ contexto }: Readonly<{ contexto: AnaContexto }>) {
   const temConteudo = contexto.resumo.length > 0 || contexto.destaques.length > 0;
   if (!temConteudo) return null;
   return (
-    <section className="ana-resumo" aria-label="Resumo da Ana">
+    <section className="ana-resumo" aria-label="Por onde começar">
       <strong>
-        {contexto.nome ? `Oi, ${contexto.nome}! Isto é o que importa agora` : 'Resumo da Ana'}
+        {contexto.nome
+          ? `${contexto.nome}, se preferir, comece por aqui`
+          : 'Se preferir, comece por aqui'}
       </strong>
       {contexto.resumo.length ? (
         <ul>

@@ -80,9 +80,9 @@ function destaquesDoRadar(radar: unknown): AnaDestaque[] {
     .map((edital) => {
       const onde = [text(edital.orgao), text(edital.uf)].filter(Boolean).join(' · ');
       const prazo = edital.data_encerramento_proposta
-        ? `encerra ${dia(edital.data_encerramento_proposta)}`
+        ? `termina ${dia(edital.data_encerramento_proposta)}`
         : '';
-      const compat = edital.compat != null ? `compatibilidade ${num(edital.compat)}%` : '';
+      const compat = edital.compat != null ? `combina ${num(edital.compat)}% com você` : '';
       const valor = reais(edital.valor_estimado);
       const detalhe = [onde, valor, prazo, compat].filter(Boolean).join(' · ');
       return {
@@ -101,27 +101,31 @@ function linhasDoRadar(radar: unknown, quem: 'empresa' | 'aluno' | 'colaborador'
   if (abertas) {
     out.push(
       quem === 'aluno'
-        ? `${plural(abertas, 'licitação aberta', 'licitações abertas')} no seu nicho para você treinar.`
-        : `${plural(abertas, 'licitação aberta', 'licitações abertas')} no seu perfil agora.`,
+        ? `${abertas === 1 ? 'Tem 1 licitação aberta' : `Tem ${abertas} licitações abertas`} no seu nicho para você treinar.`
+        : `${abertas === 1 ? 'Tem 1 licitação aberta' : `Tem ${abertas} licitações abertas`} para o seu perfil.`,
     );
   }
   if (cards.compativeis != null && num(cards.compativeis) > 0) {
-    out.push(`${num(cards.compativeis)} delas combinam bem com o seu perfil (70% ou mais).`);
+    out.push(
+      `${num(cards.compativeis) === 1 ? '1 combina' : `${num(cards.compativeis)} combinam`} bem com você.`,
+    );
   }
   const hoje = num(cards.encerram_hoje);
   const tres = num(cards.encerram_3_dias);
   if (hoje || tres) {
     out.push(
-      `${hoje ? `${plural(hoje, 'encerra', 'encerram')} hoje` : 'Nenhuma encerra hoje'}` +
-        `${tres ? ` e ${tres} em até 3 dias` : ''}.`,
+      hoje
+        ? `${plural(hoje, 'termina', 'terminam')} hoje${tres ? ` e ${tres} nos próximos 3 dias` : ''}.`
+        : `${plural(tres, 'termina', 'terminam')} nos próximos 3 dias.`,
     );
   }
   const novas = num(cards.novas);
-  if (novas) out.push(`${plural(novas, 'nova', 'novas')} desde a sua última visita ao Radar.`);
+  if (novas)
+    out.push(`${novas === 1 ? '1 é nova' : `${novas} são novas`} desde a sua última visita.`);
   const alteradas = num(cards.alteradas);
   if (alteradas)
     out.push(
-      `${plural(alteradas, 'licitação mudou', 'licitações mudaram')} (prazo, situação ou valor).`,
+      `${alteradas === 1 ? '1 licitação teve mudança' : `${alteradas} licitações tiveram mudança`} de prazo, situação ou valor.`,
     );
   return out;
 }
@@ -134,14 +138,14 @@ export function contextoEmpresa(dados: DadosEmpresa): Base {
   const documentos = obj(inicio.documentos);
   if (num(documentos.vencidos)) {
     destaques.push({
-      texto: `${plural(num(documentos.vencidos), 'documento vencido', 'documentos vencidos')} na habilitação.`,
+      texto: `${num(documentos.vencidos) === 1 ? '1 documento da empresa está vencido' : `${num(documentos.vencidos)} documentos da empresa estão vencidos`}.`,
       href: '/documentos',
       tom: 'atencao',
     });
   }
   if (num(documentos.vencendo)) {
     destaques.push({
-      texto: `${plural(num(documentos.vencendo), 'documento vence', 'documentos vencem')} nos próximos 30 dias.`,
+      texto: `${num(documentos.vencendo) === 1 ? '1 documento vence' : `${num(documentos.vencendo)} documentos vencem`} nos próximos 30 dias.`,
       href: '/documentos',
       tom: 'atencao',
     });
@@ -150,13 +154,13 @@ export function contextoEmpresa(dados: DadosEmpresa): Base {
   if (prazos.length) {
     const primeiro = prazos[0]!;
     resumo.push(
-      `${plural(prazos.length, 'prazo', 'prazos')} na agenda desta semana; o primeiro é “${text(primeiro.titulo)}” em ${dia(primeiro.vence_em)}.`,
+      `${prazos.length === 1 ? 'Você tem 1 prazo' : `Você tem ${prazos.length} prazos`} esta semana. ${prazos.length === 1 ? 'É' : 'O primeiro é'} “${text(primeiro.titulo)}”, em ${dia(primeiro.vence_em)}.`,
     );
   }
   const pipeline = obj(inicio.pipeline);
   const noPipeline = Object.values(pipeline).reduce<number>((soma, valor) => soma + num(valor), 0);
   if (noPipeline)
-    resumo.push(`${plural(noPipeline, 'oportunidade', 'oportunidades')} no seu pipeline.`);
+    resumo.push(`Você está acompanhando ${plural(noPipeline, 'oportunidade', 'oportunidades')}.`);
   for (const passo of list(inicio.proximos_passos).slice(0, 2)) {
     destaques.push({
       texto: text(passo.texto),
@@ -167,13 +171,13 @@ export function contextoEmpresa(dados: DadosEmpresa): Base {
   if (!radar.perfil_configurado) {
     destaques.unshift({
       texto:
-        'Complete o perfil (nicho, segmento, estados e faixa de valor) para eu separar as melhores para você.',
+        'Conte o que sua empresa vende e onde atua, e eu separo as melhores licitações para você.',
       href: '/radar',
       tom: 'atencao',
     });
   } else if (!num(inicio.buscas_ativas)) {
     destaques.push({
-      texto: 'Crie um alerta para ser avisado assim que sair uma licitação do seu segmento.',
+      texto: 'Crie um alerta e eu aviso quando sair uma licitação do seu ramo.',
       href: '/alertas',
       tom: 'info',
     });
@@ -183,10 +187,10 @@ export function contextoEmpresa(dados: DadosEmpresa): Base {
     resumo,
     destaques: destaques.filter((item) => item.texto).slice(0, 8),
     sugestoes: [
-      'Quais licitações abertas combinam mais com o meu segmento?',
+      'Quais licitações abertas combinam mais com a minha empresa?',
       'O que preciso fazer esta semana?',
-      'Como montar uma proposta competitiva?',
-      'Quais documentos de habilitação costumam ser pedidos?',
+      'Como montar uma proposta que ganhe?',
+      'Quais documentos costumam ser pedidos?',
     ],
     fatos: {
       radar: obj(radar.cards),
@@ -209,7 +213,7 @@ export function contextoAluno(dados: DadosAluno): Base {
   const feitas = num(progresso.aulas_concluidas);
   if (total) {
     resumo.push(
-      `Você concluiu ${feitas} de ${total} aulas (${Math.round((100 * feitas) / total)}%).`,
+      `Você já fez ${feitas} de ${total} aulas (${Math.round((100 * feitas) / total)}%).`,
     );
   }
   const continuar = obj(inicio.continuar);
@@ -227,7 +231,7 @@ export function contextoAluno(dados: DadosAluno): Base {
   const atividade = obj(inicio.proxima_atividade);
   if (text(atividade.atividade) || text(atividade.objetivo)) {
     destaques.push({
-      texto: `Próxima atividade do plano: ${text(atividade.atividade) || text(atividade.objetivo)}`,
+      texto: `Sua próxima atividade: ${text(atividade.atividade) || text(atividade.objetivo)}`,
       href: '/plano-30-dias',
       tom: 'info',
     });
@@ -235,7 +239,7 @@ export function contextoAluno(dados: DadosAluno): Base {
   const praticas = obj(inicio.praticas);
   if (num(praticas.devolvidas)) {
     destaques.push({
-      texto: `${plural(num(praticas.devolvidas), 'prática devolvida', 'práticas devolvidas')} pela mentoria — vale ler o retorno.`,
+      texto: `A mentoria devolveu ${plural(num(praticas.devolvidas), 'prática', 'práticas')}. Vale ler o retorno.`,
       href: '/praticar',
       tom: 'atencao',
     });
@@ -258,13 +262,14 @@ export function contextoAluno(dados: DadosAluno): Base {
   }
   if (!inicio.diagnostico_feito) {
     destaques.unshift({
-      texto: 'Faça o diagnóstico inicial para eu montar um caminho de estudo para o seu nível.',
+      texto:
+        'Faça o diagnóstico inicial (é rápido) e eu monto um caminho de estudo para o seu nível.',
       href: '/diagnostico',
       tom: 'atencao',
     });
   } else if (!inicio.plano_criado) {
     destaques.push({
-      texto: 'Você ainda não tem plano de estudos; posso ajudar a montar.',
+      texto: 'Você ainda não tem um plano de estudos. Vamos montar um juntos?',
       href: '/plano-30-dias',
       tom: 'info',
     });
@@ -282,8 +287,8 @@ export function contextoAluno(dados: DadosAluno): Base {
     destaques: destaques.slice(0, 8),
     sugestoes: [
       'O que devo estudar hoje?',
-      'Explique o que é habilitação em linguagem simples',
-      'Como analiso um edital passo a passo?',
+      'Me explique o que é habilitação, de um jeito simples',
+      'Como leio um edital, passo a passo?',
       'Quais licitações abertas posso usar para treinar?',
     ],
     fatos: { progresso, meta_semana: meta, praticas, acesso_ate: inicio.acesso_ate ?? null },
@@ -303,27 +308,25 @@ export function contextoMentor(dados: DadosMentor): Base {
   const sessoes = alunos
     .filter((aluno) => aluno.proxima_sessao)
     .sort((a, b) => text(a.proxima_sessao).localeCompare(text(b.proxima_sessao)));
-  const resumo: string[] = [
-    `${plural(alunos.length, 'aluno ativo', 'alunos ativos')} na sua carteira.`,
-  ];
+  const resumo: string[] = [`Você acompanha ${plural(alunos.length, 'aluno', 'alunos')}.`];
   const destaques: AnaDestaque[] = [];
   if (aDevolver) {
     destaques.push({
-      texto: `${plural(aDevolver, 'prática aguarda', 'práticas aguardam')} a sua devolutiva.`,
+      texto: `${plural(aDevolver, 'prática espera', 'práticas esperam')} o seu retorno.`,
       href: '/mentor/devolutivas',
       tom: 'atencao',
     });
   }
   if (aRevisar) {
     destaques.push({
-      texto: `${plural(aRevisar, 'atividade do plano', 'atividades do plano')} para revisar.`,
+      texto: `${plural(aRevisar, 'atividade do plano espera', 'atividades do plano esperam')} a sua revisão.`,
       href: '/mentor',
       tom: 'atencao',
     });
   }
   if (parados.length) {
     destaques.push({
-      texto: `${plural(parados.length, 'aluno sem avanço', 'alunos sem avanço')} há mais de 7 dias: ${parados
+      texto: `${plural(parados.length, 'aluno sem avançar', 'alunos sem avançar')} há mais de 7 dias: ${parados
         .slice(0, 3)
         .map((aluno) => text(aluno.nome).split(' ')[0])
         .join(', ')}${parados.length > 3 ? '…' : ''}.`,
@@ -368,14 +371,16 @@ export function contextoAdmin(dados: DadosAdmin): Base {
     );
     if (num(c.convites_pendentes)) {
       destaques.push({
-        texto: `${plural(num(c.convites_pendentes), 'convite pendente', 'convites pendentes')} de aceite.`,
+        texto: `${plural(num(c.convites_pendentes), 'convite ainda sem resposta', 'convites ainda sem resposta')}.`,
         href: '/gestao/alunos',
         tom: 'info',
       });
     }
   } else {
     const e = obj(overview.empresas_clientes);
-    resumo.push(`${num(e.total)} empresas clientes (${num(e.novos_30d)} novas em 30 dias).`);
+    resumo.push(
+      `${num(e.total)} empresas clientes, ${num(e.novos_30d)} novas nos últimos 30 dias.`,
+    );
     const a = obj(overview.alertas);
     resumo.push(
       `${plural(num(a.ultimas_24h), 'alerta enviado', 'alertas enviados')} nas últimas 24 horas.`,
@@ -384,7 +389,7 @@ export function contextoAdmin(dados: DadosAdmin): Base {
   const leads = obj(overview.leads);
   if (num(leads.novos)) {
     destaques.push({
-      texto: `${plural(num(leads.novos), 'lead novo', 'leads novos')} sem atendimento (${num(leads.novos_7d)} chegaram em 7 dias).`,
+      texto: `${plural(num(leads.novos), 'lead novo esperando', 'leads novos esperando')} atendimento (${num(leads.novos_7d)} chegaram nos últimos 7 dias).`,
       href: curso ? '/gestao/leads' : '/leads',
       tom: 'atencao',
     });
@@ -392,12 +397,12 @@ export function contextoAdmin(dados: DadosAdmin): Base {
   const editais = obj(overview.editais);
   if (!curso) {
     resumo.push(
-      `${num(editais.total).toLocaleString('pt-BR')} editais na base; ${num(editais.capturados_24h).toLocaleString('pt-BR')} capturados em 24 h.`,
+      `${num(editais.total).toLocaleString('pt-BR')} editais na base, ${num(editais.capturados_24h).toLocaleString('pt-BR')} novos nas últimas 24 horas.`,
     );
     const ultima = new Date(text(editais.ultima_captura)).getTime();
     if (Number.isFinite(ultima) && Date.now() - ultima > 60 * 60 * 1000) {
       destaques.push({
-        texto: `A última captura de editais foi em ${diaHora(editais.ultima_captura)}. Vale conferir as fontes.`,
+        texto: `A última busca de editais foi em ${diaHora(editais.ultima_captura)}. Vale conferir as fontes.`,
         href: '/admin/fontes',
         tom: 'atencao',
       });
@@ -406,13 +411,13 @@ export function contextoAdmin(dados: DadosAdmin): Base {
   const ingestao = obj(overview.ingestao);
   if (num(ingestao.dead_letters_pendentes)) {
     destaques.push({
-      texto: `${plural(num(ingestao.dead_letters_pendentes), 'item da coleta falhou', 'itens da coleta falharam')} e aguardam análise.`,
+      texto: `${plural(num(ingestao.dead_letters_pendentes), 'item da busca de editais deu erro', 'itens da busca de editais deram erro')} e precisa${num(ingestao.dead_letters_pendentes) === 1 ? '' : 'm'} de análise.`,
       href: '/admin/fontes',
       tom: 'atencao',
     });
   }
   resumo.push(
-    `${plural(num(obj(overview.ana).conversas_7d), 'conversa com a Ana', 'conversas com a Ana')} em 7 dias.`,
+    `${plural(num(obj(overview.ana).conversas_7d), 'conversa comigo', 'conversas comigo')} nos últimos 7 dias.`,
   );
   return {
     resumo,

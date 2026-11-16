@@ -45,6 +45,10 @@ export function useAnaContexto(ativo: boolean): AnaContexto | null {
   return contexto;
 }
 
+/** Primeira fala da Ana: curta, simples e de pessoa para pessoa. */
+export const SAUDACAO_ANA =
+  'Olá! Eu sou a Ana. Como posso te ajudar hoje? Escreva sua dúvida aqui embaixo.';
+
 export function assistantMessage(text: string): ChatMessage {
   return { role: 'assistente', text };
 }
@@ -77,7 +81,7 @@ export function useAnaChat(greeting: string) {
       if (response.status === 401) {
         setMessages((current) => [
           ...current,
-          assistantMessage('Entre na sua conta para conversar com a Ana.'),
+          assistantMessage('Para conversar comigo, entre na sua conta.'),
         ]);
         return;
       }
@@ -85,8 +89,8 @@ export function useAnaChat(greeting: string) {
         const payload = (await response.json().catch(() => ({}))) as { detail?: string };
         const text =
           payload.detail === 'llm_unavailable'
-            ? 'A Ana está sem conexão com o provider de IA neste momento.'
-            : 'Não consegui concluir esta resposta agora. Tente novamente em instantes.';
+            ? 'Estou com um probleminha para responder agora. Tente de novo daqui a pouco.'
+            : 'Não consegui responder agora. Pode tentar de novo?';
         setMessages((current) => [...current, assistantMessage(text)]);
         return;
       }
@@ -101,7 +105,9 @@ export function useAnaChat(greeting: string) {
       setMessages((current) => [
         ...current,
         {
-          ...assistantMessage(data.texto ?? 'A Ana não retornou uma resposta legível.'),
+          ...assistantMessage(
+            data.texto ?? 'Não consegui entender a resposta. Pode perguntar de novo?',
+          ),
           ...(data.links?.length ? { links: data.links.slice(0, 5) } : {}),
         },
       ]);
@@ -109,7 +115,7 @@ export function useAnaChat(greeting: string) {
       setMessages((current) => [
         ...current,
         assistantMessage(
-          'Não consegui conectar à Ana agora. Confirme sua sessão e tente novamente.',
+          'Não consegui me conectar agora. Veja se você continua logado e tente de novo.',
         ),
       ]);
     } finally {

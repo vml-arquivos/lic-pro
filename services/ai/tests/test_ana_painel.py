@@ -83,7 +83,7 @@ def test_resumo_sem_dados_nao_inventa_nada() -> None:
         "t", "u", None, "Qual é o próximo passo?", AnaSession(role="admin", token="tok")
     )
     assert response.ferramentas == ["resumo_do_painel"]
-    assert "não consegui ler os dados da sua conta" in response.texto
+    assert "Não consegui ler os dados da sua conta" in response.texto
 
 
 def test_guia_responde_por_painel() -> None:
@@ -94,7 +94,7 @@ def test_guia_responde_por_painel() -> None:
     # aluno não tem Alertas: a Ana não manda para uma tela que não é dele
     aluno = ana(FakeCore(None)).chat("t", "u", None, "Como crio um alerta?", AnaSession(role="aluno", token="tok"))
     assert aluno.links == []
-    assert "Não tenho um passo a passo" in aluno.texto
+    assert "Ainda não tenho um passo a passo" in aluno.texto
 
     mentor = ana(FakeCore(None)).chat(
         "t", "u", None, "Como vejo os alunos parados?", AnaSession(role="mentor", token="tok")
@@ -123,10 +123,10 @@ def test_busca_real_lista_editais_com_links() -> None:
         AnaSession(role="admin", token="tok"),
     )
     assert response.ferramentas == ["buscar_editais"]
-    assert "Encontrei 2 licitações abertas" in response.texto
-    assert "encerra 20/11" in response.texto
+    assert "Achei 2 licitações abertas" in response.texto
+    assert "termina 20/11" in response.texto
     assert "uniformes escolares" in response.texto
-    assert "compat. 88%" in response.texto
+    assert "combina 88% com você" in response.texto
     assert [link.href for link in response.links] == ["/radar/e1", "/radar/e2"]
     assert "confirmar o edital" in response.texto  # aviso de fonte oficial mantido
 

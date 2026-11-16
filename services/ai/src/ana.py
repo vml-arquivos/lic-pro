@@ -286,11 +286,10 @@ class AnaService:
 
     @staticmethod
     def _summary(area: str, context: dict[str, Any] | None) -> tuple[str, list[Evidence], list[AnaLink]]:
-        persona = persona_for(area)
         if not context:
             return (
-                "Ainda não consegui ler os dados da sua conta agora. Tente de novo em instantes; "
-                "enquanto isso, posso ajudar com dúvidas, com a busca de licitações ou com um passo a passo.",
+                "Não consegui ler os dados da sua conta agora. Tente de novo daqui a pouco. "
+                "Enquanto isso, posso tirar dúvidas, buscar licitações ou explicar um passo a passo.",
                 [],
                 [],
             )
@@ -298,15 +297,15 @@ class AnaService:
         highlights = [item for item in context.get("destaques", []) if isinstance(item, dict) and item.get("texto")]
         parts: list[str] = []
         name = context.get("nome")
-        parts.append(f"{'Oi, ' + str(name) + '! ' if name else ''}Aqui está o que importa agora ({persona.area}):")
+        parts.append(f"{'Oi, ' + str(name) + '! ' if name else ''}Veja o que separei para você hoje:")
         parts.extend(f"• {line}" for line in lines[:6])
         attention = [item for item in highlights if item.get("tom") == "atencao"][:3]
         others = [item for item in highlights if item.get("tom") != "atencao"][:2]
         if attention:
-            parts.append("Para cuidar primeiro:")
+            parts.append("Vale resolver primeiro:")
             parts.extend(f"→ {item['texto']}" for item in attention)
         if others:
-            parts.append("Também vale olhar:")
+            parts.append("Dê uma olhada também:")
             parts.extend(f"→ {item['texto']}" for item in others)
         links = [
             AnaLink(texto=str(item["texto"])[:70], href=str(item["href"]))
@@ -321,9 +320,7 @@ class AnaService:
         if found is None:
             topics = [entry.titulo for entry in GUIDE if area in entry.areas][:8]
             return (
-                "Não tenho um passo a passo pronto para essa pergunta. Posso orientar sobre: "
-                + "; ".join(topics)
-                + ".",
+                "Ainda não tenho um passo a passo para essa pergunta. Posso te ajudar com: " + "; ".join(topics) + ".",
                 [],
                 [],
             )
@@ -333,8 +330,8 @@ class AnaService:
         result = self.core.search_editais(session.token, session.acting_as, message)
         if result is None:
             return (
-                "Não consegui consultar as licitações agora. Use Explorar licitações para buscar e tente "
-                "de novo comigo em instantes.",
+                "Não consegui consultar as licitações agora. Você pode usar o Explorar licitações e, daqui a "
+                "pouco, tentar de novo comigo.",
                 [],
                 [AnaLink(texto="Explorar licitações", href="/radar")],
             )
@@ -342,13 +339,13 @@ class AnaService:
         topic = f" para “{' / '.join(words)}”" if words else " que combinam com o seu perfil"
         if not rows:
             return (
-                f"Não encontrei licitações abertas{topic} nos seus nichos. Tente outras palavras ou amplie os "
+                f"Não achei licitações abertas{topic} nos seus nichos. Tente outras palavras ou amplie os "
                 "filtros em Explorar licitações.",
                 [],
                 [AnaLink(texto="Explorar licitações", href="/radar")],
             )
-        found = "Encontrei 1 licitação aberta" if total == 1 else f"Encontrei {total} licitações abertas"
-        lines = [f"{found}{topic}." + ("" if total == 1 else " As melhores primeiro:")]
+        found = "Achei 1 licitação aberta" if total == 1 else f"Achei {total} licitações abertas"
+        lines = [f"{found}{topic}." + ("" if total == 1 else " As melhores vêm primeiro:")]
         links: list[AnaLink] = []
         for row in rows[:5]:
             title = str(row.get("titulo") or "Sem título")[:100]
@@ -359,24 +356,24 @@ class AnaService:
                 x
                 for x in (
                     where,
-                    f"encerra {deadline}" if deadline else "",
-                    f"compat. {compat}%" if compat is not None else "",
+                    f"termina {deadline}" if deadline else "",
+                    f"combina {compat}% com você" if compat is not None else "",
                 )
                 if x
             ]
             lines.append(f"• {title}" + (f" — {'; '.join(extra)}" if extra else ""))
             if row.get("id"):
                 links.append(AnaLink(texto=title[:60], href=f"/radar/{row['id']}"))
-        lines.append("Abra cada uma para ver itens, anexos e a fonte oficial.")
+        lines.append("Abra cada uma para ver os itens, os anexos e a fonte oficial.")
         return "\n".join(lines), [], links
 
     @staticmethod
     def _chat_only(area: str, context: dict[str, Any] | None) -> tuple[str, list[Evidence], list[AnaLink]]:
         persona = persona_for(area)
         suggestions = [str(item) for item in (context or {}).get("sugestoes", [])][:3]
-        text = f"{persona.saudacao} {persona.foco}"
+        text = f"{persona.saudacao} Como posso te ajudar?"
         if suggestions:
-            text += " Experimente: " + " · ".join(f"“{item}”" for item in suggestions)
+            text += " Se quiser, comece por aqui: " + " · ".join(f"“{item}”" for item in suggestions)
         return text, [], []
 
     def _complete_with_provider(

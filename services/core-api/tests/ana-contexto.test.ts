@@ -34,15 +34,15 @@ describe('contexto da Ana por tipo de usuário', () => {
         ],
       },
     });
-    expect(base.resumo.join(' ')).toContain('40 licitações abertas');
-    expect(base.resumo.join(' ')).toContain('7 delas combinam bem');
-    expect(base.resumo.join(' ')).toContain('1 encerra hoje e 4 em até 3 dias');
-    expect(base.resumo.join(' ')).toContain('3 oportunidades no seu pipeline');
+    expect(base.resumo.join(' ')).toContain('Tem 40 licitações abertas');
+    expect(base.resumo.join(' ')).toContain('7 combinam bem com você');
+    expect(base.resumo.join(' ')).toContain('1 termina hoje e 4 nos próximos 3 dias');
+    expect(base.resumo.join(' ')).toContain('Você está acompanhando 3 oportunidades');
     const textos = base.destaques.map((item) => item.texto).join('\n');
-    expect(textos).toContain('1 documento vencido');
+    expect(textos).toContain('1 documento da empresa está vencido');
     expect(textos).toContain('Crie um alerta');
     expect(textos).toContain('Uniformes escolares');
-    expect(textos).toContain('compatibilidade 91%');
+    expect(textos).toContain('combina 91% com você');
     expect(base.destaques.find((item) => item.texto.startsWith('Uniformes'))?.href).toBe(
       '/radar/e1',
     );
@@ -54,7 +54,7 @@ describe('contexto da Ana por tipo de usuário', () => {
       inicio: {},
       radar: { perfil_configurado: false, cards: {} },
     });
-    expect(base.destaques[0]?.texto).toContain('Complete o perfil');
+    expect(base.destaques[0]?.texto).toContain('Conte o que sua empresa vende');
     expect(base.destaques[0]?.href).toBe('/radar');
   });
 
@@ -74,7 +74,9 @@ describe('contexto da Ana por tipo de usuário', () => {
     });
     expect(base.resumo.join(' ')).toContain('5 de 20 aulas (25%)');
     expect(base.resumo.join(' ')).toContain('2 de 5 atividades');
-    expect(base.destaques.map((d) => d.texto).join('\n')).toContain('2 práticas devolvidas');
+    expect(base.destaques.map((d) => d.texto).join('\n')).toContain(
+      'A mentoria devolveu 2 práticas',
+    );
     expect(base.destaques[0]?.href).toBe('/academia');
   });
 
@@ -104,10 +106,10 @@ describe('contexto da Ana por tipo de usuário', () => {
         ],
       },
     });
-    expect(base.resumo[0]).toBe('2 alunos ativos na sua carteira.');
+    expect(base.resumo[0]).toBe('Você acompanha 2 alunos.');
     const textos = base.destaques.map((d) => d.texto).join('\n');
-    expect(textos).toContain('2 práticas aguardam');
-    expect(textos).toContain('1 aluno sem avanço há mais de 7 dias: Bia');
+    expect(textos).toContain('2 práticas esperam o seu retorno');
+    expect(textos).toContain('1 aluno sem avançar há mais de 7 dias: Bia');
     expect(textos).toContain('Próxima sessão: Caio');
   });
 
@@ -123,11 +125,11 @@ describe('contexto da Ana por tipo de usuário', () => {
       curso: { alunos_ativos: 50, mentores_ativos: 3, turmas_ativas: 2, convites_pendentes: 6 },
     };
     const adm = contextoAdmin({ me: {}, overview, modulo: 'profissional' });
-    expect(adm.resumo.join(' ')).toContain('12 empresas clientes (3 novas em 30 dias)');
+    expect(adm.resumo.join(' ')).toContain('12 empresas clientes, 3 novas nos últimos 30 dias');
     const textos = adm.destaques.map((d) => d.texto).join('\n');
-    expect(textos).toContain('4 leads novos');
-    expect(textos).toContain('A última captura de editais');
-    expect(textos).toContain('2 itens da coleta falharam');
+    expect(textos).toContain('4 leads novos esperando atendimento');
+    expect(textos).toContain('A última busca de editais');
+    expect(textos).toContain('2 itens da busca de editais deram erro');
     const curso = contextoAdmin({ me: {}, overview, modulo: 'curso' });
     expect(curso.resumo.join(' ')).toContain('50 alunos ativos, 3 mentores e 2 turmas ativas');
     expect(curso.destaques.map((d) => d.href)).toContain('/gestao/leads');
