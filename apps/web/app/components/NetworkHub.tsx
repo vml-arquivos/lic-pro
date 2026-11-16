@@ -95,7 +95,7 @@ export function NetworkHub({
     [],
   );
 
-  /** Inclina levemente o retrato conforme o ponteiro passa pela rede. */
+  /** Desloca levemente o retrato conforme o ponteiro passa pela rede. */
   function seguir(clientX: number, clientY: number) {
     const el = art.current;
     if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -199,7 +199,11 @@ export function NetworkHub({
         </svg>
 
         <div className="hub-core">
-          <div className="hub-core-art" ref={art} {...(tone ? { 'data-tone': tone } : {})}>
+          <div
+            className={`hub-core-art${photo && photoOk ? '' : ' hub-core-art--ana'}`}
+            ref={art}
+            {...(tone ? { 'data-tone': tone } : {})}
+          >
             {photo && photoOk ? (
               <img
                 className="hub-photo"
