@@ -93,6 +93,19 @@ describe('edital search query', () => {
     expect(withDiscarded).not.toContain('NOT EXISTS (SELECT 1 FROM edital_interacoes');
   });
 
+  it('filters by portal slug and builds the portal facet from its own filter', () => {
+    const filters = editalSearchSchema.parse({
+      portal: ['bnc', 'bll-compras'],
+      sistema_origem: 'BNC',
+    });
+    const query = buildEditalSearchQuery(filters);
+    expect(query.text).toContain('portal_slug = ANY(');
+    expect(query.values).toContainEqual(['bnc', 'bll-compras']);
+    const facet = query.facets.find((item) => item.campo === 'sistema_origem')!;
+    expect(facet.text).toContain('sistema_origem::text AS valor');
+    expect(facet.values).toEqual([['bnc', 'bll-compras']]);
+  });
+
   it('computes facets that ignore their own filter', () => {
     const filters = editalSearchSchema.parse({ uf: 'DF', modalidade: 'Pregão' });
     const query = buildEditalSearchQuery(filters);
@@ -106,6 +119,7 @@ describe('edital search query', () => {
       'modalidade',
       'situacao',
       'esfera',
+      'sistema_origem',
     ]);
   });
 

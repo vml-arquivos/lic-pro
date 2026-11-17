@@ -6,10 +6,11 @@ const ITENS = [
   { href: '/pregoes', label: 'Pregões', ajuda: 'Pregões publicados e abertos' },
   { href: '/analise', label: 'Análise', ajuda: 'Ranking, comparar e simular a proposta' },
   { href: '/precos', label: 'Preços', ajuda: 'O que o governo pagou por item' },
+  { href: '/portais', label: 'Portais', ajuda: 'De qual portal vem cada licitação' },
 ] as const;
 
 /**
- * Um só caminho entre as telas de licitações: explorar, pregões, análise e preços.
+ * Um só caminho entre as telas de licitações: explorar, pregões, análise, preços e portais.
  * Mostra apenas o que a área da conta pode abrir. Sem sessão, não aparece.
  */
 export function LicitacoesNav({

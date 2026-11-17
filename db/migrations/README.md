@@ -124,3 +124,10 @@ preenchimento automático por CNPJ e CEP. Só acrescenta colunas; nada existente
 
 `coleta_pncp_execucoes.origem` passa a aceitar também `acesso`: rodada rápida do PNCP disparada quando
 alguém entra no sistema e os dados estão velhos. Só amplia os valores aceitos.
+
+## 0036 — portais de compras
+
+`editais.portal_slug` (identificador do portal de origem) e índice por portal. `sistema_origem` passa a
+guardar o nome do portal. A função `coleta_gravar_editais` aceita `portal_slug` e regrava a linha quando
+o portal passa a ser conhecido. Preenche os editais já coletados cujo link de origem é de um portal
+conhecido. Só acrescenta coluna e índice; nada existente muda.

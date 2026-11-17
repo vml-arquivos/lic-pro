@@ -61,6 +61,7 @@ import { registerStudentSupportRoutes } from './aluno-apoio.js';
 import { registerAnaliseRoutes } from './analise.js';
 import { areasDoEscopo, lerEscopo, registerEscopoEquipe } from './escopo-equipe.js';
 import { registerRadarRoutes } from './radar.js';
+import { registerPortaisRoutes } from './portais-routes.js';
 import { registerAnaContextoRoutes } from './ana-contexto.js';
 import { registerSegmentosRoutes } from './segmentos.js';
 import { registerLookupRoutes, type LookupOptions } from './lookup.js';
@@ -2170,6 +2171,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   registerPlatformRoutes(app, { pool, config });
   registerRadarRoutes(app, { pool });
+  registerPortaisRoutes(app, { pool });
   registerSegmentosRoutes(app, { pool });
   registerLookupRoutes(app, options.lookup ?? {});
   registerAnaContextoRoutes(app);

@@ -110,6 +110,7 @@ class NormalizedTender:
     conteudo_texto: str
     raw_payload: JsonObject
     sistema_origem: str | None = None
+    portal_slug: str | None = None
     codigo_modalidade: int | None = None
     codigo_modo_disputa: int | None = None
     codigo_instrumento: str | None = None

@@ -67,6 +67,8 @@ export const editalSearchSchema = z.object({
   item: stringOrStrings.optional(),
   fonte: stringOrStrings.optional(),
   sistema_origem: stringOrStrings.optional(),
+  /** Portal de compras pelo identificador (ex.: `bnc`, `bll-compras`); veja `portais.ts` no shared. */
+  portal: stringOrStrings.optional(),
   esfera: listish(stringOrStrings).optional(),
   poder: listish(stringOrStrings).optional(),
   municipio_ibge: listish(stringOrStrings).optional(),
@@ -150,12 +152,14 @@ export type SearchContext = {
   grandeVultoMin?: number;
 };
 
-export type FacetKey = 'uf' | 'modalidade' | 'situacao' | 'esfera';
+export type FacetKey = 'uf' | 'modalidade' | 'situacao' | 'esfera' | 'sistema_origem';
 export const FACET_COLUMNS: Record<FacetKey, string> = {
   uf: 'uf',
   modalidade: 'modalidade',
   situacao: 'situacao',
   esfera: 'esfera',
+  // Portal de compras (nome como o PNCP mostra); o filtro tem o mesmo nome.
+  sistema_origem: 'sistema_origem',
 };
 
 export type SearchQuery = {
@@ -354,7 +358,8 @@ export function buildEditalSearchQuery(
   const ids = asList(filters.ids as string | string[] | undefined);
   if (ids.length) add('editais.id = ANY({0}::uuid[])', [ids]);
   if (filters.fonte) addText('fonte', filters.fonte);
-  if (filters.sistema_origem) addText('sistema_origem', filters.sistema_origem);
+  if (filters.sistema_origem) addText('sistema_origem', filters.sistema_origem, 'sistema_origem');
+  if (filters.portal) addText('portal_slug', filters.portal);
   if (filters.esfera) addText('esfera', filters.esfera as string | string[], 'esfera');
   if (filters.poder) addText('poder', filters.poder as string | string[]);
   const municipios = asList(
@@ -647,13 +652,14 @@ export function buildEditalSearchQuery(
   const offset = (filters.page - 1) * filters.page_size;
   const pagination = ` LIMIT ${filters.page_size} OFFSET ${offset}`;
   const projection = `
-    SELECT editais.id, fonte, sistema_origem, id_externo, titulo, orgao, orgao_cnpj, uf, uasg,
+    SELECT editais.id, fonte, sistema_origem, portal_slug, id_externo, titulo, orgao, orgao_cnpj, uf, uasg,
            municipio_ibge, municipio_nome, esfera, poder, modalidade, codigo_modalidade,
            modo_disputa, situacao, instrumento, srp, catmat_catser, amparo_legal, numero_compra,
            valor_estimado, valor_homologado, data_publicacao,
            data_abertura_proposta, data_encerramento_proposta, data_atualizacao,
            url_origem, hash_conteudo,
            jsonb_build_object('fonte', fonte, 'sistema_origem', sistema_origem,
+                              'portal_slug', portal_slug,
                               'id_externo', id_externo, 'url_origem', url_origem,
                               'atualizado_em', COALESCE(data_atualizacao, editais.updated_at)) AS proveniencia,
            jsonb_build_object(

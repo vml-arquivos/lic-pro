@@ -74,6 +74,21 @@ describe('normalizePncp', () => {
     expect(minimal.data_publicacao).toBeNull();
   });
 
+  it('identifica o portal pelo nome do PNCP (usuarioNome) e, sem ele, pelo link de origem', () => {
+    const pelaNome = normalizePncp(sample('P-1', { usuarioNome: 'BLL - Bolsa de Licitações' }))!;
+    expect(pelaNome.portal_slug).toBe('bll-compras');
+    expect(pelaNome.sistema_origem).toBe('BLL Compras');
+    const peloLink = normalizePncp(
+      sample('P-2', { linkSistemaOrigem: 'https://www.portaldecompraspublicas.com.br/x' }),
+    )!;
+    expect(peloLink.portal_slug).toBe('portal-de-compras-publicas');
+    const desconhecido = normalizePncp(sample('P-3', { usuarioNome: 'Sistema da Prefeitura X' }))!;
+    expect(desconhecido).toMatchObject({
+      portal_slug: 'sistema-da-prefeitura-x',
+      sistema_origem: 'Sistema da Prefeitura X',
+    });
+  });
+
   it('descarta registro sem identificador ou sem objeto', () => {
     expect(normalizePncp({ objetoCompra: 'sem id' })).toBeNull();
     expect(normalizePncp({ numeroControlePNCP: 'sem objeto' })).toBeNull();
@@ -385,5 +400,111 @@ suite('coleta do PNCP (PostgreSQL real, fonte simulada)', () => {
     expect(body.rodada_rapida_minutos).toBe(5);
     const anon = await app.inject({ method: 'GET', url: '/editais/atualizacao' });
     expect(anon.statusCode).toBe(401);
+  });
+  it('grava o portal, regrava só o portal quando ele passa a ser conhecido e filtra por portal', async () => {
+    const portalId = `PNCP-${suffix}-portal`;
+    const fonte = (usuarioNome?: string) =>
+      (async (input: string | URL | Request) => {
+        const url = new URL(String(input));
+        const feed = url.pathname.endsWith('/publicacao');
+        const page = Number(url.searchParams.get('pagina'));
+        const registro = sample(portalId, {
+          linkSistemaOrigem: 'https://app.licitanet.com.br/edital/9',
+          ...(usuarioNome ? { usuarioNome } : {}),
+        });
+        return Response.json({
+          data: feed && page === 1 ? [registro] : [],
+          totalPaginas: 1,
+          paginasRestantes: 0,
+          numeroPagina: page,
+        });
+      }) as typeof fetch;
+    const rodar = (usuarioNome?: string) =>
+      runPncpSync(
+        {
+          pool,
+          config,
+          tenantId: platformTenant,
+          fetchImpl: fonte(usuarioNome),
+          sleep: async () => undefined,
+          pauseMs: 0,
+        },
+        { origem: 'manual', dias: 1 },
+      );
+    const linha = async () =>
+      (
+        await setup.query(
+          `SELECT id, portal_slug, sistema_origem FROM editais WHERE tenant_id = $1 AND id_externo = $2`,
+          [platformTenant, portalId],
+        )
+      ).rows[0] as { id: string; portal_slug: string | null; sistema_origem: string | null };
+
+    expect(await rodar()).toMatchObject({ inseridos: 1 });
+    expect(await linha()).toMatchObject({ portal_slug: 'licitanet', sistema_origem: 'Licitanet' });
+
+    // Edital já gravado sem portal (como os coletados antes da migration): a próxima rodada
+    // preenche o portal mesmo com o conteúdo do PNCP idêntico.
+    await setup.query(
+      `UPDATE editais SET portal_slug = NULL, sistema_origem = NULL WHERE tenant_id = $1 AND id_externo = $2`,
+      [platformTenant, portalId],
+    );
+    expect(await rodar()).toMatchObject({ inseridos: 0, atualizados: 1 });
+    expect(await linha()).toMatchObject({ portal_slug: 'licitanet', sistema_origem: 'Licitanet' });
+    // E sem mudança nenhuma, não regrava de novo.
+    expect(await rodar()).toMatchObject({ inseridos: 0, atualizados: 0 });
+
+    const headers = {
+      authorization: `Bearer ${app.jwt.sign({ sub: clientUser, tenantId: clientTenant, role: 'admin' })}`,
+    };
+    const filtrado = await app.inject({
+      method: 'GET',
+      url: '/editais?portal=licitanet&page_size=50',
+      headers,
+    });
+    expect(filtrado.statusCode).toBe(200);
+    const corpo = filtrado.json() as {
+      data: Array<{ id_externo: string; portal_slug: string }>;
+      facetas: Record<string, Array<{ valor: string; total: number }>>;
+    };
+    expect(corpo.data.map((item) => item.id_externo)).toContain(portalId);
+    expect(corpo.data.every((item) => item.portal_slug === 'licitanet')).toBe(true);
+    expect(corpo.facetas.sistema_origem?.some((item) => item.valor === 'Licitanet')).toBe(true);
+
+    const lista = await app.inject({ method: 'GET', url: '/portais', headers });
+    expect(lista.statusCode).toBe(200);
+    const portais = lista.json() as {
+      portais: Array<{ slug: string; total: number; site: string | null }>;
+      total: number;
+    };
+    expect(portais.portais.find((item) => item.slug === 'licitanet')!.total).toBeGreaterThanOrEqual(
+      1,
+    );
+    expect(portais.portais.some((item) => item.slug === 'bnc' && item.total >= 0)).toBe(true);
+    expect((await app.inject({ method: 'GET', url: '/portais' })).statusCode).toBe(401);
+
+    const { id } = await linha();
+    const doc = await app.inject({
+      method: 'GET',
+      url: `/editais/${id}/documentacao-tecnica`,
+      headers,
+    });
+    expect(doc.statusCode).toBe(200);
+    const docBody = doc.json() as {
+      documentacao: { grupos: Array<{ exigencias: Array<{ id: string }> }>; aviso: string };
+      portal: { slug: string; link_edital: string | null } | null;
+    };
+    expect(docBody.portal).toMatchObject({ slug: 'licitanet' });
+    const exigencias = docBody.documentacao.grupos.flatMap((grupo) =>
+      grupo.exigencias.map((e) => e.id),
+    );
+    expect(exigencias).toEqual(
+      expect.arrayContaining(['credenciamento-portal', 'ato-constitutivo', 'proposta-precos']),
+    );
+    const ausente = await app.inject({
+      method: 'GET',
+      url: `/editais/${randomUUID()}/documentacao-tecnica`,
+      headers,
+    });
+    expect(ausente.statusCode).toBe(404);
   });
 });

@@ -9,6 +9,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from .models import JsonObject, NormalizedTender
+from .portais import portal_da_licitacao
 
 
 def normalize_pncp_publication(raw: JsonObject, tenant_id: str) -> NormalizedTender:
@@ -27,6 +28,14 @@ def normalize_pncp_publication(raw: JsonObject, tenant_id: str) -> NormalizedTen
     external_id = _required_text(raw, "numeroControlePNCP")
     title = _required_text(raw, "objetoCompra")
     content = _content_text(raw, organization_data, unit_data)
+    # O PNCP informa o portal em `usuarioNome` (e o endereço em `linkSistemaOrigem`).
+    portal = portal_da_licitacao(
+        usuario=_optional_text(
+            _first_value(raw, "usuarioNome", "sistemaOrigemNome", "sistemaOrigem")
+        ),
+        link=_optional_text(raw.get("linkSistemaOrigem")),
+        objeto=title,
+    )
     return NormalizedTender(
         tenant_id=tenant_id,
         fonte="pncp",
@@ -42,7 +51,8 @@ def normalize_pncp_publication(raw: JsonObject, tenant_id: str) -> NormalizedTen
         hash_conteudo=_content_hash(raw),
         conteudo_texto=content,
         raw_payload=raw,
-        sistema_origem=_optional_text(_first_value(raw, "sistemaOrigemNome", "sistemaOrigem")),
+        sistema_origem=portal.nome if portal else None,
+        portal_slug=portal.slug if portal else None,
         codigo_modalidade=_integer(
             _first_value(raw, "modalidadeId", "codigoModalidadeContratacao")
         ),

@@ -1,4 +1,5 @@
 /** Tipos e funções puras do Radar (sem React), para testar e reaproveitar. */
+import { infoDoPortal, portalDaLicitacao } from '@licitecomigo/shared';
 
 export type Tender = {
   id: string;
@@ -18,6 +19,7 @@ export type Tender = {
   /** Itens já coletados do PNCP; nulo quando ainda não foram buscados. */
   itens_coletados?: number | null;
   sistema_origem?: string | null;
+  portal_slug?: string | null;
   fonte?: string;
   url_origem?: string | null;
   compat?: number | null;
@@ -29,7 +31,9 @@ export type Tender = {
 };
 
 export type FacetItem = { valor: string; total: number };
-export type Facets = Partial<Record<'uf' | 'modalidade' | 'situacao' | 'esfera', FacetItem[]>>;
+export type Facets = Partial<
+  Record<'uf' | 'modalidade' | 'situacao' | 'esfera' | 'sistema_origem', FacetItem[]>
+>;
 
 export type ListResponse = {
   data: Tender[];
@@ -150,6 +154,7 @@ export const FACET_TITLES: Record<string, string> = {
   modalidade: 'Modalidade',
   situacao: 'Situação',
   esfera: 'Esfera',
+  sistema_origem: 'Portal',
 };
 
 /** Facetas que aceitam vários valores separados por vírgula. */
@@ -302,4 +307,17 @@ export function paramsParaRanking(efetivos: URLSearchParams, semPerfil: boolean)
   next.set('limite', '100');
   next.set('foco', 'interessantes');
   return next;
+}
+
+/** Portal de onde vem a licitação (nome do PNCP; sem ele, deduz pelo endereço do link de origem). */
+export function portalDoEdital(
+  item: Pick<Tender, 'sistema_origem' | 'url_origem' | 'titulo'>,
+): { nome: string; slug: string; site: string | null } | null {
+  const portal = portalDaLicitacao({
+    usuario: item.sistema_origem,
+    link: item.url_origem,
+    objeto: item.titulo,
+  });
+  if (!portal) return null;
+  return { nome: portal.nome, slug: portal.slug, site: infoDoPortal(portal.slug)?.site ?? null };
 }

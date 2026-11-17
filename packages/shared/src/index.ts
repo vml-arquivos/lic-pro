@@ -106,3 +106,6 @@ export type {
 } from './analise.js';
 export * from './segments.js';
 export * from './documentos.js';
+export * from './portais.js';
+export * from './documentacao-tecnica.js';
+export * from './criterios-analise.js';

@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { portalDaLicitacao } from '@licitecomigo/shared';
 import type { Pool } from 'pg';
 import type { RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
@@ -46,6 +47,7 @@ export type PncpEdital = {
   hash_conteudo: string;
   conteudo_texto: string;
   sistema_origem: string | null;
+  portal_slug: string | null;
   codigo_modalidade: number | null;
   codigo_modo_disputa: number | null;
   codigo_instrumento: string | null;
@@ -183,6 +185,13 @@ export function normalizePncp(raw: unknown): PncpEdital | null {
     .filter(Boolean)
     .join('\n');
 
+  // O PNCP informa o portal em `usuarioNome` (e o endereço em `linkSistemaOrigem`).
+  const portal = portalDaLicitacao({
+    usuario: text(first(raw, 'usuarioNome', 'sistemaOrigemNome', 'sistemaOrigem')),
+    link: text(raw.linkSistemaOrigem),
+    objeto: titulo,
+  });
+
   const esferaId = text(first(raw, 'esferaId') ?? orgaoEntidade.esferaId)?.toUpperCase();
   const poderId = text(first(raw, 'poderId') ?? orgaoEntidade.poderId)?.toUpperCase();
 
@@ -200,7 +209,8 @@ export function normalizePncp(raw: unknown): PncpEdital | null {
       .update(JSON.stringify(sortKeys(raw)))
       .digest('hex'),
     conteudo_texto: conteudo,
-    sistema_origem: text(first(raw, 'sistemaOrigemNome', 'sistemaOrigem')),
+    sistema_origem: portal?.nome ?? null,
+    portal_slug: portal?.slug ?? null,
     codigo_modalidade: integer(first(raw, 'modalidadeId', 'codigoModalidadeContratacao')),
     codigo_modo_disputa: integer(first(raw, 'modoDisputaId', 'codigoModoDisputa')),
     codigo_instrumento: text(

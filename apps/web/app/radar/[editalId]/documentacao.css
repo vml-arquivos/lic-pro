@@ -1,0 +1,77 @@
+/* Documentação técnica do edital */
+.dt {
+  display: grid;
+  gap: 0.8rem;
+}
+.dt-resumo,
+.dt-portal,
+.dt-aviso {
+  margin: 0;
+}
+.dt-aviso {
+  color: var(--workspace-muted);
+  font-size: 0.82rem;
+}
+.dt-atencao {
+  background: #fff8e6;
+  border: 1px solid #f0d9a0;
+  border-radius: 0.6rem;
+  margin: 0;
+  padding: 0.6rem 0.9rem 0.6rem 1.6rem;
+}
+.dt-grupo h3 {
+  font-size: 0.95rem;
+  margin: 0 0 0.4rem;
+}
+.dt-grupo ul,
+.dt-como ul {
+  display: grid;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.dt-como ul {
+  gap: 0.3rem;
+  list-style: disc;
+  padding-left: 1.2rem;
+}
+.dt-item {
+  background: #f6fafb;
+  border-left: 3px solid var(--workspace-line);
+  border-radius: 0.5rem;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.55rem 0.8rem;
+}
+.dt-item-edital {
+  border-left-color: var(--workspace-navy);
+}
+.dt-item-topo {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.8rem;
+  justify-content: space-between;
+}
+.dt-item p {
+  margin: 0;
+}
+.dt-item small {
+  color: var(--workspace-muted);
+}
+.dt-como summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.rd-portal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.2rem;
+  margin: 0.3rem 0 0.6rem;
+}
+.rd-doc-intro {
+  color: var(--workspace-muted);
+  margin: 0 0 0.6rem;
+}

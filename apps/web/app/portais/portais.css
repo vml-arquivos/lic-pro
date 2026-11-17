@@ -1,0 +1,66 @@
+.pt-pagina {
+  display: grid;
+  gap: 1rem;
+}
+.pt-filtro {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.pt-resumo {
+  color: var(--workspace-muted);
+  margin: 0;
+}
+.pt-lista {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pt-card {
+  align-content: start;
+  background: #fff;
+  border: 1px solid var(--workspace-line);
+  border-radius: 0.8rem;
+  box-shadow: var(--workspace-shadow);
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem 1.1rem;
+}
+.pt-card header {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: space-between;
+}
+.pt-card h3 {
+  color: var(--workspace-navy);
+  font-size: 1.02rem;
+  margin: 0;
+}
+.pt-card p {
+  color: var(--workspace-muted);
+  font-size: 0.88rem;
+  margin: 0;
+}
+.pt-total strong {
+  color: var(--workspace-navy);
+  font-size: 1.3rem;
+}
+.pt-acoes {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.pt-outros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

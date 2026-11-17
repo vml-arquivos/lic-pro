@@ -1,0 +1,63 @@
+/* Quadro "Como as notas são calculadas" */
+.cr {
+  background: #f6fafb;
+  border: 1px solid var(--workspace-line);
+  border-radius: 0.7rem;
+  padding: 0.7rem 1rem;
+}
+.cr summary {
+  color: var(--workspace-navy);
+  cursor: pointer;
+  font-weight: 800;
+}
+.cr h4 {
+  font-size: 0.9rem;
+  margin: 0.9rem 0 0.3rem;
+}
+.cr p {
+  margin: 0.2rem 0;
+}
+.cr-obs {
+  color: var(--workspace-muted);
+  font-size: 0.82rem;
+}
+.cr-foco {
+  background: #fff;
+  border-left: 3px solid var(--workspace-navy);
+  border-radius: 0.4rem;
+  margin-top: 0.6rem;
+  padding: 0.5rem 0.8rem;
+}
+.cr-focos,
+.cr-lista,
+.cr-compat {
+  display: grid;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+.cr-focos small,
+.cr-lista small {
+  color: var(--workspace-muted);
+  display: block;
+}
+.cr-lista > li {
+  background: #fff;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.8rem;
+}
+.cr-lista li ul {
+  margin: 0.2rem 0 0.3rem;
+  padding-left: 1.2rem;
+}
+.cr-topo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  justify-content: space-between;
+}
+.cr-peso {
+  color: var(--workspace-navy);
+  font-weight: 800;
+}

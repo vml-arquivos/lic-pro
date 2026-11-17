@@ -2,11 +2,20 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { PESOS } from '@licitecomigo/shared';
 import { api, errorText } from '../../lib/api';
 import { Badge } from '../components/ui';
+import { CriteriosAnalise } from '../analise/CriteriosAnalise';
 import type { EditalComparado } from '../analise/analise-lib';
 import { moeda, numero, tomDaNota } from '../analise/analise-lib';
-import { brl, deadlineInfo, formatDate, formatDateTime, type Tender } from './radar-lib';
+import {
+  brl,
+  deadlineInfo,
+  formatDate,
+  formatDateTime,
+  portalDoEdital,
+  type Tender,
+} from './radar-lib';
 
 export type Interaction = Partial<Pick<Tender, 'favorito' | 'descartado' | 'visto'>>;
 
@@ -117,6 +126,20 @@ function PainelAnalise({ item }: Readonly<{ item: Tender }>) {
           </dd>
         </div>
       </dl>
+      <ul className="rd-comp" aria-label="O que entrou na nota">
+        {analise.componentes.map((componente) => (
+          <li key={componente.chave}>
+            <div className="rd-comp-topo">
+              <strong>{componente.rotulo}</strong>
+              <span>
+                {Math.round(componente.pontos)}/100 · {Math.round(PESOS[componente.chave] * 100)}%
+                da nota
+              </span>
+            </div>
+            <small>{componente.detalhe}</small>
+          </li>
+        ))}
+      </ul>
       {analise.sinais.length ? (
         <ul className="an-sinais">
           {analise.sinais.slice(0, 4).map((sinal) => (
@@ -126,6 +149,7 @@ function PainelAnalise({ item }: Readonly<{ item: Tender }>) {
           ))}
         </ul>
       ) : null}
+      <CriteriosAnalise titulo="Como esta nota é calculada" />
       <div className="rd-painel-links">
         <Link
           className="ui-btn ui-btn-ghost ui-btn-small"
@@ -220,6 +244,7 @@ export function TenderCard({
   const large = Number(item.valor_estimado ?? 0) >= 200_000_000;
   const encerra = formatDateTime(item.data_encerramento_proposta);
   const abre = formatDate(item.data_abertura_proposta);
+  const portal = portalDoEdital(item);
 
   function alternar(qual: 'analise' | 'tudo') {
     if (painel === qual) return setPainel(null);
@@ -245,6 +270,41 @@ export function TenderCard({
         <CompatBadge item={item} />
       </header>
 
+      {/* Em cima: de onde vem, número do edital e as datas. Embaixo: a descrição da licitação. */}
+      <dl className="rd-infos rd-infos-topo" aria-label="Fonte, edital e datas">
+        <Info rotulo="Fonte">
+          {portal ? (
+            <>
+              <Link
+                className="rd-portal"
+                href={`/portais?portal=${encodeURIComponent(portal.slug)}`}
+                title="Ver todos os editais deste portal"
+              >
+                {portal.nome}
+              </Link>
+              {item.url_origem ? (
+                <>
+                  {' · '}
+                  <a href={item.url_origem} target="_blank" rel="noreferrer noopener">
+                    abrir no portal
+                  </a>
+                </>
+              ) : null}
+            </>
+          ) : (
+            (item.sistema_origem ?? item.fonte ?? 'Não informada')
+          )}
+        </Info>
+        <Info rotulo="Edital">{item.numero_compra ?? 'Não informado'}</Info>
+        {item.data_publicacao ? (
+          <Info rotulo="Publicado em">{formatDate(item.data_publicacao)}</Info>
+        ) : null}
+        {abre ? <Info rotulo="Abertura">{abre}</Info> : null}
+        <Info rotulo="Propostas até" destaque>
+          {encerra || 'Não informado'}
+        </Info>
+      </dl>
+
       <h3>
         <Link href={`/radar/${item.id}`}>{item.titulo}</Link>
       </h3>
@@ -254,31 +314,13 @@ export function TenderCard({
         <Info rotulo="Valor estimado" destaque>
           {brl(item.valor_estimado)}
         </Info>
-        <Info rotulo="Propostas até">{encerra || 'Não informado'}</Info>
         <Info rotulo="Local">{place || 'Não informado'}</Info>
         <Info rotulo="Modalidade">{item.modalidade ?? 'Não informada'}</Info>
-        {item.data_publicacao ? (
-          <Info rotulo="Publicado em">{formatDate(item.data_publicacao)}</Info>
-        ) : null}
-        {abre ? <Info rotulo="Abertura">{abre}</Info> : null}
-        {item.numero_compra ? <Info rotulo="Compra nº">{item.numero_compra}</Info> : null}
         {item.itens_coletados ? <Info rotulo="Itens">{item.itens_coletados}</Info> : null}
         {distance !== null ? (
           <Info rotulo="Distância">{`${distance.toLocaleString('pt-BR')} km`}</Info>
         ) : null}
       </dl>
-
-      <p className="rd-source">
-        Fonte: {item.sistema_origem ?? item.fonte ?? 'não informada'}
-        {item.url_origem ? (
-          <>
-            {' · '}
-            <a href={item.url_origem} target="_blank" rel="noreferrer noopener">
-              ver no portal de origem
-            </a>
-          </>
-        ) : null}
-      </p>
 
       <footer className="rd-card-acoes">
         <div className="rd-acoes-principais">

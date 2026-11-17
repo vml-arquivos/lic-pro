@@ -34,6 +34,9 @@ export default async function EditalDetailPage({ params }: DetailPageProps) {
         <a className="tab" href="#itens">
           Itens
         </a>
+        <a className="tab" href="#documentacao">
+          Documentação técnica
+        </a>
         <a className="tab" href="#historico">
           O que mudou
         </a>

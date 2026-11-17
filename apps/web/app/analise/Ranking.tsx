@@ -11,6 +11,7 @@ import { Pager, paginar, totalDePaginas } from '../components/Pager';
 import { UfPicker } from '../components/UfPicker';
 import { faixaDeValor, nomeDoNicho, nomeDoSegmento } from '../radar/perfil-lib';
 import { MAX_COMPARAR, type Selecionado } from './AnaliseApp';
+import { CriteriosAnalise } from './CriteriosAnalise';
 import {
   CRITERIOS_AJUDA,
   moeda,
@@ -190,6 +191,8 @@ export function Ranking({
           </button>
         ))}
       </div>
+
+      <CriteriosAnalise foco={foco} titulo={`O que entra em “${FOCO_ROTULOS[foco]}”`} />
 
       {estado.state === 'ready' && estado.data.perfil_definido ? (
         <section className="rd-perfil ui-panel" aria-label="Meu perfil">

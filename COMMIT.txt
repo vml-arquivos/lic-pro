@@ -1,8 +1,10 @@
-Ana com linguagem simples e de pessoa de verdade
+Resumo:
+Portais de compras, documentação técnica do edital, critérios das análises e card invertido
 
-- A conversa abre com "Olá! Eu sou a Ana. Como posso te ajudar hoje?" e o campo pede "Escreva sua dúvida aqui…".
-- O resumo do painel agora diz "se preferir, comece por aqui" e usa frases curtas e fáceis (sem termos como pipeline e habilitação sem explicação).
-- Avisos de erro mais humanos e aviso curto: "Confira sempre no edital oficial antes de decidir."
-- O serviço de IA responde em tom de pessoa: frases curtas, trata por você, explica os termos difíceis em uma frase.
-- Textos das licitações mais simples: "termina 20/11" e "combina 91% com você".
-- Testes atualizados para as frases novas.
+Descrição:
+- Card e ficha do edital: fonte, número do edital e datas agora aparecem em cima; a descrição da licitação fica embaixo.
+- Portais: o portal de cada licitação passa a ser gravado (o PNCP informa em usuarioNome; antes o campo era lido com o nome errado e ficava vazio). Nova página Portais, filtro "Portal de compras" no Radar e link direto para o portal de origem.
+- Nova migration 0036 (coluna portal_slug e preenchimento dos editais já coletados).
+- Documentação técnica automática no edital: o que reunir para participar (habilitação, proposta, declarações, garantias, credenciamento no portal), com a origem de cada item.
+- Critérios das análises: quadro mostrando o que entra em "mais interessantes", "mais lucrativas", "mais fáceis" e "melhor preço", com o peso de cada critério, no Ranking e dentro do card.
+- Textos da Ana mais simples e diretos.

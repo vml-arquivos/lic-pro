@@ -21,6 +21,7 @@ type Catalog = {
   esfera?: string[];
   poder?: string[];
 };
+type PortalOpcao = { slug: string; nome: string; total: number };
 type CityHit = { codigo_ibge: string; municipio: string; sigla_uf: string };
 
 function Select({
@@ -67,11 +68,16 @@ export function RadarFilters({
 }>) {
   const [catalog, setCatalog] = useState<Catalog>({});
   const [cities, setCities] = useState<CityHit[]>([]);
+  const [portais, setPortais] = useState<PortalOpcao[]>([]);
   const cityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     void api<Catalog>('/catalog/filters')
       .then(setCatalog)
+      .catch(() => undefined);
+    // Portais de compras (BLL, BNC, Compras.gov.br…): só os que têm editais entram na lista.
+    void api<{ portais: PortalOpcao[] }>('/portais')
+      .then((resposta) => setPortais(resposta.portais))
       .catch(() => undefined);
   }, []);
 
@@ -95,6 +101,10 @@ export function RadarFilters({
   const nichosDaLista = selectedNiches.length ? selectedNiches : meusNichos;
   const asOptions = (list: string[] | undefined) =>
     (list ?? []).map((item) => [item, item] as const);
+  const portalAtual = params.get('portal') ?? '';
+  const portalOpcoes = portais
+    .filter((portal) => portal.total > 0 || portal.slug === portalAtual)
+    .map((portal) => [portal.slug, portal.nome] as const);
   const nearDefault = params.get('perto_municipio')
     ? `Município escolhido (${params.get('perto_municipio')})`
     : (params.get('municipio') ?? '');
@@ -210,6 +220,13 @@ export function RadarFilters({
             name="poder"
             value={params.get('poder') ?? ''}
             options={asOptions(catalog.poder)}
+          />
+          <Select
+            label="Portal de compras"
+            name="portal"
+            value={portalAtual}
+            options={portalOpcoes}
+            empty="Todos os portais"
           />
           <Select
             label="Período por"

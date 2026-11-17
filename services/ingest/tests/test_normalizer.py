@@ -110,3 +110,30 @@ def test_unknown_sphere_and_power_codes_stay_empty() -> None:
 
     assert tender.esfera is None
     assert tender.poder is None
+
+
+def test_normalizer_reads_portal_from_usuario_nome_and_link() -> None:
+    payload = json.loads(FIXTURE.read_text())
+    base = payload["data"][0]
+
+    by_name = normalize_pncp_publication(
+        {**base, "usuarioNome": "BLL - Bolsa de Licitações e Leilões"}, "tenant"
+    )
+    assert by_name.portal_slug == "bll-compras"
+    assert by_name.sistema_origem == "BLL Compras"
+
+    by_link = normalize_pncp_publication(
+        {
+            **base,
+            "usuarioNome": None,
+            "linkSistemaOrigem": "https://www.portaldecompraspublicas.com.br/18/x",
+        },
+        "tenant",
+    )
+    assert by_link.portal_slug == "portal-de-compras-publicas"
+
+    unknown = normalize_pncp_publication(
+        {**base, "usuarioNome": "Sistema da Prefeitura X", "linkSistemaOrigem": None}, "tenant"
+    )
+    assert unknown.portal_slug == "sistema-da-prefeitura-x"
+    assert unknown.sistema_origem == "Sistema da Prefeitura X"

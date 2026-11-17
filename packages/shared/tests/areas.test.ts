@@ -38,9 +38,9 @@ describe('menus por área', () => {
 
   it('o aluno explora licitações, analisa, compara preços e baixa planilha, sem ferramentas de operação', () => {
     const hrefs = flatMenu('aluno').map((item) => item.href);
-    for (const href of ['/radar', '/analise', '/pregoes', '/precos'])
+    for (const href of ['/radar', '/analise', '/pregoes', '/precos', '/portais'])
       expect(hrefs, href).toContain(href);
-    for (const href of ['/radar', '/analise', '/pregoes', '/precos'])
+    for (const href of ['/radar', '/analise', '/pregoes', '/precos', '/portais'])
       expect(canOpenPage(['aluno'], href), href).toBe(true);
     for (const href of ['/oportunidades', '/documentos', '/agenda', '/admin'])
       expect(canOpenPage(['aluno'], href), href).toBe(false);
@@ -169,13 +169,13 @@ describe('menus por área', () => {
     }
   });
 
-  it('quem trabalha com licitações encontra Explorar, Pregões, Análise e Preços num só grupo', () => {
+  it('quem trabalha com licitações encontra Explorar, Pregões, Análise, Preços e Portais num só grupo', () => {
     for (const area of ['administracao', 'empresa', 'colaborador', 'aluno'] as const) {
       const grupo = AREA_MENUS[area].find((item) => item.label === 'Licitações');
       expect(
         grupo?.items.map((item) => item.href),
         area,
-      ).toEqual(['/radar', '/pregoes', '/analise', '/precos']);
+      ).toEqual(['/radar', '/pregoes', '/analise', '/precos', '/portais']);
     }
     expect(flatMenu('curso').map((item) => item.href)).not.toContain('/radar');
     expect(flatMenu('mentor').map((item) => item.href)).not.toContain('/radar');

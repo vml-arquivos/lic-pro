@@ -1,10 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { errorText, send } from '../../../lib/api';
 import { Badge } from '../../components/ui';
-import { brl, deadlineInfo } from '../radar-lib';
+import { brl, deadlineInfo, portalDoEdital } from '../radar-lib';
+import { DocumentacaoTecnica } from './DocumentacaoTecnica';
+import './documentacao.css';
 import { ValoresFechados } from './ValoresFechados';
 
 type Edital = {
@@ -224,6 +226,18 @@ export function EditalWorkspace({
     void load();
   }, [editalId]);
 
+  // Itens e documentos do PNCP alimentam a documentação técnica: busca sozinho na primeira visita.
+  const buscouSozinho = useRef(false);
+  useEffect(() => {
+    const atual = detail?.edital;
+    if (!atual || !signedIn || buscouSozinho.current) return;
+    if (atual.fonte !== 'pncp' || atual.detalhes_coletados_em) return;
+    buscouSozinho.current = true;
+    void send('POST', `/editais/${editalId}/detalhes/atualizar`, { force: false })
+      .then(() => load())
+      .catch(() => undefined);
+  }, [detail, signedIn, editalId]);
+
   async function interact(change: Partial<Interacao>) {
     const before = interacao;
     setInteracao({
@@ -306,6 +320,7 @@ export function EditalWorkspace({
       </section>
     );
   const edital = detail.edital;
+  const portal = portalDoEdital(edital);
   const shownAnalysis = analysis ?? detail.analise?.resultado ?? null;
 
   return (
@@ -317,11 +332,31 @@ export function EditalWorkspace({
             {deadlineInfo(edital.data_encerramento_proposta).label}
           </Badge>
         </p>
+        {portal || edital.url_origem ? (
+          <p className="rd-portal-links">
+            {portal ? (
+              <Link href={`/radar?portal=${encodeURIComponent(portal.slug)}`}>
+                Ver outros editais do portal {portal.nome}
+              </Link>
+            ) : null}
+            {edital.url_origem ? (
+              <a href={edital.url_origem} target="_blank" rel="noreferrer noopener">
+                Abrir este edital no portal de origem
+              </a>
+            ) : null}
+          </p>
+        ) : null}
         <dl className="rd-facts">
           {(
             [
+              // Em cima: fonte, edital e datas. A descrição da licitação vem logo abaixo desta ficha.
+              ['Fonte', portal?.nome ?? edital.sistema_origem ?? edital.fonte],
               ['Número da compra', edital.numero_compra],
               ['Processo', edital.processo],
+              ['Publicação', fmtDateTime(edital.data_publicacao)],
+              ['Abertura das propostas', fmtDateTime(edital.data_abertura_proposta)],
+              ['Encerramento das propostas', fmtDateTime(edital.data_encerramento_proposta)],
+              ['Última atualização na fonte', fmtDateTime(edital.data_atualizacao)],
               ['Órgão', edital.orgao],
               ['CNPJ do órgão', edital.orgao_cnpj ? formatCnpj(edital.orgao_cnpj) : null],
               ['Município', edital.municipio_nome],
@@ -337,11 +372,6 @@ export function EditalWorkspace({
               ['Situação', edital.situacao],
               ['Valor estimado', brl(edital.valor_estimado)],
               ['Valor homologado', edital.valor_homologado ? brl(edital.valor_homologado) : null],
-              ['Publicação', fmtDateTime(edital.data_publicacao)],
-              ['Abertura das propostas', fmtDateTime(edital.data_abertura_proposta)],
-              ['Encerramento das propostas', fmtDateTime(edital.data_encerramento_proposta)],
-              ['Última atualização na fonte', fmtDateTime(edital.data_atualizacao)],
-              ['Fonte', edital.sistema_origem ?? edital.fonte],
             ] as Array<[string, string | null | undefined]>
           )
             .filter(([, value]) => value && value !== '—')
@@ -501,6 +531,17 @@ export function EditalWorkspace({
         {signedIn && detail.edital.fonte === 'pncp' && detail.itens.length ? (
           <ValoresFechados editalId={editalId} />
         ) : null}
+      </section>
+      <section id="documentacao" className="detail-card">
+        <h2>Documentação técnica</h2>
+        <p className="rd-doc-intro">
+          O que reunir para participar, montado automaticamente a partir dos dados do PNCP e do
+          texto do edital. Atualiza sozinho quando os itens e documentos são buscados.
+        </p>
+        <DocumentacaoTecnica
+          editalId={editalId}
+          versao={`${detail.itens.length}-${detail.documentos?.length ?? 0}`}
+        />
       </section>
       <section id="historico" className="detail-card">
         <h2>O que mudou e documentos</h2>

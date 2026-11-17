@@ -67,6 +67,7 @@ const analysis: MenuItem = {
   icon: 'scale',
 };
 const prices: MenuItem = { label: 'Preços pagos', href: '/precos', icon: 'chart' };
+const portals: MenuItem = { label: 'Portais de compras', href: '/portais', icon: 'building' };
 
 const home: MenuItem = { label: 'Início', href: '/painel', icon: 'home' };
 const subscription: MenuItem = { label: 'Assinatura e uso', href: '/assinatura', icon: 'award' };
@@ -85,7 +86,7 @@ const liveMeetings: MenuItem = {
 /** Os mesmos grupos de tema para quem trabalha com licitações no dia a dia. */
 const biddingGroup: MenuGroup = {
   label: 'Licitações',
-  items: [radar, published, analysis, prices],
+  items: [radar, published, analysis, prices, portals],
 };
 const trackingGroup: MenuGroup = {
   label: 'Acompanhamento',
@@ -242,6 +243,7 @@ export const PAGE_RULES: readonly PageRule[] = [
   { prefix: '/analise', areas: ['administracao', 'empresa', 'colaborador', 'aluno', 'mentor'] },
   { prefix: '/pregoes', areas: WORK },
   { prefix: '/precos', areas: WORK },
+  { prefix: '/portais', areas: WORK },
   { prefix: '/assinatura', areas: COMPANY },
   { prefix: '/oportunidades', areas: OPERATION },
   { prefix: '/agenda', areas: OPERATION },

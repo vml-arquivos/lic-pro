@@ -14,7 +14,7 @@ INSERT INTO editais (
   instrumento, modo_disputa, situacao, esfera, poder, municipio_ibge, municipio_nome,
   srp, data_atualizacao, data_abertura_proposta, data_encerramento_proposta,
   data_abertura_propostas, data_encerramento_propostas, valor_homologado, estado_completude,
-  orgao_cnpj, numero_compra, processo, amparo_legal, informacao_complementar
+  orgao_cnpj, numero_compra, processo, amparo_legal, informacao_complementar, portal_slug
 ) VALUES (
   %(tenant_id)s, %(fonte)s, %(id_externo)s, %(titulo)s, %(orgao)s, %(uf)s, %(uasg)s,
   %(modalidade)s, %(valor_estimado)s, %(data_publicacao)s, %(url_origem)s,
@@ -24,7 +24,7 @@ INSERT INTO editais (
   %(data_atualizacao)s, %(data_abertura_proposta)s, %(data_encerramento_proposta)s,
   %(data_abertura_propostas)s, %(data_encerramento_propostas)s, %(valor_homologado)s,
   %(estado_completude)s, %(orgao_cnpj)s, %(numero_compra)s, %(processo)s, %(amparo_legal)s,
-  %(informacao_complementar)s
+  %(informacao_complementar)s, %(portal_slug)s
 )
 ON CONFLICT (tenant_id, fonte, id_externo) DO UPDATE SET
   titulo = EXCLUDED.titulo,
@@ -61,6 +61,7 @@ ON CONFLICT (tenant_id, fonte, id_externo) DO UPDATE SET
   processo = EXCLUDED.processo,
   amparo_legal = EXCLUDED.amparo_legal,
   informacao_complementar = EXCLUDED.informacao_complementar,
+  portal_slug = EXCLUDED.portal_slug,
   updated_at = now()
 RETURNING (xmax = 0) AS inserted;
 """
@@ -99,6 +100,7 @@ def _parameters(tender: NormalizedTender) -> dict[str, Any]:
         "hash_conteudo": tender.hash_conteudo,
         "conteudo_texto": tender.conteudo_texto,
         "sistema_origem": tender.sistema_origem,
+        "portal_slug": tender.portal_slug,
         "codigo_modalidade": tender.codigo_modalidade,
         "codigo_modo_disputa": tender.codigo_modo_disputa,
         "codigo_instrumento": tender.codigo_instrumento,
