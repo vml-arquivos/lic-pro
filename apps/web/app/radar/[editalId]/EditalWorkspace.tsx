@@ -7,7 +7,8 @@ import { Badge } from '../../components/ui';
 import { brl, deadlineInfo, portalDoEdital } from '../radar-lib';
 import { DocumentacaoTecnica } from './DocumentacaoTecnica';
 import './documentacao.css';
-import { MercadoDoEdital } from './MercadoDoEdital';
+import { DadosDoEdital, DocumentosDoEdital, useLeitura } from './LeituraDoEdital';
+import { ConcorrentesDoEdital, PrecosDoEdital } from './MercadoDoEdital';
 import { ValoresFechados } from './ValoresFechados';
 
 type Edital = {
@@ -148,6 +149,12 @@ function formatCnpj(value: string | null | undefined): string {
     : (value ?? '—');
 }
 
+/** Pregão já encerrado: o resultado dos itens costuma estar publicado. */
+function fechado(edital: Edital): boolean {
+  if (edital.valor_homologado) return true;
+  return /homolog|adjudic|conclu[ií]d|encerrad/i.test(edital.situacao ?? '');
+}
+
 export function EditalWorkspace({
   editalId,
   canPipeline = true,
@@ -188,8 +195,8 @@ export function EditalWorkspace({
       );
       setMessage(
         !result.atualizado
-          ? 'Os itens e documentos já foram buscados há pouco. Use “Buscar de novo” se precisar.'
-          : `Encontrados ${result.itens ?? 0} item(ns) e ${result.documentos ?? 0} documento(s) no PNCP.`,
+          ? 'Itens e documentos já estão atualizados.'
+          : `Encontrados ${result.itens ?? 0} item(ns) e ${result.documentos ?? 0} documento(s).`,
       );
       await load();
     } catch (cause) {
@@ -234,10 +241,19 @@ export function EditalWorkspace({
     if (!atual || !signedIn || buscouSozinho.current) return;
     if (atual.fonte !== 'pncp' || atual.detalhes_coletados_em) return;
     buscouSozinho.current = true;
+    setFetchingDetails(true);
     void send('POST', `/editais/${editalId}/detalhes/atualizar`, { force: false })
       .then(() => load())
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setFetchingDetails(false));
   }, [detail, signedIn, editalId]);
+
+  // Documentos do edital: lidos no servidor sozinhos; recomeça quando chegam itens ou documentos novos.
+  const leitura = useLeitura(
+    editalId,
+    signedIn && Boolean(detail?.edital) && !fetchingDetails,
+    `${detail?.itens.length ?? 0}-${detail?.documentos?.length ?? 0}`,
+  );
 
   async function interact(change: Partial<Interacao>) {
     const before = interacao;
@@ -279,18 +295,18 @@ export function EditalWorkspace({
   }
 
   async function analyzeReader() {
-    setMessage('Reader trabalhando somente sobre o edital e seus chunks persistidos…');
+    setMessage('Analisando…');
     const response = await fetch('/api/reader/analyze', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ edital_id: editalId, pergunta: question }),
     });
     if (!response.ok) {
-      setMessage('Reader indisponível ou sem sessão válida.');
+      setMessage('Análise indisponível agora.');
       return;
     }
     setAnalysis((await response.json()) as ReaderResult);
-    setMessage('Análise gerada com evidências.');
+    setMessage('Análise pronta.');
   }
 
   async function ingestPdf() {
@@ -300,9 +316,7 @@ export function EditalWorkspace({
     body.set('edital_id', editalId);
     const response = await fetch('/api/reader/ingest', { method: 'POST', body });
     setMessage(
-      response.ok
-        ? 'PDF ingerido; agora você pode pedir a análise.'
-        : 'Não foi possível ingerir o PDF.',
+      response.ok ? 'PDF enviado. Agora é só perguntar.' : 'Não foi possível enviar o PDF.',
     );
     if (response.ok) await load();
   }
@@ -310,7 +324,7 @@ export function EditalWorkspace({
   if (loading)
     return (
       <section className="detail-card">
-        <p>Carregando edital, versões e evidências…</p>
+        <p>Carregando o edital…</p>
       </section>
     );
   if (!detail?.edital)
@@ -497,10 +511,10 @@ export function EditalWorkspace({
               onClick={() => void fetchDetails(Boolean(detail.edital.detalhes_coletados_em))}
             >
               {fetchingDetails
-                ? 'Buscando no PNCP…'
+                ? 'Buscando…'
                 : detail.edital.detalhes_coletados_em
-                  ? 'Buscar de novo itens e documentos'
-                  : 'Buscar itens e documentos no PNCP'}
+                  ? 'Atualizar itens e documentos'
+                  : 'Buscar itens e documentos'}
             </button>
           </p>
         ) : null}
@@ -530,24 +544,58 @@ export function EditalWorkspace({
           <p>Nenhum item normalizado ainda.</p>
         )}
         {signedIn && detail.edital.fonte === 'pncp' && detail.itens.length ? (
-          <ValoresFechados editalId={editalId} />
+          <ValoresFechados editalId={editalId} automatico={fechado(edital)} />
         ) : null}
       </section>
       <section id="documentacao" className="detail-card">
         <h2>Documentação técnica</h2>
+        {signedIn ? (
+          <DadosDoEdital
+            estado={leitura.estado}
+            buscando={fetchingDetails}
+            tentarDeNovo={leitura.tentarDeNovo}
+          />
+        ) : null}
         <DocumentacaoTecnica
           editalId={editalId}
-          versao={`${detail.itens.length}-${detail.documentos?.length ?? 0}`}
+          versao={`${detail.itens.length}-${detail.documentos?.length ?? 0}-${
+            leitura.estado.s === 'pronta' ? leitura.estado.dados.gerado_em : ''
+          }`}
+          semArquivos={signedIn}
         />
       </section>
       {signedIn ? (
-        <section id="mercado" className="detail-card">
-          <h2>Preços e concorrentes</h2>
-          <MercadoDoEdital editalId={editalId} temItens={detail.itens.length > 0} />
+        <section id="documentos" className="detail-card">
+          <h2>Documentos do edital</h2>
+          <DocumentosDoEdital
+            editalId={editalId}
+            estado={leitura.estado}
+            publicados={detail.documentos ?? []}
+          />
+        </section>
+      ) : null}
+      {signedIn ? (
+        <section id="precos" className="detail-card">
+          <h2>Preços pagos</h2>
+          <PrecosDoEdital
+            editalId={editalId}
+            temItens={detail.itens.length > 0}
+            buscando={fetchingDetails}
+          />
+        </section>
+      ) : null}
+      {signedIn ? (
+        <section id="concorrentes" className="detail-card">
+          <h2>Concorrentes</h2>
+          <ConcorrentesDoEdital
+            editalId={editalId}
+            temItens={detail.itens.length > 0}
+            buscando={fetchingDetails}
+          />
         </section>
       ) : null}
       <section id="historico" className="detail-card">
-        <h2>O que mudou e documentos</h2>
+        <h2>O que mudou</h2>
         {(detail.eventos ?? []).length ? (
           <ul className="simple-list">
             {(detail.eventos ?? []).map((evento) => (
@@ -569,37 +617,24 @@ export function EditalWorkspace({
         ) : (
           <p>Nenhuma alteração registrada desde que o edital entrou no Radar.</p>
         )}
-        <h3>Documentos ({(detail.documentos ?? []).length})</h3>
-        {(detail.documentos ?? []).length ? (
-          <ul className="simple-list">
-            {(detail.documentos ?? []).map((doc) => (
-              <li key={doc.id}>
-                <strong>{doc.nome_arquivo ?? doc.tipo ?? 'Documento'}</strong>
-                <span>
-                  {doc.tipo ?? 'anexo'}
-                  {doc.url ? (
-                    <>
-                      {' · '}
-                      <a href={doc.url} target="_blank" rel="noreferrer noopener">
-                        abrir na fonte
-                      </a>
-                    </>
-                  ) : null}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>
-            A fonte não trouxe documentos para este edital. Confira os anexos no portal de origem.
-          </p>
-        )}
+        {!signedIn && (detail.documentos ?? []).length ? (
+          <>
+            <h3>Documentos ({(detail.documentos ?? []).length})</h3>
+            <ul className="simple-list">
+              {(detail.documentos ?? []).map((doc) => (
+                <li key={doc.id}>
+                  <strong>{doc.nome_arquivo ?? doc.tipo ?? 'Documento'}</strong>
+                  <span>{doc.tipo ?? 'anexo'}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null}
       </section>
       <section id="analise" className="detail-card analysis-card">
         <div className="analysis-heading">
           <div>
-            <p className="eyebrow">Reader v1 · evidência primeiro</p>
-            <h2>Análise IA</h2>
+            <h2>Perguntas sobre o edital</h2>
           </div>
           <span className="status-pill">
             {detail.analise?.status ?? (analysis ? 'concluída' : 'pendente')}
@@ -607,7 +642,7 @@ export function EditalWorkspace({
         </div>
         <div className="reader-controls">
           <label>
-            Pergunta para o Reader
+            Sua pergunta
             <textarea
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
@@ -616,7 +651,7 @@ export function EditalWorkspace({
           </label>
           <div className="action-row">
             <button type="button" onClick={() => void analyzeReader()}>
-              Analisar fonte
+              Perguntar
             </button>
             <label className="file-input">
               Anexar PDF
@@ -668,10 +703,7 @@ export function EditalWorkspace({
             <p className="analysis-warning">{shownAnalysis.disclaimer}</p>
           </div>
         ) : (
-          <p>
-            Faça upload de um PDF ingerido ou selecione uma pergunta para gerar a primeira leitura
-            com evidências.
-          </p>
+          <p>Anexe o PDF do edital e faça sua pergunta.</p>
         )}
         {message ? (
           <p className="success-message" aria-live="polite">
@@ -698,17 +730,11 @@ export function EditalWorkspace({
       </section>
       <section id="raio-x" className="detail-card">
         <h2>Raio-X</h2>
-        <p>
-          O MVP 1 mostra os fatos ingeridos, itens, versões e evidências. Classificações de risco
-          não confirmadas aparecem como perguntas para revisão.
-        </p>
+        <p>Fatos, itens e versões do edital.</p>
       </section>
       <section id="proposta" className="detail-card">
         <h2>Proposta</h2>
-        <p>
-          O MVP 1 não envia propostas a portais. Use o pipeline e o checklist para organizar a
-          próxima decisão com aprovação humana.
-        </p>
+        <p>Use o pipeline para acompanhar a proposta.</p>
       </section>
     </>
   );

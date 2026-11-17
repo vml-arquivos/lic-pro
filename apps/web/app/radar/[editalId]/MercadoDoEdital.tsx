@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   formatarDocumento,
   type ComparacaoDePreco,
@@ -77,45 +77,73 @@ const POSICAO: Record<PosicaoDoPreco, { rotulo: string; tom: string }> = {
   acima_do_maximo: { rotulo: 'Acima do maior preço pago', tom: 'ok' },
 };
 
-/** Preço estimado × preços pagos em outras compras do mesmo item. */
-function PrecosPagos({ editalId, temItens }: Readonly<{ editalId: string; temItens: boolean }>) {
-  const [ocupado, setOcupado] = useState(false);
+/** Hook comum: busca ao abrir e de novo quando `quando` muda. */
+function useBusca<T>(caminho: string, ativo: boolean, quando: string) {
+  const [ocupado, setOcupado] = useState(ativo);
   const [erro, setErro] = useState('');
-  const [dados, setDados] = useState<RespostaPrecos | null>(null);
+  const [dados, setDados] = useState<T | null>(null);
+  const [rodada, setRodada] = useState(0);
 
-  async function carregar() {
+  useEffect(() => {
+    if (!ativo) {
+      setOcupado(false);
+      return;
+    }
+    let vivo = true;
     setOcupado(true);
     setErro('');
-    try {
-      setDados(await api<RespostaPrecos>(`/editais/${editalId}/historico-precos`));
-    } catch (causa) {
-      setErro(errorText(causa));
-    } finally {
-      setOcupado(false);
-    }
-  }
+    api<T>(caminho)
+      .then((resposta) => vivo && setDados(resposta))
+      .catch((causa: unknown) => vivo && setErro(errorText(causa)))
+      .finally(() => vivo && setOcupado(false));
+    return () => {
+      vivo = false;
+    };
+  }, [caminho, ativo, quando, rodada]);
+
+  return { ocupado, erro, dados, atualizar: () => setRodada((valor) => valor + 1) };
+}
+
+function Atualizar({ ocupado, aoClicar }: Readonly<{ ocupado: boolean; aoClicar: () => void }>) {
+  return (
+    <p className="mk-atualizar">
+      <button
+        type="button"
+        className="ui-btn ui-btn-ghost ui-btn-small"
+        disabled={ocupado}
+        onClick={aoClicar}
+      >
+        Atualizar
+      </button>
+    </p>
+  );
+}
+
+/** Preço estimado × preços pagos em outras compras do mesmo item. */
+export function PrecosDoEdital({
+  editalId,
+  temItens,
+  buscando,
+}: Readonly<{ editalId: string; temItens: boolean; buscando: boolean }>) {
+  const { ocupado, erro, dados, atualizar } = useBusca<RespostaPrecos>(
+    `/editais/${editalId}/historico-precos`,
+    temItens,
+    editalId,
+  );
 
   return (
     <div className="mk-bloco">
-      <h3>Preços pagos em outras compras</h3>
-      {temItens ? (
-        <p>
-          <button
-            type="button"
-            className="ui-btn ui-btn-ghost ui-btn-small"
-            disabled={ocupado}
-            onClick={() => void carregar()}
-          >
-            {ocupado
-              ? 'Consultando o Compras.gov.br…'
-              : dados
-                ? 'Atualizar comparação'
-                : 'Comparar preços'}
-          </button>
+      {!temItens ? (
+        buscando ? (
+          <p className="mk-vazio">Buscando os itens do edital…</p>
+        ) : (
+          <Alert kind="info">Este edital não tem itens para comparar.</Alert>
+        )
+      ) : ocupado && !dados ? (
+        <p className="mk-vazio" role="status">
+          Comparando os preços…
         </p>
-      ) : (
-        <Alert kind="info">Busque os itens do edital primeiro.</Alert>
-      )}
+      ) : null}
       {erro ? <Alert kind="error">{erro}</Alert> : null}
       {dados ? (
         <>
@@ -221,6 +249,7 @@ function PrecosPagos({ editalId, temItens }: Readonly<{ editalId: string; temIte
               </ul>
             </details>
           ) : null}
+          <Atualizar ocupado={ocupado} aoClicar={atualizar} />
         </>
       ) : null}
     </div>
@@ -294,40 +323,25 @@ function ListaDeConcorrentes({
 }
 
 /** Concorrentes: neste edital (se já fechou) e pelo histórico real do órgão e dos itens. */
-function Concorrentes({ editalId }: Readonly<{ editalId: string }>) {
-  const [ocupado, setOcupado] = useState(false);
-  const [erro, setErro] = useState('');
-  const [dados, setDados] = useState<RespostaConcorrentes | null>(null);
-
-  async function carregar() {
-    setOcupado(true);
-    setErro('');
-    try {
-      setDados(await api<RespostaConcorrentes>(`/editais/${editalId}/concorrentes`));
-    } catch (causa) {
-      setErro(errorText(causa));
-    } finally {
-      setOcupado(false);
-    }
-  }
+export function ConcorrentesDoEdital({
+  editalId,
+  temItens,
+  buscando,
+}: Readonly<{ editalId: string; temItens: boolean; buscando: boolean }>) {
+  // Espera os itens chegarem para já incluir os fornecedores dos mesmos itens.
+  const { ocupado, erro, dados, atualizar } = useBusca<RespostaConcorrentes>(
+    `/editais/${editalId}/concorrentes`,
+    !buscando,
+    String(temItens),
+  );
 
   return (
     <div className="mk-bloco">
-      <h3>Concorrentes</h3>
-      <p>
-        <button
-          type="button"
-          className="ui-btn ui-btn-ghost ui-btn-small"
-          disabled={ocupado}
-          onClick={() => void carregar()}
-        >
-          {ocupado
-            ? 'Consultando o PNCP e o Compras.gov.br…'
-            : dados
-              ? 'Atualizar concorrentes'
-              : 'Ver concorrentes'}
-        </button>
-      </p>
+      {(ocupado && !dados) || buscando ? (
+        <p className="mk-vazio" role="status">
+          Buscando os concorrentes…
+        </p>
+      ) : null}
       {erro ? <Alert kind="error">{erro}</Alert> : null}
       {dados ? (
         <>
@@ -356,20 +370,9 @@ function Concorrentes({ editalId }: Readonly<{ editalId: string }>) {
             lista={dados.dos_itens}
             vazio="Nenhum fornecedor encontrado."
           />
+          <Atualizar ocupado={ocupado} aoClicar={atualizar} />
         </>
       ) : null}
-    </div>
-  );
-}
-
-export function MercadoDoEdital({
-  editalId,
-  temItens,
-}: Readonly<{ editalId: string; temItens: boolean }>) {
-  return (
-    <div className="mk">
-      <PrecosPagos editalId={editalId} temItens={temItens} />
-      <Concorrentes editalId={editalId} />
     </div>
   );
 }

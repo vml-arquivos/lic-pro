@@ -21,10 +21,7 @@ export default async function EditalDetailPage({ params }: DetailPageProps) {
         <div>
           <p className="eyebrow">Workspace do edital</p>
           <h1>Leia, confira a fonte e decida com calma</h1>
-          <p>
-            O Reader só responde com evidências salvas; correções ficam registradas e o produto não
-            executa ações em portais.
-          </p>
+          <p>Tudo do edital em um só lugar.</p>
         </div>
       </header>
       <nav className="tabs" aria-label="Seções do edital">
@@ -37,14 +34,20 @@ export default async function EditalDetailPage({ params }: DetailPageProps) {
         <a className="tab" href="#documentacao">
           Documentação técnica
         </a>
-        <a className="tab" href="#mercado">
-          Preços e concorrentes
+        <a className="tab" href="#documentos">
+          Documentos
+        </a>
+        <a className="tab" href="#precos">
+          Preços pagos
+        </a>
+        <a className="tab" href="#concorrentes">
+          Concorrentes
         </a>
         <a className="tab" href="#historico">
           O que mudou
         </a>
         <a className="tab" href="#analise">
-          Reader
+          Perguntas
         </a>
         <a className="tab" href="#versoes">
           Versões

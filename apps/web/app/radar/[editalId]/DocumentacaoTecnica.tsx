@@ -25,7 +25,8 @@ type Resposta = {
 export function DocumentacaoTecnica({
   editalId,
   versao,
-}: Readonly<{ editalId: string; versao: string }>) {
+  semArquivos = false,
+}: Readonly<{ editalId: string; versao: string; semArquivos?: boolean }>) {
   const [estado, setEstado] = useState<
     { s: 'carregando' } | { s: 'erro'; mensagem: string } | { s: 'pronto'; dados: Resposta }
   >({ s: 'carregando' });
@@ -104,7 +105,7 @@ export function DocumentacaoTecnica({
         </section>
       ))}
 
-      {doc.documentos.length ? (
+      {doc.documentos.length && !semArquivos ? (
         <section className="dt-grupo">
           <h3>Arquivos publicados no PNCP</h3>
           <ul>

@@ -1,0 +1,123 @@
+/* Leitura do edital: dados, avisos e documentos */
+.lt {
+  display: grid;
+  gap: 0.9rem;
+}
+.lt-aguarde {
+  align-items: center;
+  color: var(--workspace-muted);
+  display: flex;
+  gap: 0.6rem;
+  margin: 0;
+}
+.lt-ponto {
+  animation: lt-pulso 1s ease-in-out infinite;
+  background: var(--workspace-navy);
+  border-radius: 50%;
+  display: inline-block;
+  height: 0.6rem;
+  width: 0.6rem;
+}
+@keyframes lt-pulso {
+  50% {
+    opacity: 0.25;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lt-ponto {
+    animation: none;
+  }
+}
+.lt-vazio {
+  color: var(--workspace-muted);
+  margin: 0;
+}
+.lt-erro {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+.lt-atencao {
+  background: #fff8e6;
+  border: 1px solid #f0d9a0;
+  border-radius: 0.6rem;
+  margin: 0;
+  padding: 0.6rem 0.9rem 0.6rem 1.6rem;
+}
+.lt-grupo h3 {
+  font-size: 0.95rem;
+  margin: 0 0 0.4rem;
+}
+.lt-grupo ul,
+.lt-docs {
+  display: grid;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.lt-fato,
+.lt-doc {
+  background: #f6fafb;
+  border-left: 3px solid var(--workspace-navy);
+  border-radius: 0.5rem;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.55rem 0.8rem;
+}
+.lt-doc-fora {
+  border-left-color: var(--workspace-line);
+}
+.lt-fato-topo,
+.lt-doc-topo {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.8rem;
+  justify-content: space-between;
+}
+.lt-fato details summary {
+  color: var(--workspace-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.lt-fato blockquote {
+  border-left: 2px solid var(--workspace-line);
+  font-size: 0.85rem;
+  margin: 0.3rem 0 0;
+  padding-left: 0.6rem;
+}
+.lt-doc small {
+  color: var(--workspace-muted);
+}
+.lt-texto {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+.lt-texto input {
+  max-width: 22rem;
+}
+.lt-paginas {
+  background: #fff;
+  border: 1px solid var(--workspace-line);
+  border-radius: 0.5rem;
+  max-height: 28rem;
+  overflow: auto;
+  padding: 0.6rem 0.8rem;
+}
+.lt-paginas h4 {
+  color: var(--workspace-muted);
+  font-size: 0.75rem;
+  margin: 0.6rem 0 0.2rem;
+  text-transform: uppercase;
+}
+.lt-paginas h4:first-child {
+  margin-top: 0;
+}
+.lt-paginas p {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 0;
+  white-space: pre-wrap;
+}

@@ -11,6 +11,7 @@ import { withTenant } from './db.js';
 import { searchContext, scopedFilters } from './radar.js';
 import { authContext, sendDatabaseUnavailable } from './request-context.js';
 import { buildEditalSearchQuery } from './search.js';
+import { leituras } from './leitura-edital.js';
 
 type Deps = { pool: Pool | undefined };
 
@@ -167,7 +168,7 @@ export function registerPortaisRoutes(app: FastifyInstance, { pool }: Deps): voi
     const info = infoDoPortal(edital.portal_slug ?? portal?.slug ?? '');
     const documentacao = gerarDocumentacaoTecnica({
       titulo: edital.titulo,
-      texto: edital.conteudo_texto,
+      texto: [edital.conteudo_texto, leituras.textoLido(id)].filter(Boolean).join('\n\n') || null,
       modalidade: edital.modalidade,
       modo_disputa: edital.modo_disputa,
       instrumento: edital.instrumento,

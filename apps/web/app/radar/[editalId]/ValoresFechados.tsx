@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, errorText } from '../../../lib/api';
 import { reais } from '../../../lib/money';
 import { Alert, Kpi, Table, formatDate } from '../../components/ui';
@@ -34,7 +34,10 @@ const pct = (value: number | null | undefined) =>
   typeof value === 'number' ? `${value.toLocaleString('pt-BR')}%` : '—';
 
 /** Valor estimado × valor fechado de cada item, com o vencedor, direto do PNCP. */
-export function ValoresFechados({ editalId }: Readonly<{ editalId: string }>) {
+export function ValoresFechados({
+  editalId,
+  automatico = false,
+}: Readonly<{ editalId: string; automatico?: boolean }>) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [data, setData] = useState<Resposta | null>(null);
@@ -51,19 +54,26 @@ export function ValoresFechados({ editalId }: Readonly<{ editalId: string }>) {
     }
   }
 
+  useEffect(() => {
+    if (automatico) void load();
+  }, [editalId, automatico]);
+
   return (
     <div className="rd-fechados">
       <h3>Valores fechados no pregão</h3>
-      <p>
-        <button
-          type="button"
-          className="ui-btn ui-btn-ghost ui-btn-small"
-          disabled={busy}
-          onClick={() => void load()}
-        >
-          {busy ? 'Consultando o PNCP…' : data ? 'Atualizar valores' : 'Ver valores fechados'}
-        </button>
-      </p>
+      {automatico && busy && !data ? <p role="status">Buscando os valores…</p> : null}
+      {automatico && !busy ? null : (
+        <p>
+          <button
+            type="button"
+            className="ui-btn ui-btn-ghost ui-btn-small"
+            disabled={busy}
+            onClick={() => void load()}
+          >
+            {busy ? 'Buscando…' : data ? 'Atualizar valores' : 'Ver valores fechados'}
+          </button>
+        </p>
+      )}
       {error ? <Alert kind="error">{error}</Alert> : null}
       {data ? (
         data.resumo.com_resultado ? (

@@ -289,7 +289,7 @@ export function registerDetalhesRoutes(
     if (!loaded.itens.length) {
       return reply.code(409).send({
         error: 'itens_nao_coletados',
-        message: 'Busque os itens do edital primeiro (botão “Buscar itens e documentos no PNCP”).',
+        message: 'Os itens do edital ainda não foram buscados.',
       });
     }
     const hit = resultCache.get(id);

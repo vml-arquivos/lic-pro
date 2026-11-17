@@ -1,5 +1,5 @@
 Resumo:
-Acesso master, bloqueio de funções por pessoa, login único entre painéis e preços e concorrentes no edital
+Acesso master, bloqueio de funções por pessoa, login único entre painéis e leitura automática do edital (documentação, preços e concorrentes)
 
 Descrição:
 - Acesso master (superadmin) pelo e-mail em SUPERADMIN_EMAILS: vê tudo, cria acessos de equipe e marca o que cada um não pode abrir (menu, páginas e API). Nova tela em Equipe administrativa e também no convite.
@@ -11,6 +11,10 @@ Descrição:
 - Nova migration 0036 (coluna portal_slug e preenchimento dos editais já coletados).
 - Documentação técnica automática no edital: o que reunir para participar (habilitação, proposta, declarações, garantias, credenciamento no portal), com a origem de cada item.
 - Critérios das análises: quadro mostrando o que entra em "mais interessantes", "mais lucrativas", "mais fáceis" e "melhor preço", com o peso de cada critério, no Ranking e dentro do card.
-- Nova seção "Preços e concorrentes" no edital: compara o valor estimado de cada item com o que outros órgãos pagaram pelo mesmo CATMAT (Compras.gov.br) e lista concorrentes pelo histórico real (contratos do órgão no PNCP, resultados do próprio edital quando encerrado e fornecedores dos mesmos itens), com link para conferir no PNCP.
+- Página do edital carrega tudo sozinha, sem botões: documentação técnica, documentos, preços pagos e concorrentes (cada um em um bloco separado). Preços pagos compara o estimado com o que outros órgãos pagaram pelo mesmo CATMAT (Compras.gov.br). Concorrentes lista quem venceu neste edital (quando já há resultado), os contratos parecidos do órgão e os fornecedores dos mesmos itens (PNCP).
+- O sistema lê os PDFs do edital no PNCP e mostra na tela prazos, garantia, amostra, visita técnica, multas e habilitação, cada um com a página de onde saiu, mais avisos curtos do que pede atenção. Os documentos abrem como texto na própria página (com busca), sem link para baixar o PDF.
+- A documentação técnica passa a marcar "No edital" com base no texto real dos documentos.
+- Valores fechados carregam sozinhos nos pregões encerrados.
+- Nova biblioteca unpdf no core-api (pnpm-lock atualizado). Sem migration nova.
 - Textos mais curtos e diretos em toda a plataforma: removidos avisos e explicações de fonte (Preços e concorrentes, Documentação técnica, Portais, Critérios, Preços de referência, Valores fechados).
 - Textos da Ana mais simples e diretos.
