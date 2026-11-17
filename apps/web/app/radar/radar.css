@@ -603,3 +603,16 @@
 .rd-comp small {
   color: var(--workspace-muted);
 }
+
+.rd-info-largo {
+  grid-column: 1 / -1;
+}
+.rd-info-largo dd {
+  color: var(--workspace-navy);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.rd-descricao {
+  border-top: 1px solid var(--workspace-line);
+  padding-top: 0.6rem;
+}

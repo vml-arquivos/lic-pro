@@ -55,10 +55,19 @@ function CompatBadge({ item }: Readonly<{ item: Tender }>) {
 function Info({
   rotulo,
   destaque,
+  largo,
   children,
-}: Readonly<{ rotulo: string; destaque?: boolean; children: React.ReactNode }>) {
+}: Readonly<{
+  rotulo: string;
+  destaque?: boolean;
+  /** Ocupa a linha inteira (ex.: nome do órgão). */
+  largo?: boolean;
+  children: React.ReactNode;
+}>) {
   return (
-    <div className={destaque ? 'rd-info rd-info-destaque' : 'rd-info'}>
+    <div
+      className={`rd-info${destaque ? ' rd-info-destaque' : ''}${largo ? ' rd-info-largo' : ''}`}
+    >
       <dt>{rotulo}</dt>
       <dd>{children}</dd>
     </div>
@@ -270,14 +279,14 @@ export function TenderCard({
         <CompatBadge item={item} />
       </header>
 
-      {/* Em cima: de onde vem, número do edital e as datas. Embaixo: a descrição da licitação. */}
+      {/* Em cima: fonte, edital, datas, órgão, valor, local e modalidade. Embaixo: a descrição. */}
       <dl className="rd-infos rd-infos-topo" aria-label="Fonte, edital e datas">
         <Info rotulo="Fonte">
           {portal ? (
             <>
               <Link
                 className="rd-portal"
-                href={`/portais?portal=${encodeURIComponent(portal.slug)}`}
+                href={`/radar?portal=${encodeURIComponent(portal.slug)}`}
                 title="Ver todos os editais deste portal"
               >
                 {portal.nome}
@@ -305,12 +314,10 @@ export function TenderCard({
         </Info>
       </dl>
 
-      <h3>
-        <Link href={`/radar/${item.id}`}>{item.titulo}</Link>
-      </h3>
-      <p className="rd-orgao">{item.orgao ?? 'Órgão não informado'}</p>
-
-      <dl className="rd-infos">
+      <dl className="rd-infos" aria-label="Órgão, valor, local e modalidade">
+        <Info rotulo="Órgão" largo>
+          {item.orgao ?? 'Não informado'}
+        </Info>
         <Info rotulo="Valor estimado" destaque>
           {brl(item.valor_estimado)}
         </Info>
@@ -321,6 +328,10 @@ export function TenderCard({
           <Info rotulo="Distância">{`${distance.toLocaleString('pt-BR')} km`}</Info>
         ) : null}
       </dl>
+
+      <h3 className="rd-descricao">
+        <Link href={`/radar/${item.id}`}>{item.titulo}</Link>
+      </h3>
 
       <footer className="rd-card-acoes">
         <div className="rd-acoes-principais">
