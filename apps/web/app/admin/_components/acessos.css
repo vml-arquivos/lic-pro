@@ -1,0 +1,54 @@
+.ac {
+  display: grid;
+  gap: 0.5rem;
+  grid-column: 1 / -1;
+}
+.ac-titulo {
+  margin: 0;
+}
+.ac-painel {
+  background: #f6fafb;
+  border: 1px solid var(--workspace-line);
+  border-radius: 0.6rem;
+  padding: 0.5rem 0.8rem;
+}
+.ac-painel summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.ac-painel summary small {
+  color: var(--workspace-muted);
+  font-weight: 400;
+}
+.ac-acoes {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+}
+.ac-grupo {
+  border: 0;
+  display: grid;
+  gap: 0.3rem 1.2rem;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  margin: 0 0 0.6rem;
+  padding: 0;
+}
+.ac-grupo legend {
+  grid-column: 1 / -1;
+  color: var(--workspace-muted);
+  font-size: 0.8rem;
+  padding: 0;
+}
+.ac .ac-item {
+  align-items: center;
+  flex-direction: row;
+  display: flex;
+  gap: 0.5rem;
+}
+.ac .ac-item input {
+  width: auto;
+}
+.ac-resumo {
+  color: var(--workspace-muted);
+  font-size: 0.82rem;
+}

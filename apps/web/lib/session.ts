@@ -1,7 +1,9 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import {
   areasForPanel,
+  paginaBloqueada,
+  paginaSoDoSuperadmin,
   panelOpensForAreas,
   panelUrl,
   panelUrlForRole,
@@ -19,6 +21,11 @@ export type Session = {
   area: Area;
   areas_permitidas: Area[];
   plataforma: boolean;
+  /** Funções que o superadmin bloqueou para esta conta da equipe. */
+  acessos_bloqueados?: string[];
+  superadmin?: boolean;
+  /** Pode abrir e mexer na gestão da equipe. */
+  gestao_equipe?: boolean;
   visualizar_como: Area | null;
   perfil_jornada: string | null;
   nicho_preferencias: string[] | null;
@@ -105,5 +112,15 @@ export async function requireArea(...areas: Area[]): Promise<Session> {
   if (result.status === 'unavailable') throw new Error('Serviço de contas indisponível.');
   const allowed = result.session.areas_permitidas;
   if (!areas.some((area) => allowed.includes(area))) notFound();
+  const caminho = headers().get('x-pathname');
+  if (caminho && paginaBloqueada(result.session.acessos_bloqueados, caminho)) notFound();
+  if (caminho && paginaSoDoSuperadmin(caminho) && !result.session.gestao_equipe) notFound();
   return result.session;
+}
+
+/** Só quem pode gerir a equipe (superadmin) abre a página; para as demais, ela não existe. */
+export async function requireSuperadmin(): Promise<Session> {
+  const session = await getSession();
+  if (!session?.gestao_equipe) notFound();
+  return session;
 }

@@ -4,6 +4,7 @@ import type { Pool } from 'pg';
 import { NICHE_CODES, PASSWORD_TECHNICAL_MAX } from '@licitecomigo/shared';
 import { z } from 'zod';
 import { ESCOPOS, tiposDeConviteVisiveis, type Escopo } from './escopo-equipe.js';
+import { normalizarBloqueios } from '@licitecomigo/shared';
 import { createOpaqueToken, hashOpaqueToken, PublicRateLimiter } from './auth-public.js';
 import { panelBaseUrl, type RuntimeConfig } from './config.js';
 import { MIGRATIONS_SEM_ACESSO, estadoMigrations } from './migrations-esperadas.js';
@@ -44,6 +45,8 @@ const invitationBody = z
     mentor_id: uuid.optional(),
     /** Só vale para tipo `equipe`: de onde a pessoa pode ver e mexer. */
     escopo: z.enum(ESCOPOS).default('tudo'),
+    /** Só vale para tipo `equipe`: funções que ficam bloqueadas para a pessoa. */
+    acessos_bloqueados: z.array(z.string().max(80)).max(200).default([]),
   })
   .superRefine((value, context) => {
     if (value.tipo === 'empresa' && !value.empresa_nome) {
@@ -536,6 +539,14 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
                 escopo,
               ]);
             }
+            const bloqueios =
+              body.tipo === 'equipe' ? normalizarBloqueios(body.acessos_bloqueados) : [];
+            if (bloqueios.length) {
+              await client.query('UPDATE convites SET acessos_bloqueados = $2 WHERE id = $1', [
+                inserted.rows[0]!.id,
+                bloqueios,
+              ]);
+            }
             return inserted.rows[0]!;
           },
           { tipo: body.tipo, escopo: body.tipo === 'equipe' ? body.escopo : 'tudo' },
@@ -657,9 +668,13 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
         turma_id: string | null;
         mentor_id: string | null;
         escopo: Escopo | null;
+        acessos_bloqueados: string[] | null;
       }>(
         `SELECT id, tenant_id, tipo, email, nome, empresa_nome, turma_id, mentor_id,
-                to_jsonb(convites)->>'escopo' AS escopo FROM convites
+                to_jsonb(convites)->>'escopo' AS escopo,
+                ARRAY(SELECT jsonb_array_elements_text(
+                        COALESCE(to_jsonb(convites)->'acessos_bloqueados', '[]'::jsonb))) AS acessos_bloqueados
+           FROM convites
           WHERE token_hash = $1 AND usado_em IS NULL AND revogado_em IS NULL AND expira_em > now()
           FOR UPDATE`,
         [hashOpaqueToken(body.token)],
@@ -722,6 +737,12 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
         await client.query(
           'UPDATE usuarios SET escopo_equipe = $3 WHERE tenant_id = $1 AND id = $2',
           [tenantId, userId, invite.escopo],
+        );
+      }
+      if (invite.tipo === 'equipe' && invite.acessos_bloqueados?.length) {
+        await client.query(
+          'UPDATE usuarios SET acessos_bloqueados = $3 WHERE tenant_id = $1 AND id = $2',
+          [tenantId, userId, invite.acessos_bloqueados],
         );
       }
       if (invite.tipo === 'aluno' && invite.turma_id) {

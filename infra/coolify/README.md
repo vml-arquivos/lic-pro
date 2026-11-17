@@ -82,3 +82,10 @@ O resultado esperado para roles de aplicação é `rolsuper = false`, `rolbypass
 - [ ] Lead público aceita apenas consentimento, tem honeypot e não possui leitura pública.
 - [ ] CORS, cookies, rate limit, RLS e trilha de auditoria foram verificados.
 - [ ] Lighthouse mobile foi medido no domínio real antes de declarar qualquer resultado.
+
+## Domínios finais e acesso master
+
+- `admin.` → Painel admin (`PANEL_URL_ADMIN`), `app.` → Empresa (`PANEL_URL_EMPRESA`), `alunos.` → Aluno e mentor (`PANEL_URL_ALUNO`), `mentoria.` → Painel da mentoria (`PANEL_URL_CURSO`). O domínio raiz e o `www.` ficam com o site (`SITE_URL`).
+- Todos os endereços do app web apontam para o mesmo serviço web no Coolify; o site tem o próprio serviço.
+- `SUPERADMIN_EMAILS` (core-api): e-mails com acesso total e que gerenciam a equipe. A conta precisa ser da equipe (`pnpm admin:promote-platform`).
+- `COOKIE_DOMAIN` (web), ex.: `.licitecomigo.com.br`: a equipe entra uma vez e vale em todos os painéis. Empresa, aluno e mentor não são afetados.

@@ -1,13 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
-import { areaOfRole } from '@licitecomigo/shared';
+import { areaOfRole, normalizarBloqueios } from '@licitecomigo/shared';
 import { z } from 'zod';
 import { createOpaqueToken, hashOpaqueToken } from './auth-public.js';
 import { RECURSO_LABEL } from './atividade.js';
 import { panelBaseUrl, type RuntimeConfig } from './config.js';
 import type { withTenant } from './db.js';
 import { sendEmail } from './email.js';
-import { ESCOPOS, esquecerEscopo } from './escopo-equipe.js';
+import { ESCOPOS, esquecerEscopo, haSuperadmin } from './escopo-equipe.js';
 import { withPlatform } from './request-context.js';
 
 /** O link de redefinição vale por 48 horas e só pode ser usado uma vez. */
@@ -90,6 +90,8 @@ const ACAO_LABEL: Record<string, string> = {
   'platform.user.deactivated': 'Administração desativou o acesso',
   'platform.user.password_link_created': 'Administração gerou link de redefinição de senha',
   'platform.colaborador.niches_changed': 'Administração alterou os nichos',
+  'platform.team.access_changed': 'Administração alterou os acessos',
+  'platform.team.scope_changed': 'Administração alterou o escopo',
 };
 
 export function registerPlatformUserRoutes(
@@ -102,6 +104,7 @@ export function registerPlatformUserRoutes(
       client.query(
         `SELECT u.id, u.nome, u.email, u.ativo, u.created_at,
                 COALESCE(to_jsonb(u)->>'escopo_equipe', 'tudo') AS escopo_equipe,
+                COALESCE(to_jsonb(u)->'acessos_bloqueados', '[]'::jsonb) AS acessos_bloqueados,
                 (SELECT max(a.ultimo_em) FROM atividade_usuario a
                   WHERE a.tenant_id = u.tenant_id AND a.usuario_id = u.id) AS ultimo_acesso
            FROM usuarios u
@@ -110,7 +113,48 @@ export function registerPlatformUserRoutes(
         [request.user.tenantId],
       ),
     );
-    return { data: result.rows };
+    return {
+      data: result.rows.map((linha) => ({
+        ...linha,
+        superadmin: config.superadminEmails.includes(String(linha.email).trim().toLowerCase()),
+      })),
+      ha_superadmin: config.superadminEmails.length > 0,
+    };
+  });
+
+  // Marca as funções bloqueadas de alguém da equipe (só o superadmin; nunca o próprio, nunca outro superadmin).
+  platform.patch('/platform/users/:userId/acessos', async (request, reply) => {
+    const { userId } = userParams.parse(request.params);
+    const body = z.object({ bloqueados: z.array(z.string().max(80)).max(200) }).parse(request.body);
+    if (userId === request.user.sub) {
+      return reply.code(400).send({ error: 'nao_altere_o_proprio_acesso' });
+    }
+    if (!haSuperadmin()) return reply.code(403).send({ error: 'so_superadmin' });
+    const bloqueados = normalizarBloqueios(body.bloqueados);
+    const alterado = await withPlatform(
+      pool!,
+      request,
+      'platform.team.access_changed',
+      async (client) => {
+        const target = await loadTarget(client, userId);
+        if (!target || target.papel !== 'plataforma') return 'nao_encontrado' as const;
+        if (config.superadminEmails.includes(target.email.trim().toLowerCase())) {
+          return 'superadmin' as const;
+        }
+        await enterTargetAccount(client, target.tenant_id);
+        await client.query(
+          'UPDATE usuarios SET acessos_bloqueados = $3, updated_at = now() WHERE tenant_id = $1 AND id = $2',
+          [target.tenant_id, userId, bloqueados],
+        );
+        return 'ok' as const;
+      },
+      { usuario_id: userId, bloqueados: bloqueados.length },
+    );
+    if (alterado === 'nao_encontrado') return reply.code(404).send({ error: 'user_not_found' });
+    if (alterado === 'superadmin')
+      return reply.code(409).send({ error: 'superadmin_sem_bloqueio' });
+    esquecerEscopo(userId);
+    return { id: userId, acessos_bloqueados: bloqueados };
   });
 
   // Muda o escopo de alguém da equipe (só quem tem acesso total; nunca o próprio).

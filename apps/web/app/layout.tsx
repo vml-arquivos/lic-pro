@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { PANEL_COPY, requiresSession } from '@licitecomigo/shared';
-import { currentPanel } from '../lib/panel';
+import { panelUrl, type Area } from '@licitecomigo/shared';
+import { configuredPanels, currentPanel } from '../lib/panel';
 import { getSessionResult } from '../lib/session';
 import { AnaWidget } from './ana/AnaWidget';
 import { AppShell } from './AppShell';
@@ -33,6 +34,25 @@ export function generateMetadata(): Metadata {
 
 export const viewport: Viewport = { themeColor: '#4f46e5' };
 
+/** Atalhos para os outros painéis (só a equipe, e só com endereços próprios configurados). */
+function painelLinks(
+  session: { plataforma: boolean; areas_permitidas: Area[] } | null,
+): { area: Area; url: string; atual: boolean }[] {
+  if (!session?.plataforma) return [];
+  const panels = configuredPanels();
+  const atual = currentPanel();
+  const vistos = new Set<string>();
+  const lista: { area: Area; url: string; atual: boolean }[] = [];
+  for (const area of ['administracao', 'curso', 'empresa', 'aluno'] as const) {
+    const base = panelUrl(panels, area);
+    if (!base || vistos.has(base)) continue;
+    vistos.add(base);
+    const casa = area === 'administracao' ? '/admin' : area === 'curso' ? '/gestao' : '/painel';
+    lista.push({ area, url: `${base}${casa}`, atual: atual === area });
+  }
+  return lista.length > 1 ? lista : [];
+}
+
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const pathname = headers().get('x-pathname') ?? '/';
   const result = await getSessionResult();
@@ -53,7 +73,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang="pt-BR">
       <body>
-        <AppShell session={session}>{children}</AppShell>
+        <AppShell session={session} paineis={painelLinks(session)}>
+          {children}
+        </AppShell>
         {session ? <AnaWidget /> : null}
         {session ? <SincronizarAoAcessar /> : null}
       </body>

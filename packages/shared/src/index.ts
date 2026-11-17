@@ -110,3 +110,4 @@ export * from './portais.js';
 export * from './documentacao-tecnica.js';
 export * from './criterios-analise.js';
 export * from './historico-mercado.js';
+export * from './acessos.js';

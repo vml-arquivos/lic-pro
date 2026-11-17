@@ -126,6 +126,7 @@ suite('histórico de preços e concorrentes (PostgreSQL real, fontes simuladas)'
   const editalAberto = randomUUID();
   const editalFechado = randomUUID();
   const editalManual = randomUUID();
+  const extras: string[] = [];
   const suffix = randomUUID().slice(0, 8);
   const seqAberto = Math.floor(Math.random() * 900000) + 1;
   const seqFechado = seqAberto + 1;
@@ -278,7 +279,7 @@ suite('histórico de preços e concorrentes (PostgreSQL real, fontes simuladas)'
 
   afterAll(async () => {
     await setup.query('DELETE FROM editais WHERE id = ANY($1)', [
-      [editalAberto, editalFechado, editalManual],
+      [editalAberto, editalFechado, editalManual, ...extras],
     ]);
     await app.close();
     await pool.end();
@@ -390,6 +391,7 @@ suite('histórico de preços e concorrentes (PostgreSQL real, fontes simuladas)'
          VALUES ($1, $2, '1', 'Papel A4', 10, 20, $3)`,
         [platformTenant, id, catmat],
       );
+      extras.push(id);
       return id;
     };
     contratosFora = true;

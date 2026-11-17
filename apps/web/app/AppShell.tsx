@@ -9,6 +9,9 @@ import {
   AREA_MENUS,
   canOpenPage,
   flatMenu,
+  menuSemBloqueios,
+  paginaBloqueada,
+  paginaSoDoSuperadmin,
   type Area,
   type MenuGroup,
 } from '@licitecomigo/shared';
@@ -16,7 +19,12 @@ import type { Session } from '../lib/session';
 import { Icon } from './components/Icon';
 import { NotificationBell } from './components/NotificationBell';
 
-type AppShellProps = Readonly<{ session: Session | null; children: React.ReactNode }>;
+type PainelLink = { area: Area; url: string; atual: boolean };
+type AppShellProps = Readonly<{
+  session: Session | null;
+  children: React.ReactNode;
+  paineis?: PainelLink[];
+}>;
 
 const ANONYMOUS_MENU: readonly MenuGroup[] = [
   {
@@ -70,14 +78,20 @@ export function AccessDenied({ href = '/painel' }: Readonly<{ href?: string }>) 
   );
 }
 
-export function AppShell({ session, children }: AppShellProps) {
+export function AppShell({ session, children, paineis = [] }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [abertos, setAbertos] = useState<Record<string, boolean>>({});
 
   const area = session?.area ?? null;
-  const groups = area ? AREA_MENUS[area] : ANONYMOUS_MENU;
+  const groups = area
+    ? menuSemBloqueios(
+        AREA_MENUS[area],
+        session?.acessos_bloqueados,
+        session?.gestao_equipe ?? !session?.plataforma,
+      )
+    : ANONYMOUS_MENU;
   // Abre sozinho o tema da página atual; fora de qualquer tema, abre o primeiro.
   const grupoAberto = (
     groups.find(
@@ -85,7 +99,11 @@ export function AppShell({ session, children }: AppShellProps) {
     ) ?? groups.find((group) => group.label)
   )?.label;
   const current = area ? flatMenu(area).find((item) => isCurrent(pathname, item.href)) : undefined;
-  const blocked = session ? !canOpenPage(session.areas_permitidas, pathname) : false;
+  const blocked = session
+    ? !canOpenPage(session.areas_permitidas, pathname) ||
+      paginaBloqueada(session.acessos_bloqueados, pathname) ||
+      (session.plataforma && !session.gestao_equipe && paginaSoDoSuperadmin(pathname))
+    : false;
   const viewingAs = Boolean(
     session?.plataforma &&
     area &&
@@ -201,6 +219,22 @@ export function AppShell({ session, children }: AppShellProps) {
             );
           })}
         </nav>
+        {paineis.length ? (
+          <div className="view-as">
+            <p className="sidebar-label">Painéis</p>
+            <ul className="painel-links">
+              {paineis.map((painel) => (
+                <li key={painel.area}>
+                  {painel.atual ? (
+                    <strong>{AREA_LABELS[painel.area]}</strong>
+                  ) : (
+                    <a href={painel.url}>{AREA_LABELS[painel.area]}</a>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         {session?.plataforma && !session.painel_fixo ? (
           <div className="view-as">
             <p className="sidebar-label">Ver como</p>

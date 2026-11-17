@@ -131,3 +131,9 @@ alguém entra no sistema e os dados estão velhos. Só amplia os valores aceitos
 guardar o nome do portal. A função `coleta_gravar_editais` aceita `portal_slug` e regrava a linha quando
 o portal passa a ser conhecido. Preenche os editais já coletados cujo link de origem é de um portal
 conhecido. Só acrescenta coluna e índice; nada existente muda.
+
+## 0037 — acessos da equipe
+
+`usuarios.acessos_bloqueados` e `convites.acessos_bloqueados` (lista de funções que o superadmin bloqueou
+para cada acesso da equipe; vazia = tudo liberado). O convite de equipe carrega a lista e a conta criada
+herda. Só acrescenta colunas; nada existente muda.

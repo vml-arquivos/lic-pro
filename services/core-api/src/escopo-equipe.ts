@@ -1,4 +1,4 @@
-import { MODULE_AREAS, AREAS, type Area } from '@licitecomigo/shared';
+import { MODULE_AREAS, AREAS, rotaBloqueada, type Area } from '@licitecomigo/shared';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Pool } from 'pg';
 import { withTenant } from './db.js';
@@ -124,36 +124,105 @@ export function alvoPermitido(escopo: EscopoRestrito, alvo: Alvo, valor: string 
   }
 }
 
-const cache = new Map<string, { escopo: Escopo; em: number }>();
+export type AcessoEquipe = { escopo: Escopo; bloqueios: string[]; superadmin: boolean };
+
+const cache = new Map<string, { acesso: AcessoEquipe; em: number }>();
 const TTL_MS = 10_000;
+/** E-mails do superadmin (`SUPERADMIN_EMAILS`). Definidos uma vez, ao montar o servidor. */
+let superadmins: ReadonlySet<string> = new Set();
+
+export function definirSuperadmins(emails: readonly string[]): void {
+  superadmins = new Set(emails.map((email) => email.trim().toLowerCase()).filter(Boolean));
+  cache.clear();
+}
 
 export function esquecerEscopo(userId: string): void {
   cache.delete(userId);
 }
 
 /**
- * Escopo atual da conta. Banco ainda sem a migration 0031 (coluna inexistente) vale como `tudo`:
- * nesse caso ninguém tem escopo restrito. Qualquer outra falha propaga (nunca abre por engano).
+ * Acesso atual da conta da equipe: escopo, funções bloqueadas e se é superadmin. O superadmin
+ * (e-mail em `SUPERADMIN_EMAILS`) sempre vê tudo e nunca tem bloqueio. Banco ainda sem as
+ * migrations 0031/0037 (coluna inexistente) vale como acesso total sem bloqueios: nesse caso
+ * ninguém tem restrição. Qualquer outra falha propaga (nunca abre por engano).
  */
-export async function lerEscopo(pool: Pool, request: FastifyRequest): Promise<Escopo> {
-  if (request.user.role !== 'plataforma') return 'tudo';
+export async function lerAcessoEquipe(pool: Pool, request: FastifyRequest): Promise<AcessoEquipe> {
+  if (request.user.role !== 'plataforma') {
+    return { escopo: 'tudo', bloqueios: [], superadmin: false };
+  }
   const chave = request.user.sub;
   const guardado = cache.get(chave);
-  if (guardado && Date.now() - guardado.em < TTL_MS) return guardado.escopo;
-  let escopo: Escopo = 'tudo';
+  if (guardado && Date.now() - guardado.em < TTL_MS) return guardado.acesso;
+  let acesso: AcessoEquipe = { escopo: 'tudo', bloqueios: [], superadmin: false };
   try {
-    escopo = await withTenant(pool, authContext(request), async (client) => {
-      const found = await client.query<{ escopo_equipe: Escopo }>(
-        'SELECT escopo_equipe FROM usuarios WHERE tenant_id = $1 AND id = $2',
+    acesso = await withTenant(pool, authContext(request), async (client) => {
+      const found = await client.query<{
+        email: string;
+        escopo_equipe: Escopo;
+        acessos_bloqueados: string[] | null;
+      }>(
+        `SELECT email, escopo_equipe, acessos_bloqueados
+           FROM usuarios WHERE tenant_id = $1 AND id = $2`,
         [request.user.tenantId, request.user.sub],
       );
-      return found.rows[0]?.escopo_equipe ?? 'tudo';
+      const linha = found.rows[0];
+      const superadmin = Boolean(linha && superadmins.has(linha.email.trim().toLowerCase()));
+      return superadmin
+        ? { escopo: 'tudo' as const, bloqueios: [], superadmin: true }
+        : {
+            escopo: linha?.escopo_equipe ?? 'tudo',
+            bloqueios: linha?.acessos_bloqueados ?? [],
+            superadmin: false,
+          };
     });
   } catch (error) {
     if ((error as { code?: string }).code !== '42703') throw error;
+    acesso = await lerEscopoAntigo(pool, request);
   }
-  cache.set(chave, { escopo, em: Date.now() });
-  return escopo;
+  cache.set(chave, { acesso, em: Date.now() });
+  return acesso;
+}
+
+/** Banco sem a migration 0037: só o escopo (ou nem ele, sem a 0031). */
+async function lerEscopoAntigo(pool: Pool, request: FastifyRequest): Promise<AcessoEquipe> {
+  try {
+    return await withTenant(pool, authContext(request), async (client) => {
+      const found = await client.query<{ email: string; escopo_equipe: Escopo }>(
+        'SELECT email, escopo_equipe FROM usuarios WHERE tenant_id = $1 AND id = $2',
+        [request.user.tenantId, request.user.sub],
+      );
+      const linha = found.rows[0];
+      const superadmin = Boolean(linha && superadmins.has(linha.email.trim().toLowerCase()));
+      return {
+        escopo: superadmin ? ('tudo' as const) : (linha?.escopo_equipe ?? 'tudo'),
+        bloqueios: [],
+        superadmin,
+      };
+    });
+  } catch (error) {
+    if ((error as { code?: string }).code !== '42703') throw error;
+    return { escopo: 'tudo', bloqueios: [], superadmin: false };
+  }
+}
+
+/** Escopo atual da conta (compatível com quem só precisa dele). */
+export async function lerEscopo(pool: Pool, request: FastifyRequest): Promise<Escopo> {
+  return (await lerAcessoEquipe(pool, request)).escopo;
+}
+
+/** Há superadmin configurado? Sem isso, a gestão da equipe segue como antes (acesso total). */
+export function haSuperadmin(): boolean {
+  return superadmins.size > 0;
+}
+
+/** Rotas que só o superadmin usa (quando há superadmin configurado). */
+export function rotaSoDoSuperadmin(method: string, url: string, body?: unknown): boolean {
+  const path = new URL(url, 'http://core-api.local').pathname.replace(/\/+$/, '') || '/';
+  if (path === '/platform/team' || path.startsWith('/platform/team/')) return true;
+  if (method === 'PATCH' && new RegExp(`^/platform/users/${UUID}/(escopo|acessos)$`).test(path)) {
+    return true;
+  }
+  return method === 'POST' && path === '/platform/invitations' && asRecord(body).tipo === 'equipe';
 }
 
 async function valorDoAlvo(
@@ -183,18 +252,35 @@ async function valorDoAlvo(
 declare module 'fastify' {
   interface FastifyRequest {
     escopoEquipe?: Escopo;
+    superadmin?: boolean;
   }
 }
 
 /** Hook global: roda depois da autenticação e antes de qualquer rota. */
 export function registerEscopoEquipe(
   app: FastifyInstance,
-  { pool }: { pool: Pool | undefined },
+  { pool, superadminEmails = [] }: { pool: Pool | undefined; superadminEmails?: readonly string[] },
 ): void {
+  definirSuperadmins(superadminEmails);
   app.addHook('preHandler', async (request, reply) => {
     if (!pool || !request.user || request.user.role !== 'plataforma') return;
-    const escopo = await lerEscopo(pool, request);
+    const acesso = await lerAcessoEquipe(pool, request);
+    const escopo = acesso.escopo;
     request.escopoEquipe = escopo;
+    request.superadmin = acesso.superadmin;
+    if (
+      haSuperadmin() &&
+      !acesso.superadmin &&
+      rotaSoDoSuperadmin(request.method, request.url, request.body)
+    ) {
+      return reply.code(403).send({ error: 'so_superadmin' });
+    }
+    if (acesso.bloqueios.length) {
+      const caminho = new URL(request.url, 'http://core-api.local').pathname;
+      if (rotaBloqueada(acesso.bloqueios, caminho)) {
+        return reply.code(403).send({ error: 'acesso_bloqueado' });
+      }
+    }
     if (escopo === 'tudo') return;
     const decisao = decidirRota(escopo, request.method, request.url, request.body);
     if (decisao.resultado === 'liberado') return;

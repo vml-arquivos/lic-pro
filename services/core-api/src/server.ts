@@ -60,7 +60,13 @@ import { registerCompanyRoutes } from './empresa.js';
 import { registerLearningRoutes } from './learning.js';
 import { registerStudentSupportRoutes } from './aluno-apoio.js';
 import { registerAnaliseRoutes } from './analise.js';
-import { areasDoEscopo, lerEscopo, registerEscopoEquipe } from './escopo-equipe.js';
+import {
+  areasDoEscopo,
+  haSuperadmin,
+  lerAcessoEquipe,
+  lerEscopo,
+  registerEscopoEquipe,
+} from './escopo-equipe.js';
 import { registerRadarRoutes } from './radar.js';
 import { registerPortaisRoutes } from './portais-routes.js';
 import { registerAnaContextoRoutes } from './ana-contexto.js';
@@ -435,7 +441,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   // Antes das rotas: o hook só vale para o que é registrado depois dele.
-  registerEscopoEquipe(app, { pool });
+  registerEscopoEquipe(app, { pool, superadminEmails: config.superadminEmails });
   registerActivityTracking(app, { pool });
 
   app.get('/health', async () => ({ ...health('core-api'), databaseConfigured: Boolean(pool) }));
@@ -947,7 +953,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (!account) return reply.code(404).send({ error: 'user_not_found' });
     // A área vem do papel do token, nunca de preferências do usuário.
     const role = request.user.role;
-    const escopo = await lerEscopo(pool, request);
+    const acesso = await lerAcessoEquipe(pool, request);
+    const escopo = acesso.escopo;
     const permitidas = role === 'plataforma' ? areasDoEscopo(escopo) : allowedAreas(role);
     const ativa = activeArea(role, account.visualizar_como as string | null);
     return reply.send({
@@ -956,6 +963,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       area: permitidas.includes(ativa) ? ativa : (permitidas[0] ?? ativa),
       areas_permitidas: permitidas,
       escopo_equipe: role === 'plataforma' ? escopo : null,
+      acessos_bloqueados: role === 'plataforma' ? acesso.bloqueios : [],
+      superadmin: acesso.superadmin,
+      // Equipe da plataforma abre a gestão da equipe: o superadmin; sem superadmin configurado, o acesso total de sempre.
+      gestao_equipe:
+        role === 'plataforma' && (acesso.superadmin || (!haSuperadmin() && escopo === 'tudo')),
       plataforma: role === 'plataforma',
     });
   });

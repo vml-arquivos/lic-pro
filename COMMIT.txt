@@ -1,7 +1,11 @@
 Resumo:
-Preços pagos e concorrentes no edital, portais de compras, documentação técnica e card invertido
+Acesso master, bloqueio de funções por pessoa, login único entre painéis e preços e concorrentes no edital
 
 Descrição:
+- Acesso master (superadmin) pelo e-mail em SUPERADMIN_EMAILS: vê tudo, cria acessos de equipe e marca o que cada um não pode abrir (menu, páginas e API). Nova tela em Equipe administrativa e também no convite.
+- Login único entre os painéis para a equipe (COOKIE_DOMAIN) e atalhos para trocar de painel.
+- Migration 0037 (colunas acessos_bloqueados).
+- Domínios finais nos exemplos do .env.example.
 - Card e ficha do edital: fonte, número do edital e datas agora aparecem em cima; a descrição da licitação fica embaixo.
 - Portais: o portal de cada licitação passa a ser gravado (o PNCP informa em usuarioNome; antes o campo era lido com o nome errado e ficava vazio). Nova página Portais, filtro "Portal de compras" no Radar e link direto para o portal de origem.
 - Nova migration 0036 (coluna portal_slug e preenchimento dos editais já coletados).

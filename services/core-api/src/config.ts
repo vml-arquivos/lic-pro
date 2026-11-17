@@ -48,6 +48,8 @@ export type RuntimeConfig = {
   pncpSyncTenantId?: string;
   /** Compras.gov.br Dados Abertos (pesquisa de preços de referência). */
   comprasBaseUrl: string;
+  /** E-mails do superadmin (`SUPERADMIN_EMAILS`, separados por vírgula): acesso total e quem libera ou bloqueia a equipe. */
+  superadminEmails: string[];
   /** Cobrança (Asaas). Sem chave e sem token do webhook, a venda fica desligada. */
   asaasApiKey?: string;
   asaasWebhookToken?: string;
@@ -155,6 +157,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
     comprasBaseUrl: (
       env.COMPRAS_GOV_BASE_URL?.trim() || 'https://dadosabertos.compras.gov.br'
     ).replace(/\/$/, ''),
+    superadminEmails: (env.SUPERADMIN_EMAILS ?? '')
+      .split(',')
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean),
     asaasEnv,
     asaasBaseUrl: (
       env.ASAAS_BASE_URL?.trim() ||

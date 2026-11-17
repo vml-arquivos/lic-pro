@@ -1,4 +1,4 @@
-import { requireArea } from '../../../lib/session';
+import { requireArea, requireSuperadmin } from '../../../lib/session';
 import { PageHeader } from '../../components/ui';
 import { TeamAdmin } from './TeamAdmin';
 
@@ -9,6 +9,7 @@ export const metadata = {
 
 export default async function TeamPage() {
   await requireArea('administracao');
+  await requireSuperadmin();
   return (
     <main className="ui-page">
       <PageHeader

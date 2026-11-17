@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Alert } from '../../components/ui';
 import { errorText, send } from '../../../lib/api';
+import { AcessosEditor } from './AcessosEditor';
 
 export type InviteKind = 'aluno' | 'mentor' | 'empresa' | 'colaborador' | 'equipe';
 type Option = { id: string; nome: string };
@@ -49,8 +50,10 @@ export function InviteForm({
   classes = [],
   mentors = [],
   onCreated,
+  podeBloquear = false,
 }: Readonly<{
   kind: InviteKind;
+  podeBloquear?: boolean;
   classes?: Option[];
   mentors?: Option[];
   onCreated: () => void;
@@ -61,6 +64,7 @@ export function InviteForm({
   const [turma, setTurma] = useState('');
   const [mentor, setMentor] = useState('');
   const [escopo, setEscopo] = useState<'tudo' | 'profissional' | 'curso'>('profissional');
+  const [bloqueados, setBloqueados] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState<Created | null>(null);
@@ -76,13 +80,14 @@ export function InviteForm({
         nome,
         email,
         ...(kind === 'empresa' ? { empresa_nome: empresa } : {}),
-        ...(kind === 'equipe' ? { escopo } : {}),
+        ...(kind === 'equipe' ? { escopo, acessos_bloqueados: bloqueados } : {}),
         ...(kind === 'aluno' ? { turma_id: turma, ...(mentor ? { mentor_id: mentor } : {}) } : {}),
       });
       setCreated(result);
       setNome('');
       setEmail('');
       setEmpresa('');
+      setBloqueados([]);
       onCreated();
     } catch (cause) {
       setError(errorText(cause));
@@ -131,6 +136,9 @@ export function InviteForm({
             Quem tem acesso só a um painel não vê o dinheiro, os leads nem as contas do outro.
           </small>
         </label>
+      ) : null}
+      {kind === 'equipe' && podeBloquear ? (
+        <AcessosEditor bloqueados={bloqueados} onChange={setBloqueados} />
       ) : null}
       {kind === 'aluno' ? (
         <>

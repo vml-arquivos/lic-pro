@@ -61,11 +61,24 @@ export async function POST(request: Request): Promise<Response> {
     }
   }
 
+  // Login único: com `COOKIE_DOMAIN` definido (ex.: .licitecomigo.com.br), a conta da equipe
+  // fica logada em todos os painéis. Empresa, aluno e mentor continuam presos ao próprio endereço.
+  const cookieDomain = process.env.COOKIE_DOMAIN?.trim();
+  let compartilhar = false;
+  if (cookieDomain) {
+    const quem = await fetch(`${baseUrl}/me`, {
+      headers: { authorization: `Bearer ${payload.access_token}` },
+      cache: 'no-store',
+    }).catch(() => null);
+    const dados = quem?.ok ? ((await quem.json()) as { papel?: string }) : null;
+    compartilhar = dados?.papel === 'plataforma';
+  }
   const result = Response.json({ ok: true });
   result.headers.append(
     'set-cookie',
     [
       `lc_access_token=${encodeURIComponent(payload.access_token)}`,
+      compartilhar && cookieDomain ? `Domain=${cookieDomain}` : '',
       'Path=/',
       'HttpOnly',
       'SameSite=Lax',
