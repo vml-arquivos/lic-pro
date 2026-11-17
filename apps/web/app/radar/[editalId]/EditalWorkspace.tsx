@@ -7,6 +7,7 @@ import { Badge } from '../../components/ui';
 import { brl, deadlineInfo, portalDoEdital } from '../radar-lib';
 import { DocumentacaoTecnica } from './DocumentacaoTecnica';
 import './documentacao.css';
+import { MercadoDoEdital } from './MercadoDoEdital';
 import { ValoresFechados } from './ValoresFechados';
 
 type Edital = {
@@ -534,15 +535,17 @@ export function EditalWorkspace({
       </section>
       <section id="documentacao" className="detail-card">
         <h2>Documentação técnica</h2>
-        <p className="rd-doc-intro">
-          O que reunir para participar, montado automaticamente a partir dos dados do PNCP e do
-          texto do edital. Atualiza sozinho quando os itens e documentos são buscados.
-        </p>
         <DocumentacaoTecnica
           editalId={editalId}
           versao={`${detail.itens.length}-${detail.documentos?.length ?? 0}`}
         />
       </section>
+      {signedIn ? (
+        <section id="mercado" className="detail-card">
+          <h2>Preços e concorrentes</h2>
+          <MercadoDoEdital editalId={editalId} temItens={detail.itens.length > 0} />
+        </section>
+      ) : null}
       <section id="historico" className="detail-card">
         <h2>O que mudou e documentos</h2>
         {(detail.eventos ?? []).length ? (

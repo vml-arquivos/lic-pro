@@ -24,6 +24,8 @@ export type PrecoItem = {
   quantidade: number | null;
   data: string | null;
   fornecedor: string | null;
+  /** CNPJ/CPF do fornecedor quando a fonte informa (campo à parte do nome). */
+  cnpj_fornecedor: string | null;
   unidade: string | null;
   uasg: string | null;
   uf: string | null;
@@ -102,6 +104,7 @@ export function normalizePreco(raw: unknown): PrecoItem | null {
       row.dataCompra ?? row.dataResultado ?? row.dataHoraAtualizacao ?? row.dataPublicacao,
     ),
     fornecedor: text(row.nomeFornecedor, row.nomeRazaoSocialFornecedor, row.niFornecedor),
+    cnpj_fornecedor: text(row.niFornecedor, row.cnpjFornecedor, row.cnpj),
     unidade: text(
       row.siglaUnidadeFornecimento,
       row.nomeUnidadeFornecimento,

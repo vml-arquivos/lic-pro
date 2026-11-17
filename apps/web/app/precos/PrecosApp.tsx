@@ -377,13 +377,6 @@ export function PrecosApp({ nichos }: Readonly<{ nichos: readonly NichoOption[] 
                   </Table>
                 )}
               </Paginado>
-              <p className="plan-note">
-                Fonte: {result.fonte.nome}, consultada em{' '}
-                {formatDate(result.fonte.consultado_em, true)}. Os valores são de compras
-                homologadas ou contratadas, não pagamentos efetivos. São dados de apoio: o preço de
-                referência da sua proposta ou pesquisa segue a metodologia que o edital e a norma
-                exigirem, e a decisão é sua.
-              </p>
             </Panel>
           </>
         ) : (

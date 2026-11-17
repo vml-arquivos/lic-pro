@@ -104,11 +104,11 @@ export function HomeWorkspace({ demoMode }: HomeWorkspaceProps) {
               : 'Nenhuma empresa vinculada ainda.'}
           </p>
           <div className="workspace-divider" />
-          <p className="workspace-muted">
-            {demoMode
-              ? 'O modo demo pode exibir fluxos experimentais separados dos dados reais.'
-              : 'Os dados exibidos vêm da sua conta e das fontes consultadas.'}
-          </p>
+          {demoMode ? (
+            <p className="workspace-muted">
+              O modo demo pode exibir fluxos experimentais separados dos dados reais.
+            </p>
+          ) : null}
           <Link className="button-primary" href="/empresas">
             Gerenciar empresas
           </Link>

@@ -1,5 +1,5 @@
 Resumo:
-Portais de compras, documentação técnica do edital, critérios das análises e card invertido
+Preços pagos e concorrentes no edital, portais de compras, documentação técnica e card invertido
 
 Descrição:
 - Card e ficha do edital: fonte, número do edital e datas agora aparecem em cima; a descrição da licitação fica embaixo.
@@ -7,4 +7,6 @@ Descrição:
 - Nova migration 0036 (coluna portal_slug e preenchimento dos editais já coletados).
 - Documentação técnica automática no edital: o que reunir para participar (habilitação, proposta, declarações, garantias, credenciamento no portal), com a origem de cada item.
 - Critérios das análises: quadro mostrando o que entra em "mais interessantes", "mais lucrativas", "mais fáceis" e "melhor preço", com o peso de cada critério, no Ranking e dentro do card.
+- Nova seção "Preços e concorrentes" no edital: compara o valor estimado de cada item com o que outros órgãos pagaram pelo mesmo CATMAT (Compras.gov.br) e lista concorrentes pelo histórico real (contratos do órgão no PNCP, resultados do próprio edital quando encerrado e fornecedores dos mesmos itens), com link para conferir no PNCP.
+- Textos mais curtos e diretos em toda a plataforma: removidos avisos e explicações de fonte (Preços e concorrentes, Documentação técnica, Portais, Critérios, Preços de referência, Valores fechados).
 - Textos da Ana mais simples e diretos.

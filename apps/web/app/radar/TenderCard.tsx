@@ -158,7 +158,7 @@ function PainelAnalise({ item }: Readonly<{ item: Tender }>) {
           ))}
         </ul>
       ) : null}
-      <CriteriosAnalise titulo="Como esta nota é calculada" />
+      <CriteriosAnalise titulo="Como a nota é calculada" />
       <div className="rd-painel-links">
         <Link
           className="ui-btn ui-btn-ghost ui-btn-small"

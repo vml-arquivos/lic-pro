@@ -104,15 +104,9 @@ export function ValoresFechados({ editalId }: Readonly<{ editalId: string }>) {
                 </tr>
               ))}
             </Table>
-            <p className="plan-note">
-              Fonte: {data.fonte.nome}, consultada em {formatDate(data.fonte.consultado_em, true)}.
-            </p>
           </>
         ) : (
-          <p>
-            O PNCP ainda não publicou o resultado dos itens deste edital. Se a disputa já terminou,
-            tente de novo mais tarde.
-          </p>
+          <p>Ainda sem resultado publicado.</p>
         )
       ) : null}
     </div>

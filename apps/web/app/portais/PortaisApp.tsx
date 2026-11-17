@@ -58,7 +58,7 @@ export function PortaisApp() {
                 {abertas ? ' com propostas abertas' : ''} em{' '}
                 <strong>{formatNumber(comEditais.length)}</strong> portais
                 {dados.sem_portal > 0
-                  ? `; ${formatNumber(dados.sem_portal)} sem portal informado pelo órgão.`
+                  ? `; ${formatNumber(dados.sem_portal)} sem portal informado.`
                   : '.'}
               </p>
 
@@ -70,7 +70,6 @@ export function PortaisApp() {
                         <h3>{portal.nome}</h3>
                         {portal.conhecido ? null : <Badge tone="muted">Sistema do órgão</Badge>}
                       </header>
-                      {portal.descricao ? <p>{portal.descricao}</p> : null}
                       <p className="pt-total">
                         <strong>{formatNumber(portal.total)}</strong>{' '}
                         {portal.total === 1 ? 'edital' : 'editais'}
@@ -94,10 +93,7 @@ export function PortaisApp() {
                   ))}
                 </ul>
               ) : (
-                <Empty>
-                  Nenhum edital com portal informado ainda. A próxima coleta do PNCP preenche isso
-                  automaticamente.
-                </Empty>
+                <Empty>Nenhum edital com portal ainda.</Empty>
               )}
 
               {semEditais.length ? (

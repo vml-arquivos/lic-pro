@@ -46,6 +46,7 @@ import { registerDiagnosticoRoutes } from './diagnostico.js';
 import { AsaasError, type AsaasClient } from './asaas.js';
 import { registerPriceRoutes } from './precos.js';
 import { registerDetalhesRoutes } from './pncp-detalhes.js';
+import { registerHistoricoRoutes } from './historico-mercado.js';
 import { registerPlatformRoutes } from './platform.js';
 import { loadConfig, panelBaseUrl, type RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
@@ -2187,6 +2188,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
   registerPriceRoutes(app, { config, pool });
   registerDetalhesRoutes(app, { pool, config });
+  registerHistoricoRoutes(app, { pool, config });
   registerBillingRoutes(app, { pool, config, ...(options.asaas ? { asaas: options.asaas } : {}) });
   registerBillingExtras(app, { pool, config, ...(options.asaas ? { asaas: options.asaas } : {}) });
   registerDiagnosticoRoutes(app, {

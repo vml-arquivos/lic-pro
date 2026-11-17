@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { DocumentacaoTecnica as Documentacao, OrigemExigencia } from '@licitecomigo/shared';
+import type { DocumentacaoTecnica as Documentacao } from '@licitecomigo/shared';
 import { api, errorText } from '../../../lib/api';
 import { Badge } from '../../components/ui';
 import './documentacao.css';
@@ -16,12 +16,6 @@ type Resposta = {
   } | null;
   itens_coletados: number;
   documentos_coletados: number;
-};
-
-const ORIGEM: Record<OrigemExigencia, string> = {
-  lei: 'Padrão da lei',
-  edital: 'O edital menciona',
-  dados: 'Dados do PNCP',
 };
 
 /**
@@ -47,7 +41,7 @@ export function DocumentacaoTecnica({
   }, [editalId, versao]);
 
   if (estado.s === 'carregando') {
-    return <p className="rd-painel-msg">Montando a documentação técnica deste edital…</p>;
+    return <p className="rd-painel-msg">Carregando…</p>;
   }
   if (estado.s === 'erro') {
     return (
@@ -61,16 +55,16 @@ export function DocumentacaoTecnica({
   return (
     <div className="dt">
       <p className="dt-resumo">
-        <strong>{doc.tipo_objeto_nome}.</strong> {doc.resumo}
+        <strong>{doc.tipo_objeto_nome}</strong>
       </p>
       {portal ? (
         <p className="dt-portal">
-          A disputa acontece no portal <strong>{portal.nome}</strong>
+          Portal: <strong>{portal.nome}</strong>
           {portal.link_edital ? (
             <>
               {' · '}
               <a href={portal.link_edital} target="_blank" rel="noreferrer noopener">
-                abrir este edital no portal
+                abrir no portal
               </a>
             </>
           ) : null}
@@ -101,12 +95,9 @@ export function DocumentacaoTecnica({
               <li key={item.id} className={item.mencionado ? 'dt-item dt-item-edital' : 'dt-item'}>
                 <div className="dt-item-topo">
                   <strong>{item.titulo}</strong>
-                  <Badge tone={item.mencionado ? 'ok' : 'muted'}>
-                    {item.mencionado ? 'O edital menciona' : ORIGEM[item.origem]}
-                  </Badge>
+                  {item.mencionado ? <Badge tone="ok">No edital</Badge> : null}
                 </div>
                 <p>{item.detalhe}</p>
-                <small>{item.base}</small>
               </li>
             ))}
           </ul>
@@ -135,16 +126,6 @@ export function DocumentacaoTecnica({
           </ul>
         </section>
       ) : null}
-
-      <details className="dt-como">
-        <summary>Como esta lista foi montada</summary>
-        <ul>
-          {doc.como_foi_montada.map((linha) => (
-            <li key={linha}>{linha}</li>
-          ))}
-        </ul>
-      </details>
-      <p className="dt-aviso">{doc.aviso}</p>
     </div>
   );
 }
