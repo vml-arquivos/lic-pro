@@ -1,5 +1,5 @@
 Resumo:
-Acesso master, bloqueio de funções por pessoa, login único entre painéis e leitura automática do edital (documentação, preços e concorrentes)
+Acesso master, bloqueio de funções por pessoa, login único entre painéis e leitura automática do edital e Quadro de decisão no Radar
 
 Descrição:
 - Acesso master (superadmin) pelo e-mail em SUPERADMIN_EMAILS: vê tudo, cria acessos de equipe e marca o que cada um não pode abrir (menu, páginas e API). Nova tela em Equipe administrativa e também no convite.
@@ -18,3 +18,6 @@ Descrição:
 - Nova biblioteca unpdf no core-api (pnpm-lock atualizado). Sem migration nova.
 - Textos mais curtos e diretos em toda a plataforma: removidos avisos e explicações de fonte (Preços e concorrentes, Documentação técnica, Portais, Critérios, Preços de referência, Valores fechados).
 - Textos da Ana mais simples e diretos.
+- Novo Quadro de decisão no Radar (aba Quadro): as melhores oportunidades abertas em cards com edital, portal, situação, prazo, órgão, local e valor, e a análise já pronta em cada um (o que o edital pede, preços pagos e concorrentes). Filtros por ordem, prazo, busca, estados e perfil.
+- Quadro: botão Baixar Excel (planilha com cabeçalho fixo, abre também no Google Planilhas) e Salvar em PDF.
+- Nova rota POST /analise/quadro/xlsx no core-api. Sem migration nova.

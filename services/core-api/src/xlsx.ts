@@ -93,10 +93,18 @@ export function safeCellText(value: string): string {
   return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
 }
 
+export type XlsxOptions = {
+  /** Largura de cada coluna, em caracteres. */
+  widths?: readonly number[];
+  /** Mantém a primeira linha visível ao rolar. */
+  freezeHeader?: boolean;
+};
+
 export function buildXlsx(
   sheetName: string,
   header: readonly string[],
   rows: readonly (readonly SheetCell[])[],
+  options: XlsxOptions = {},
 ): Buffer {
   const cell = (value: SheetCell, row: number, col: number): string => {
     const ref = `${columnName(col)}${row}`;
@@ -112,7 +120,18 @@ export function buildXlsx(
         `<row r="${rowIndex + 1}">${line.map((value, colIndex) => cell(value, rowIndex + 1, colIndex)).join('')}</row>`,
     )
     .join('');
-  const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${sheetRows}</sheetData></worksheet>`;
+  const views = options.freezeHeader
+    ? '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
+    : '';
+  const cols = options.widths?.length
+    ? `<cols>${options.widths
+        .map(
+          (width, index) =>
+            `<col min="${index + 1}" max="${index + 1}" width="${Math.min(100, Math.max(6, width))}" customWidth="1"/>`,
+        )
+        .join('')}</cols>`
+    : '';
+  const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${views}${cols}<sheetData>${sheetRows}</sheetData></worksheet>`;
   const name = escapeXml(sheetName.replace(/[\\/?*[\]:]/g, ' ').slice(0, 31) || 'Planilha');
   const files = [
     {

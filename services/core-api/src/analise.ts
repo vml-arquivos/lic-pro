@@ -10,6 +10,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Pool, PoolClient } from 'pg';
 import { z } from 'zod';
 import { ANALISE_ROLES } from './auth.js';
+import { buildXlsx } from './xlsx.js';
 import { withTenant } from './db.js';
 import { readUserNiches } from './niche-scope.js';
 import { scopedFilters, searchContext } from './radar.js';
@@ -305,7 +306,34 @@ async function analisarEditais(
   });
 }
 
+const quadroXlsxBody = z.object({
+  titulo: z.string().trim().min(1).max(60).default('Quadro de decisão'),
+  cabecalho: z.array(z.string().max(80)).min(1).max(30),
+  linhas: z.array(z.array(z.union([z.string().max(3000), z.number(), z.null()])).max(30)).max(200),
+  larguras: z.array(z.number()).max(30).optional(),
+});
+
 export function registerAnaliseRoutes(app: FastifyInstance, { pool }: Deps): void {
+  /** Planilha do Quadro de decisão: as linhas vêm prontas da tela, o servidor só monta o arquivo. */
+  app.post('/analise/quadro/xlsx', async (request, reply) => {
+    if (!requireRoles(reply, request, ANALISE_ROLES)) return reply;
+    const body = quadroXlsxBody.parse(request.body);
+    const arquivo = buildXlsx(body.titulo, body.cabecalho, body.linhas, {
+      freezeHeader: true,
+      ...(body.larguras ? { widths: body.larguras } : {}),
+    });
+    reply.header(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    reply.header(
+      'Content-Disposition',
+      `attachment; filename="quadro-de-decisao-${new Date().toISOString().slice(0, 10)}.xlsx"`,
+    );
+    reply.header('Cache-Control', 'no-store');
+    return reply.send(arquivo);
+  });
+
   /** Ranking: os editais que mais valem a pena, pelo foco escolhido. */
   app.get('/analise/ranking', async (request, reply) => {
     if (!requireRoles(reply, request, ANALISE_ROLES)) return reply;

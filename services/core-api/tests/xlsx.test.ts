@@ -62,4 +62,26 @@ describe('exportação', () => {
     expect(out).toContain("'Pregão <A> & B', 1234.5");
     expect(out).toContain('"\'=2+2"');
   });
+
+  it.skipIf(!hasOpenpyxl())('mantém larguras e cabeçalho fixo na planilha do Quadro', () => {
+    const buffer = buildXlsx('Quadro', ['A', 'B'], [['x', 2]], {
+      widths: [10, 40],
+      freezeHeader: true,
+    });
+    const dir = mkdtempSync(join(tmpdir(), 'xlsx-'));
+    const file = join(dir, 'quadro.xlsx');
+    writeFileSync(file, buffer);
+    const out = execFileSync(
+      'python3',
+      [
+        '-I',
+        '-c',
+        'import sys,openpyxl;ws=openpyxl.load_workbook(sys.argv[1]).active;print(ws.freeze_panes);print(ws.column_dimensions["B"].width)',
+        file,
+      ],
+      { encoding: 'utf8' },
+    );
+    expect(out).toContain('A2');
+    expect(out).toContain('40');
+  });
 });

@@ -3,6 +3,7 @@ import { pageAreas, type Area } from '@licitecomigo/shared';
 
 const ITENS = [
   { href: '/radar', label: 'Explorar', ajuda: 'Buscar editais com filtros e o seu perfil' },
+  { href: '/radar/quadro', label: 'Quadro', ajuda: 'As melhores oportunidades, já analisadas' },
   { href: '/pregoes', label: 'Pregões', ajuda: 'Pregões publicados e abertos' },
   { href: '/analise', label: 'Análise', ajuda: 'Ranking, comparar e simular a proposta' },
   { href: '/precos', label: 'Preços', ajuda: 'O que o governo pagou por item' },
