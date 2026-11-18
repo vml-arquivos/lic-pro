@@ -120,6 +120,7 @@ suite('histórico de preços e concorrentes (PostgreSQL real, fontes simuladas)'
   let server!: Server;
   const calls: string[] = [];
   let contratosFora = false;
+  let resultadosFora = false;
   const platformTenant = randomUUID();
   const clientTenant = randomUUID();
   const clientUser = randomUUID();
@@ -198,6 +199,7 @@ suite('histórico de preços e concorrentes (PostgreSQL real, fontes simuladas)'
           ],
         });
       }
+      if (resultadosFora && url.includes('/resultados')) return send(500, {});
       if (url.includes(`/compras/2026/${seqFechado}/itens/1/resultados`)) {
         return send(200, [
           {
@@ -382,7 +384,8 @@ suite('histórico de preços e concorrentes (PostgreSQL real, fontes simuladas)'
         [
           id,
           platformTenant,
-          `00394460000141-1-${String(seqAberto + 50 + Math.floor(Math.random() * 1000)).padStart(6, '0')}/2026`,
+          // Outro órgão: o histórico do órgão dos testes anteriores já está guardado.
+          `11222333000181-1-${String(seqAberto + 50 + Math.floor(Math.random() * 1000)).padStart(6, '0')}/2026`,
           `hx-${id.slice(0, 8)}`,
         ],
       );
@@ -411,5 +414,88 @@ suite('histórico de preços e concorrentes (PostgreSQL real, fontes simuladas)'
     } finally {
       contratosFora = false;
     }
+  });
+
+  it('reabrir o edital não consulta de novo as fontes oficiais', async () => {
+    await get(`/editais/${editalFechado}/concorrentes`);
+    await get(`/editais/${editalFechado}/historico-precos`);
+    const antes = calls.length;
+    const [conc, precos] = [
+      await get(`/editais/${editalFechado}/concorrentes`),
+      await get(`/editais/${editalFechado}/historico-precos`),
+    ];
+    expect(conc.statusCode).toBe(200);
+    expect(precos.statusCode).toBe(200);
+    expect(calls.slice(antes)).toEqual([]);
+    expect(conc.json().dados).toMatchObject({ origem: 'cache', desatualizado: false });
+  });
+
+  it('dois acessos ao mesmo tempo fazem uma consulta só ao PNCP', async () => {
+    const id = randomUUID();
+    const cnpj = '55443322000110';
+    await setup.query(
+      `INSERT INTO editais (id, tenant_id, fonte, id_externo, titulo, orgao, uf, hash_conteudo, conteudo_texto, data_encerramento_propostas)
+       VALUES ($1, $2, 'pncp', $3, 'Aquisição de papel A4', 'Prefeitura Nova', 'RR', $4, 'texto', now() + interval '3 days')`,
+      [id, platformTenant, `${cnpj}-1-000007/2026`, `hc-${id.slice(0, 8)}`],
+    );
+    extras.push(id);
+    await setup.query(
+      `INSERT INTO itens_edital (tenant_id, edital_id, numero, descricao, quantidade, valor_unitario_estimado, catmat_catser)
+       VALUES ($1, $2, '1', 'Papel A4', 10, 20, NULL)`,
+      [platformTenant, id],
+    );
+    const antes = calls.filter((url) => url.includes('/v1/contratos')).length;
+    const [a, b, c] = await Promise.all([
+      get(`/editais/${id}/concorrentes`),
+      get(`/editais/${id}/concorrentes`),
+      get(`/editais/${id}/concorrentes`),
+    ]);
+    expect([a.statusCode, b.statusCode, c.statusCode]).toEqual([200, 200, 200]);
+    const depois = calls.filter((url) => url.includes('/v1/contratos')).length;
+    expect(depois - antes).toBe(1);
+  });
+
+  it('edital sem resultado publicado é diferente de fonte com falha', async () => {
+    const aberto = await get(`/editais/${editalAberto}/concorrentes`);
+    expect(aberto.json().neste_edital).toMatchObject({
+      estado: 'aguardando_publicacao',
+      vencedores: [],
+    });
+
+    const id = randomUUID();
+    await setup.query(
+      `INSERT INTO editais (id, tenant_id, fonte, id_externo, titulo, orgao, uf, hash_conteudo, conteudo_texto, data_encerramento_propostas)
+       VALUES ($1, $2, 'pncp', $3, 'Aquisição de papel A4', 'Prefeitura de Teste', 'RR', $4, 'texto', now() - interval '3 days')`,
+      [
+        id,
+        platformTenant,
+        `00394460000141-1-${String(seqFechado + 700).padStart(6, '0')}/2026`,
+        `hr-${id.slice(0, 8)}`,
+      ],
+    );
+    extras.push(id);
+    await setup.query(
+      `INSERT INTO itens_edital (tenant_id, edital_id, numero, descricao, quantidade, valor_unitario_estimado, catmat_catser)
+       VALUES ($1, $2, '1', 'Papel A4', 10, 20, NULL)`,
+      [platformTenant, id],
+    );
+    resultadosFora = true;
+    try {
+      const fora = await get(`/editais/${id}/concorrentes`);
+      expect(fora.statusCode).toBe(200);
+      expect(fora.json().neste_edital.estado).toBe('fonte_indisponivel');
+      expect(fora.json().do_orgao.length).toBeGreaterThan(0);
+    } finally {
+      resultadosFora = false;
+    }
+
+    const fechado = await get(`/editais/${editalFechado}/concorrentes`);
+    expect(fechado.json().neste_edital).toMatchObject({
+      estado: 'parcial',
+      cobertura: { consultados: 3, publicados: 1, falhas: 0 },
+    });
+    const valores = await get(`/editais/${editalFechado}/resultados`);
+    expect(valores.statusCode).toBe(200);
+    expect(valores.json()).toMatchObject({ estado: 'parcial', cobertura: { publicados: 1 } });
   });
 });

@@ -2,16 +2,26 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Area } from '@licitecomigo/shared';
 import { api, errorText, send } from '../../lib/api';
 import { DadosAtualizados } from '../components/DadosAtualizados';
+import { EVENTO_DADOS_ATUALIZADOS } from '../components/SincronizarAoAcessar';
 import { LicitacoesNav } from '../components/LicitacoesNav';
 import { Alert, Empty, PageHeader } from '../components/ui';
 import { RadarFilters } from './RadarFilters';
 import { RadarPainel } from './RadarPainel';
 import { PerfilRadar } from './PerfilRadar';
 import { FacetPanel, ResultList } from './RadarResults';
+import {
+  FRESCO_MS,
+  chaveDaLista,
+  esquecerListas,
+  guardarLista,
+  guardarScroll,
+  lembrarBusca,
+  lerLista,
+} from './radar-cache';
 import { SEM_PERFIL, comPerfil, usePerfil } from './perfil-lib';
 import {
   ATALHOS,
@@ -31,6 +41,7 @@ export function RadarApp({
   canSave,
   nichosTravados = false,
   area,
+  usuario = 'anonimo',
 }: Readonly<{
   signedIn: boolean;
   canExport: boolean;
@@ -38,17 +49,26 @@ export function RadarApp({
   /** Colaborador: os nichos são definidos pelo Painel admin. */
   nichosTravados?: boolean;
   area?: Area | null;
+  /** Identifica a conta nas listas guardadas neste navegador. */
+  usuario?: string;
 }>) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const params = useMemo(() => new URLSearchParams(searchParams.toString()), [searchParams]);
-  const { dados: perfilDados, recarregar: recarregarPerfil } = usePerfil();
+  const { dados: perfilDados, recarregar: recarregarPerfil } = usePerfil(usuario);
   const usandoPerfil = params.get(SEM_PERFIL) !== '1';
   const efetivos = useMemo(() => {
     const final = comPerfil(params, usandoPerfil && perfilDados ? perfilDados.perfil : null);
     if (!final.get('page_size')) final.set('page_size', '10');
     return final;
   }, [params, usandoPerfil, perfilDados]);
+  const chave = useMemo(() => chaveDaLista(usuario, efetivos), [usuario, efetivos]);
+  const chaveAtual = useRef(chave);
+  chaveAtual.current = chave;
+  const forcar = useRef(false);
+  const primeiraVez = useRef(true);
+  const [versaoDados, setVersaoDados] = useState(0);
+  const [atualizando, setAtualizando] = useState(false);
   const [result, setResult] = useState<ListResponse | null>(null);
   const [state, setState] = useState<LoadState>('loading');
   const [hasProfile, setHasProfile] = useState(false);
@@ -73,9 +93,26 @@ export function RadarApp({
   );
 
   useEffect(() => {
+    if (signedIn && !perfilDados) return;
     const controller = new AbortController();
-    setState('loading');
-    if (signedIn && !perfilDados) return () => controller.abort();
+    const guardada = signedIn ? lerLista(chave) : null;
+    const forcada = forcar.current;
+    forcar.current = false;
+    if (guardada) {
+      // Mostra na hora o que já temos; só busca de novo se estiver velho ou se pediram.
+      setResult(guardada.dados);
+      setState('ready');
+      if (primeiraVez.current && guardada.scroll > 0) {
+        const alvo = guardada.scroll;
+        requestAnimationFrame(() => window.scrollTo(0, alvo));
+      }
+      primeiraVez.current = false;
+      if (!forcada && guardada.idade < FRESCO_MS) return;
+      setAtualizando(true);
+    } else {
+      primeiraVez.current = false;
+      setState('loading');
+    }
     const query = efetivos.toString();
     void fetch(`/api/core/editais${query ? `?${query}` : ''}`, {
       cache: 'no-store',
@@ -88,15 +125,58 @@ export function RadarApp({
           if (body.error === 'niche_preferences_required') return setState('niche_required');
         }
         if (!response.ok) throw new Error('radar_failed');
-        setResult((await response.json()) as ListResponse);
+        const dados = (await response.json()) as ListResponse;
+        guardarLista(chave, dados);
+        setResult(dados);
         setState('ready');
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === 'AbortError') return;
-        setState('error');
+        // Com uma lista já na tela, uma falha ao atualizar não apaga o que a pessoa está vendo.
+        if (!guardada) setState('error');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setAtualizando(false);
       });
-    return () => controller.abort();
-  }, [efetivos, profileVersion, signedIn, perfilDados]);
+    return () => {
+      controller.abort();
+      setAtualizando(false);
+    };
+  }, [chave, efetivos, profileVersion, signedIn, perfilDados, versaoDados]);
+
+  // Lembra a busca (para o "Voltar ao Radar") e a posição da lista ao sair da tela.
+  const buscaDaUrl = params.toString();
+  useEffect(() => {
+    if (signedIn) lembrarBusca(usuario, buscaDaUrl);
+  }, [signedIn, usuario, buscaDaUrl]);
+  useEffect(() => {
+    const salvar = () => guardarScroll(chaveAtual.current, window.scrollY);
+    window.addEventListener('pagehide', salvar);
+    return () => {
+      window.removeEventListener('pagehide', salvar);
+      salvar();
+    };
+  }, []);
+
+  // Uma rodada de coleta terminou, ou a aba voltou depois de um tempo: atualiza por baixo.
+  useEffect(() => {
+    if (!signedIn) return;
+    const revalidar = () => {
+      forcar.current = true;
+      setVersaoDados((valor) => valor + 1);
+    };
+    const aoVoltar = () => {
+      if (document.visibilityState !== 'visible') return;
+      const guardada = lerLista(chaveAtual.current);
+      if (!guardada || guardada.idade >= FRESCO_MS) revalidar();
+    };
+    window.addEventListener(EVENTO_DADOS_ATUALIZADOS, revalidar);
+    document.addEventListener('visibilitychange', aoVoltar);
+    return () => {
+      window.removeEventListener(EVENTO_DADOS_ATUALIZADOS, revalidar);
+      document.removeEventListener('visibilitychange', aoVoltar);
+    };
+  }, [signedIn]);
 
   useEffect(() => {
     void api<{ modalidade?: string[] }>('/catalog/filters')
@@ -170,6 +250,7 @@ export function RadarApp({
             apply(next);
           }}
           onSaved={() => {
+            esquecerListas();
             recarregarPerfil();
             setProfileVersion((value) => value + 1);
           }}
@@ -252,7 +333,11 @@ export function RadarApp({
       {state === 'loading' && !result ? <p className="ui-loading">Consultando editais…</p> : null}
 
       {result && (state === 'ready' || state === 'loading') ? (
-        <section className="rd-layout" aria-busy={state === 'loading'} aria-live="polite">
+        <section
+          className="rd-layout"
+          aria-busy={state === 'loading' || atualizando}
+          aria-live="polite"
+        >
           <FacetPanel facets={result.facetas} params={params} onChange={apply} />
           <div className="rd-main">
             <div className="rd-toolbar">

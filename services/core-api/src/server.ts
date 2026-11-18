@@ -47,7 +47,8 @@ import { AsaasError, type AsaasClient } from './asaas.js';
 import { registerPriceRoutes } from './precos.js';
 import { registerDetalhesRoutes } from './pncp-detalhes.js';
 import { registerHistoricoRoutes } from './historico-mercado.js';
-import { registerLeituraRoutes } from './leitura-edital.js';
+import { leituras, registerLeituraRoutes } from './leitura-edital.js';
+import { CacheCompartilhado } from './cache-compartilhado.js';
 import { registerPlatformRoutes } from './platform.js';
 import { loadConfig, panelBaseUrl, type RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
@@ -2200,8 +2201,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     ...(options.runSync ? { runSync: options.runSync } : {}),
   });
   registerPriceRoutes(app, { config, pool });
-  registerDetalhesRoutes(app, { pool, config });
-  registerHistoricoRoutes(app, { pool, config });
+  // Cache e trabalho único das fontes oficiais, compartilhado entre instâncias quando há Redis.
+  const cacheDasFontes = new CacheCompartilhado(config.redisUrl);
+  app.addHook('onClose', async () => cacheDasFontes.fechar());
+  leituras.usarCompartilhado(cacheDasFontes);
+  registerDetalhesRoutes(app, { pool, config, cache: cacheDasFontes });
+  registerHistoricoRoutes(app, { pool, config, cache: cacheDasFontes });
   registerLeituraRoutes(app, { pool });
   registerBillingRoutes(app, { pool, config, ...(options.asaas ? { asaas: options.asaas } : {}) });
   registerBillingExtras(app, { pool, config, ...(options.asaas ? { asaas: options.asaas } : {}) });

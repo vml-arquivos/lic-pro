@@ -152,7 +152,24 @@ function formatCnpj(value: string | null | undefined): string {
 /** Pregão já encerrado: o resultado dos itens costuma estar publicado. */
 function fechado(edital: Edital): boolean {
   if (edital.valor_homologado) return true;
+  // As propostas já encerraram: o resultado pode estar publicado, mesmo sem a situação dizer.
+  const fim = edital.data_encerramento_proposta
+    ? new Date(edital.data_encerramento_proposta).getTime()
+    : null;
+  if (fim !== null && !Number.isNaN(fim) && fim < Date.now()) return true;
   return /homolog|adjudic|conclu[ií]d|encerrad/i.test(edital.situacao ?? '');
+}
+
+/** Última ficha vista de cada edital, por conta: reabrir mostra na hora e atualiza por baixo. */
+const fichas = new Map<string, { detail: Detail; em: number }>();
+const VALIDADE_DA_FICHA_MS = 10 * 60_000;
+function guardarFicha(usuario: string, editalId: string, detail: Detail): void {
+  fichas.set(`${usuario}|${editalId}`, { detail, em: Date.now() });
+  while (fichas.size > 30) fichas.delete(fichas.keys().next().value as string);
+}
+function lerFicha(usuario: string, editalId: string): Detail | null {
+  const guardada = fichas.get(`${usuario}|${editalId}`);
+  return guardada && Date.now() - guardada.em < VALIDADE_DA_FICHA_MS ? guardada.detail : null;
 }
 
 export function EditalWorkspace({
@@ -161,21 +178,23 @@ export function EditalWorkspace({
   canPractice = false,
   signedIn = true,
   canAnalyze = false,
+  usuario = 'anonimo',
 }: {
   editalId: string;
   canPipeline?: boolean;
   canPractice?: boolean;
   signedIn?: boolean;
   canAnalyze?: boolean;
+  usuario?: string;
 }) {
-  const [detail, setDetail] = useState<Detail | null>(null);
+  const [detail, setDetail] = useState<Detail | null>(() => lerFicha(usuario, editalId));
   const [companies, setCompanies] = useState<Company[]>([]);
   const [companyId, setCompanyId] = useState('');
   const [question, setQuestion] = useState('Faça uma leitura inicial do edital.');
   const [analysis, setAnalysis] = useState<ReaderResult | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => lerFicha(usuario, editalId) === null);
   const [interacao, setInteracao] = useState<Interacao>({
     favorito: false,
     descartado: false,
@@ -206,27 +225,22 @@ export function EditalWorkspace({
     }
   }
 
+  const marcouVisto = useRef(false);
   async function load() {
-    const [detailResponse, companyResponse] = await Promise.all([
-      fetch(`/api/core/editais/${editalId}`),
-      canPipeline
-        ? fetch('/api/core/companies')
-        : Promise.resolve(new Response(null, { status: 204 })),
-    ]);
+    // A ficha vem sozinha: a lista de empresas do pipeline carrega à parte e não a atrasa.
+    const detailResponse = await fetch(`/api/core/editais/${editalId}`);
     if (detailResponse.ok) {
       const loaded = (await detailResponse.json()) as Detail;
       setDetail(loaded);
+      guardarFicha(usuario, editalId, loaded);
       if (loaded.interacao) {
         setInteracao(loaded.interacao);
         setNote(loaded.interacao.nota ?? '');
       }
-      if (signedIn)
+      if (signedIn && !marcouVisto.current) {
+        marcouVisto.current = true;
         void send('POST', `/editais/${editalId}/interacao`, { visto: true }).catch(() => undefined);
-    }
-    if (canPipeline && companyResponse.ok) {
-      const rows = ((await companyResponse.json()) as { data?: Company[] }).data ?? [];
-      setCompanies(rows);
-      setCompanyId((current) => current || rows[0]?.id || '');
+      }
     }
     setLoading(false);
   }
@@ -234,18 +248,53 @@ export function EditalWorkspace({
     void load();
   }, [editalId]);
 
-  // Itens e documentos do PNCP alimentam a documentação técnica: busca sozinho na primeira visita.
-  const buscouSozinho = useRef(false);
+  useEffect(() => {
+    if (!canPipeline) return;
+    let vivo = true;
+    void fetch('/api/core/companies')
+      .then(async (response) => {
+        if (!vivo || !response.ok) return;
+        const rows = ((await response.json()) as { data?: Company[] }).data ?? [];
+        setCompanies(rows);
+        setCompanyId((current) => current || rows[0]?.id || '');
+      })
+      .catch(() => undefined);
+    return () => {
+      vivo = false;
+    };
+  }, [canPipeline]);
+
+  // Itens e documentos do PNCP: confere a cada abertura. O servidor só consulta a fonte se o que
+  // está gravado venceu (ou o edital mudou). Com a ficha já na tela, tudo acontece por baixo.
+  const revalidouDetalhes = useRef(false);
   useEffect(() => {
     const atual = detail?.edital;
-    if (!atual || !signedIn || buscouSozinho.current) return;
-    if (atual.fonte !== 'pncp' || atual.detalhes_coletados_em) return;
-    buscouSozinho.current = true;
-    setFetchingDetails(true);
-    void send('POST', `/editais/${editalId}/detalhes/atualizar`, { force: false })
-      .then(() => load())
-      .catch(() => undefined)
-      .finally(() => setFetchingDetails(false));
+    if (!atual || !signedIn || revalidouDetalhes.current) return;
+    if (atual.fonte !== 'pncp') return;
+    revalidouDetalhes.current = true;
+    const semItens = detail.itens.length === 0;
+    if (semItens) setFetchingDetails(true);
+    void (async () => {
+      try {
+        const resposta = await send<{ atualizado: boolean; motivo?: string }>(
+          'POST',
+          `/editais/${editalId}/detalhes/atualizar`,
+          { force: false },
+        );
+        if (resposta.atualizado) await load();
+        else if (semItens && resposta.motivo === 'em_andamento') {
+          // Outra pessoa já está buscando este edital: espera os itens chegarem.
+          for (let tentativa = 0; tentativa < 6; tentativa += 1) {
+            await new Promise((resolve) => setTimeout(resolve, 4000));
+            await load();
+          }
+        }
+      } catch {
+        // a ficha segue na tela; o botão de atualizar continua disponível
+      } finally {
+        setFetchingDetails(false);
+      }
+    })();
   }, [detail, signedIn, editalId]);
 
   // Documentos do edital: lidos no servidor sozinhos; recomeça quando chegam itens ou documentos novos.

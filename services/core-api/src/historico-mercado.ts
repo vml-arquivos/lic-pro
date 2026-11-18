@@ -17,10 +17,17 @@ import { PublicRateLimiter } from './auth-public.js';
 import type { RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
 import {
-  buscarResultados,
+  CacheCompartilhado,
+  cacheLocal,
+  metaDoDado,
+  type ResultadoDoCache,
+} from './cache-compartilhado.js';
+import { comPoliticaDeFonte } from './fonte-http.js';
+import {
   DetalhesError,
   parseNumeroControle,
-  type ItemComResultado,
+  resultadosDoEdital,
+  type EstadoDosResultados,
 } from './pncp-detalhes.js';
 import {
   consultarPrecos,
@@ -107,6 +114,9 @@ export function normalizeContrato(raw: unknown): RegistroDeCompra | null {
   };
 }
 
+/** Páginas de 500 contratos lidas por órgão. Acima disso, a cobertura aparece como parcial. */
+const PAGINAS_DE_CONTRATOS = 3;
+
 const yyyymmdd = (data: Date): string => data.toISOString().slice(0, 10).replaceAll('-', '');
 
 async function getJson(
@@ -148,7 +158,14 @@ export async function buscarContratosDoOrgao(
   cnpjOrgao: string,
   opcoes: { meses: number; agora?: Date },
   fetchImpl: typeof fetch = fetch,
-): Promise<{ registros: RegistroDeCompra[]; meses: number; paginas: number }> {
+): Promise<{
+  registros: RegistroDeCompra[];
+  meses: number;
+  paginas: number;
+  totalPaginas: number;
+  /** Uma página falhou no meio: o resultado é incompleto. */
+  incompleto: boolean;
+}> {
   const agora = opcoes.agora ?? new Date();
   for (const meses of [...new Set([opcoes.meses, 6, 3])].filter((m) => m <= opcoes.meses)) {
     const inicio = new Date(agora.getTime() - meses * 30.4375 * 86_400_000);
@@ -158,7 +175,7 @@ export async function buscarContratosDoOrgao(
     const primeira = await getJson(fetchImpl, montar(1));
     if (primeira.status === 400 || primeira.status === 422) continue;
     if (primeira.status === 204 || primeira.status === 404) {
-      return { registros: [], meses, paginas: 1 };
+      return { registros: [], meses, paginas: 1, totalPaginas: 1, incompleto: false };
     }
     if (primeira.status >= 400) {
       throw new HistoricoError(
@@ -179,13 +196,28 @@ export async function buscarContratosDoOrgao(
     const inicial = lista(primeira.body);
     brutos.push(...inicial.itens);
     let paginas = 1;
-    for (let pagina = 2; pagina <= Math.min(inicial.totalPaginas, 3); pagina += 1) {
-      const proxima = await getJson(fetchImpl, montar(pagina));
-      if (proxima.status >= 400) break;
-      paginas += 1;
-      brutos.push(...lista(proxima.body).itens);
+    let incompleto = false;
+    for (
+      let pagina = 2;
+      pagina <= Math.min(inicial.totalPaginas, PAGINAS_DE_CONTRATOS);
+      pagina += 1
+    ) {
+      try {
+        const proxima = await getJson(fetchImpl, montar(pagina));
+        if (proxima.status >= 400) {
+          incompleto = true;
+          break;
+        }
+        paginas += 1;
+        brutos.push(...lista(proxima.body).itens);
+      } catch {
+        incompleto = true;
+        break;
+      }
     }
     return {
+      totalPaginas: inicial.totalPaginas,
+      incompleto,
       registros: brutos
         .map(normalizeContrato)
         .filter((registro): registro is RegistroDeCompra => registro !== null),
@@ -271,7 +303,12 @@ export type PrecoDoItem = ReturnType<typeof RESUMO_ITEM> & {
   motivo: string | null;
 };
 
-type Deps = { pool: Pool | undefined; config: RuntimeConfig; fetchImpl?: typeof fetch };
+type Deps = {
+  pool: Pool | undefined;
+  config: RuntimeConfig;
+  fetchImpl?: typeof fetch;
+  cache?: CacheCompartilhado;
+};
 
 function statsDaUf(precos: PrecosResultado, uf: string | null): PrecoStats | null {
   if (!uf) return null;
@@ -296,27 +333,67 @@ function statsDaUf(precos: PrecosResultado, uf: string | null): PrecoStats | nul
   };
 }
 
+/** O dado mais velho (e se algum está desatualizado) entre vários consultados. */
+function metaDoPiorCaso(dados: ResultadoDoCache<unknown>[]) {
+  const maisVelho = dados.reduce((a, b) => (a.em <= b.em ? a : b));
+  return {
+    ...metaDoDado(maisVelho),
+    desatualizado: dados.some((dado) => dado.desatualizado),
+    atualizando: dados.some((dado) => dado.atualizando),
+    parcial: dados.some((dado) => dado.parcial),
+  };
+}
+
+type EstadoDoBloco =
+  | 'disponivel'
+  | 'sem_registro'
+  | 'aguardando_publicacao'
+  | 'parcial'
+  | 'fonte_indisponivel'
+  | 'nao_se_aplica';
+
+const MENSAGEM_DO_ESTADO: Record<EstadoDoBloco, string> = {
+  disponivel: 'Vencedores já publicados.',
+  sem_registro: 'O PNCP não tem resultado registrado para este edital.',
+  aguardando_publicacao: 'Ainda sem resultado publicado.',
+  parcial: 'Resultado parcial.',
+  fonte_indisponivel: 'A fonte não respondeu agora.',
+  nao_se_aplica: 'Só existe para editais do PNCP.',
+};
+
 export function registerHistoricoRoutes(
   app: FastifyInstance,
-  { pool, config, fetchImpl }: Deps,
+  { pool, config, fetchImpl: fetchBase, cache = cacheLocal }: Deps,
 ): void {
-  const limiter = new PublicRateLimiter(12);
-  const cachePrecos = new Map<string, { at: number; value: unknown }>();
-  const cacheConcorrentes = new Map<string, { at: number; value: unknown }>();
-  const cacheCatmat = new Map<string, { at: number; value: PrecosResultado }>();
-  const TTL = 30 * 60_000;
+  const limiter = new PublicRateLimiter(60);
+  const fetchPncp = comPoliticaDeFonte(fetchBase ?? fetch, 'pncp');
+  const fetchCompras = comPoliticaDeFonte(fetchBase ?? fetch, 'compras', { concorrencia: 3 });
 
-  const precosDoCatmat = async (catmat: string): Promise<PrecosResultado> => {
-    const guardado = cacheCatmat.get(catmat);
-    if (guardado && Date.now() - guardado.at < TTL) return guardado.value;
-    const valor = await consultarPrecos(
-      { config, ...(fetchImpl ? { fetchImpl } : {}) },
-      { catmat, meses: MESES },
+  /** Preços do CATMAT: um resultado por código para toda a plataforma. */
+  const precosDoCatmat = (catmat: string) =>
+    cache.obter<PrecosResultado>(`compras:precos:${catmat}:${MESES}`, {
+      validadeMs: 6 * 3_600_000,
+      retencaoMs: 7 * 86_400_000,
+      servirVelhoEAtualizar: true,
+      buscar: async () => ({
+        valor: await consultarPrecos({ config, fetchImpl: fetchCompras }, { catmat, meses: MESES }),
+      }),
+    });
+
+  /** Contratos do órgão: um resultado por órgão, usado por todos os editais dele. */
+  const contratosDoOrgao = (cnpj: string) =>
+    cache.obter<Awaited<ReturnType<typeof buscarContratosDoOrgao>>>(
+      `pncp:contratos:${cnpj}:${MESES}`,
+      {
+        validadeMs: 6 * 3_600_000,
+        retencaoMs: 7 * 86_400_000,
+        servirVelhoEAtualizar: true,
+        buscar: async () => {
+          const valor = await buscarContratosDoOrgao(config, cnpj, { meses: MESES }, fetchPncp);
+          return { valor, parcial: valor.incompleto };
+        },
+      },
     );
-    cacheCatmat.set(catmat, { at: Date.now(), value: valor });
-    if (cacheCatmat.size > 300) cacheCatmat.delete(cacheCatmat.keys().next().value as string);
-    return valor;
-  };
 
   const carregar = async (request: Parameters<typeof authContext>[0], id: string) => {
     if (!pool) return 'sem_banco' as const;
@@ -330,9 +407,12 @@ export function registerHistoricoRoutes(
           uf: string | null;
           valor_homologado: string | null;
           encerrada: boolean;
+          fechado: boolean;
         }>(
           `SELECT id_externo, fonte, titulo, orgao, uf, valor_homologado,
-                  (COALESCE(data_encerramento_propostas, data_encerramento_proposta) < now()) AS encerrada
+                  (COALESCE(data_encerramento_propostas, data_encerramento_proposta) < now()) AS encerrada,
+                  (valor_homologado IS NOT NULL
+                     OR COALESCE(data_encerramento_propostas, data_encerramento_proposta) < now()) AS fechado
              FROM editais WHERE id = $1`,
           [id],
         )
@@ -362,17 +442,18 @@ export function registerHistoricoRoutes(
         message: 'Os itens do edital ainda não foram buscados.',
       });
     }
-    const guardado = cachePrecos.get(id);
-    if (guardado && Date.now() - guardado.at < TTL) return reply.send(guardado.value);
 
     const escolhidos = itensParaComparar(itens, 8);
     const porCatmat = new Map<string, PrecosResultado | string>();
+    const idades: ResultadoDoCache<PrecosResultado>[] = [];
     const fila = [...new Set(escolhidos.map((item) => item.catmat_catser!))];
     let falhas = 0;
     const trabalhador = async (): Promise<void> => {
       for (let catmat = fila.shift(); catmat; catmat = fila.shift()) {
         try {
-          porCatmat.set(catmat, await precosDoCatmat(catmat));
+          const dado = await precosDoCatmat(catmat);
+          idades.push(dado);
+          porCatmat.set(catmat, dado.valor);
         } catch (error) {
           falhas += 1;
           porCatmat.set(
@@ -454,13 +535,22 @@ export function registerHistoricoRoutes(
       periodo_meses: MESES,
       uf: edital.uf,
       aviso: AVISO_HISTORICO,
+      estado: falhas > 0 ? 'parcial' : escolhidos.length ? 'completo' : 'sem_itens_comparaveis',
+      cobertura: {
+        itens_total: itens.length,
+        itens_comparaveis: escolhidos.length,
+        limite: 8,
+        codigos_consultados: total,
+        codigos_com_falha: falhas,
+      },
+      dados: idades.length ? metaDoPiorCaso(idades) : null,
       fonte: {
         ...FONTES_HISTORICO[2],
-        consultado_em: new Date().toISOString(),
+        consultado_em: idades.length
+          ? new Date(Math.min(...idades.map((dado) => dado.em))).toISOString()
+          : new Date().toISOString(),
       },
     };
-    cachePrecos.set(id, { at: Date.now(), value });
-    if (cachePrecos.size > 100) cachePrecos.delete(cachePrecos.keys().next().value as string);
     return reply.send(value);
   });
 
@@ -472,137 +562,182 @@ export function registerHistoricoRoutes(
     if (carregado === 'sem_banco') return sendDatabaseUnavailable(reply);
     if (!carregado) return reply.code(404).send({ error: 'edital_not_found' });
     const { edital, itens } = carregado;
-    const guardado = cacheConcorrentes.get(id);
-    if (guardado && Date.now() - guardado.at < TTL) return reply.send(guardado.value);
 
     const avisos: string[] = [];
-    let falhasDeFonte = 0;
+    const dadosUsados: ResultadoDoCache<unknown>[] = [];
     const chave = edital.fonte === 'pncp' ? parseNumeroControle(edital.id_externo) : null;
-
-    // 1) Quem ganhou neste edital (só existe depois do resultado)
-    let nesteEdital: { disponivel: boolean; motivo: string; vencedores: Concorrente[] } = {
-      disponivel: false,
-      motivo: chave
-        ? 'Ainda sem resultado publicado.'
-        : 'Resultado só existe para editais do PNCP.',
-      vencedores: [],
-    };
-    if (chave && (edital.encerrada || edital.valor_homologado) && itens.length) {
-      try {
-        const resultados: ItemComResultado[] = await buscarResultados(
-          config,
-          edital.id_externo,
-          itens.slice(0, 40).map((item) => ({
-            numero: item.numero,
-            descricao: item.descricao,
-            unidade: item.unidade,
-            quantidade: item.quantidade,
-            valor_unitario_estimado: item.valor_unitario_estimado,
-          })),
-          fetchImpl,
-        );
-        const registros: RegistroDeCompra[] = resultados.flatMap((item) =>
-          item.resultado
-            ? [
-                {
-                  fornecedor: item.resultado.fornecedor,
-                  cnpj: documentoDoFornecedor(item.resultado.cnpj_fornecedor),
-                  valor: item.resultado.valor_unitario_homologado,
-                  data: item.resultado.data,
-                  orgao: edital.orgao,
-                  uf: edital.uf,
-                  objeto: item.descricao,
-                  origem: 'pncp-resultado' as const,
-                  link: null,
-                },
-              ]
-            : [],
-        );
-        const vencedores = agruparConcorrentes(registros, 20);
-        nesteEdital = {
-          disponivel: vencedores.length > 0,
-          motivo: vencedores.length
-            ? 'Vencedores já publicados.'
-            : 'Ainda sem resultado publicado.',
-          vencedores,
-        };
-      } catch (error) {
-        falhasDeFonte += 1;
-        avisos.push(
-          error instanceof DetalhesError
-            ? error.message
-            : 'Não foi possível ler os resultados deste edital no PNCP agora.',
-        );
-      }
-    }
-
-    // 2) Contratos que o órgão do edital publicou (PNCP)
     const palavrasDoEdital = palavrasDoAssunto(
       [edital.titulo, ...itens.slice(0, 40).map((item) => item.descricao)].join(' '),
     );
+
+    // As três fontes são independentes: consulta ao mesmo tempo.
+    const [resultadoDoEdital, contratos, porItem] = await Promise.all([
+      // 1) Quem ganhou neste edital (só existe depois do resultado)
+      (async () => {
+        if (!chave) return { estado: 'nao_se_aplica' as EstadoDoBloco, vencedores: [] };
+        if (!itens.length)
+          return { estado: 'aguardando_publicacao' as EstadoDoBloco, vencedores: [] };
+        try {
+          const dado = await resultadosDoEdital(
+            { cache, config, fetchImpl: fetchPncp },
+            edital.id_externo,
+            itens.map((item) => ({
+              numero: item.numero,
+              descricao: item.descricao,
+              unidade: item.unidade,
+              quantidade: item.quantidade,
+              valor_unitario_estimado: item.valor_unitario_estimado,
+            })),
+            edital.fechado,
+          );
+          dadosUsados.push(dado);
+          const registros: RegistroDeCompra[] = dado.valor.itens.flatMap((item) =>
+            item.resultado
+              ? [
+                  {
+                    fornecedor: item.resultado.fornecedor,
+                    cnpj: documentoDoFornecedor(item.resultado.cnpj_fornecedor),
+                    valor: item.resultado.valor_unitario_homologado,
+                    data: item.resultado.data,
+                    orgao: edital.orgao,
+                    uf: edital.uf,
+                    objeto: item.descricao,
+                    origem: 'pncp-resultado' as const,
+                    link: null,
+                  },
+                ]
+              : [],
+          );
+          const mapa: Record<EstadoDosResultados, EstadoDoBloco> = {
+            publicado: 'disponivel',
+            parcial: 'parcial',
+            aguardando_publicacao: 'aguardando_publicacao',
+            sem_registro: 'sem_registro',
+          };
+          return {
+            estado: mapa[dado.valor.estado],
+            vencedores: agruparConcorrentes(registros, 20),
+            cobertura: dado.valor.cobertura,
+          };
+        } catch (error) {
+          avisos.push(
+            error instanceof DetalhesError
+              ? error.message
+              : 'Não foi possível ler os resultados deste edital no PNCP agora.',
+          );
+          return { estado: 'fonte_indisponivel' as EstadoDoBloco, vencedores: [] };
+        }
+      })(),
+      // 2) Contratos que o órgão do edital publicou (PNCP)
+      (async () => {
+        if (!chave) {
+          if (edital.fonte !== 'pncp') {
+            avisos.push('Os contratos por órgão só existem para editais do PNCP.');
+          }
+          return null;
+        }
+        try {
+          const dado = await contratosDoOrgao(chave.cnpj);
+          dadosUsados.push(dado);
+          return dado.valor;
+        } catch (error) {
+          avisos.push(
+            error instanceof HistoricoError
+              ? error.message
+              : 'Não foi possível ler os contratos do órgão no PNCP agora.',
+          );
+          return 'falhou' as const;
+        }
+      })(),
+      // 3) Fornecedores que venderam os mesmos itens (Compras.gov.br, por CATMAT)
+      (async () => {
+        const catmats = itensParaComparar(itens, 4);
+        const registros: RegistroDeCompra[] = [];
+        let falhas = 0;
+        await Promise.all(
+          catmats.map(async (item) => {
+            try {
+              const dado = await precosDoCatmat(item.catmat_catser!);
+              dadosUsados.push(dado);
+              for (const preco of dado.valor.itens) {
+                const registro = registroDePreco(preco);
+                if (registro) registros.push(registro);
+              }
+            } catch {
+              falhas += 1;
+            }
+          }),
+        );
+        if (catmats.length && falhas === catmats.length) {
+          avisos.push('O Compras.gov.br não respondeu agora; fornecedores por item indisponíveis.');
+        }
+        return { catmats, registros, falhas };
+      })(),
+    ]);
+
+    const nesteEdital = {
+      disponivel: resultadoDoEdital.vencedores.length > 0,
+      estado: resultadoDoEdital.estado,
+      motivo: MENSAGEM_DO_ESTADO[resultadoDoEdital.estado],
+      vencedores: resultadoDoEdital.vencedores,
+      cobertura: 'cobertura' in resultadoDoEdital ? resultadoDoEdital.cobertura : null,
+    };
+
     let contratosAnalisados = 0;
     let mesesContratos: number = MESES;
     let doOrgao: Concorrente[] = [];
     let similares: Concorrente[] = [];
-    if (chave) {
-      try {
-        const contratos = await buscarContratosDoOrgao(
-          config,
-          chave.cnpj,
-          { meses: MESES },
-          fetchImpl,
-        );
-        contratosAnalisados = contratos.registros.length;
-        mesesContratos = contratos.meses;
-        doOrgao = agruparConcorrentes(contratos.registros, 10);
-        similares = agruparConcorrentes(
-          contratos.registros.filter(
-            (registro) => similaridadeDeAssunto(palavrasDoEdital, registro.objeto) >= 0.5,
-          ),
-          10,
-        );
-      } catch (error) {
-        falhasDeFonte += 1;
-        avisos.push(
-          error instanceof HistoricoError
-            ? error.message
-            : 'Não foi possível ler os contratos do órgão no PNCP agora.',
-        );
-      }
-    } else if (edital.fonte !== 'pncp') {
-      avisos.push('Os contratos por órgão só existem para editais do PNCP.');
+    let blocoContratos: {
+      estado: EstadoDoBloco;
+      paginas_lidas?: number;
+      total_paginas?: number;
+    } = { estado: chave ? 'fonte_indisponivel' : 'nao_se_aplica' };
+    if (contratos && contratos !== 'falhou') {
+      contratosAnalisados = contratos.registros.length;
+      mesesContratos = contratos.meses;
+      doOrgao = agruparConcorrentes(contratos.registros, 10);
+      similares = agruparConcorrentes(
+        contratos.registros.filter(
+          (registro) => similaridadeDeAssunto(palavrasDoEdital, registro.objeto) >= 0.5,
+        ),
+        10,
+      );
+      const parcial = contratos.incompleto || contratos.paginas < contratos.totalPaginas;
+      blocoContratos = {
+        estado: contratosAnalisados === 0 ? 'sem_registro' : parcial ? 'parcial' : 'disponivel',
+        paginas_lidas: contratos.paginas,
+        total_paginas: contratos.totalPaginas,
+      };
     }
 
-    // 3) Fornecedores que venderam os mesmos itens (Compras.gov.br, por CATMAT)
-    let dosItens: Concorrente[] = [];
-    const catmats = itensParaComparar(itens, 4);
-    if (catmats.length) {
-      const registros: RegistroDeCompra[] = [];
-      let falhas = 0;
-      for (const item of catmats) {
-        try {
-          const precos = await precosDoCatmat(item.catmat_catser!);
-          for (const preco of precos.itens) {
-            const registro = registroDePreco(preco);
-            if (registro) registros.push(registro);
-          }
-        } catch {
-          falhas += 1;
-        }
-      }
-      dosItens = agruparConcorrentes(registros, 10);
-      if (falhas === catmats.length) {
-        falhasDeFonte += 1;
-        avisos.push('O Compras.gov.br não respondeu agora; fornecedores por item indisponíveis.');
-      }
-    }
+    const dosItens = agruparConcorrentes(porItem.registros, 10);
+    const blocoItens = {
+      estado: (!porItem.catmats.length
+        ? 'sem_registro'
+        : porItem.falhas === porItem.catmats.length
+          ? 'fonte_indisponivel'
+          : porItem.falhas > 0
+            ? 'parcial'
+            : dosItens.length
+              ? 'disponivel'
+              : 'sem_registro') as EstadoDoBloco,
+      consultados: porItem.catmats.length,
+      falhas: porItem.falhas,
+    };
 
+    const semNada =
+      !nesteEdital.vencedores.length && !doOrgao.length && !similares.length && !dosItens.length;
+    const nadaConsultadoNosItens =
+      blocoItens.estado === 'fonte_indisponivel' || porItem.catmats.length === 0;
+    const resultadoDoEditalSemResposta =
+      nesteEdital.estado === 'fonte_indisponivel' ||
+      nesteEdital.estado === 'nao_se_aplica' ||
+      nesteEdital.estado === 'aguardando_publicacao';
     if (
-      !nesteEdital.vencedores.length &&
-      !doOrgao.length &&
-      !similares.length &&
-      !dosItens.length &&
-      falhasDeFonte > 0
+      semNada &&
+      contratos === 'falhou' &&
+      nadaConsultadoNosItens &&
+      resultadoDoEditalSemResposta
     ) {
       return reply.code(502).send({
         error: 'fonte_indisponivel',
@@ -610,23 +745,22 @@ export function registerHistoricoRoutes(
       });
     }
 
-    const value = {
+    return reply.send({
       neste_edital: nesteEdital,
       similares,
       do_orgao: doOrgao,
       dos_itens: dosItens,
+      blocos: { contratos_do_orgao: blocoContratos, fornecedores_dos_itens: blocoItens },
       contratos_analisados: contratosAnalisados,
       periodo_meses: mesesContratos,
-      itens_consultados: catmats.map((item) => item.catmat_catser),
+      itens_consultados: porItem.catmats.map((item) => item.catmat_catser),
       avisos,
       aviso: AVISO_HISTORICO,
       fontes: FONTES_HISTORICO,
-      consultado_em: new Date().toISOString(),
-    };
-    cacheConcorrentes.set(id, { at: Date.now(), value });
-    if (cacheConcorrentes.size > 100) {
-      cacheConcorrentes.delete(cacheConcorrentes.keys().next().value as string);
-    }
-    return reply.send(value);
+      dados: dadosUsados.length ? metaDoPiorCaso(dadosUsados) : null,
+      consultado_em: dadosUsados.length
+        ? new Date(Math.min(...dadosUsados.map((dado) => dado.em))).toISOString()
+        : new Date().toISOString(),
+    });
   });
 }

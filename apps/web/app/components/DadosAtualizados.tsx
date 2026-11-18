@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api';
 import { EVENTO_DADOS_ATUALIZADOS, EVENTO_SYNC_INICIADA } from './SincronizarAoAcessar';
 
@@ -24,12 +24,22 @@ export function DadosAtualizados() {
   const [dados, setDados] = useState<Atualizacao | null>(null);
   const [agora, setAgora] = useState(() => Date.now());
   const [atualizando, setAtualizando] = useState(false);
+  const ultimaVista = useRef<string | null>(null);
 
   useEffect(() => {
     let ativo = true;
     const carregar = () =>
       api<Atualizacao>('/editais/atualizacao')
-        .then((resposta) => ativo && setDados(resposta))
+        .then((resposta) => {
+          if (!ativo) return;
+          setDados(resposta);
+          // Uma rodada agendada terminou com a tela aberta: avisa as listas para atualizar.
+          const nova = resposta.ultima_atualizacao_em;
+          if (nova && ultimaVista.current && nova !== ultimaVista.current) {
+            window.dispatchEvent(new CustomEvent(EVENTO_DADOS_ATUALIZADOS));
+          }
+          if (nova) ultimaVista.current = nova;
+        })
         .catch(() => undefined);
     void carregar();
     const consulta = setInterval(() => void carregar(), 60_000);

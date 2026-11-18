@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { pageAreas, type Area } from '@licitecomigo/shared';
 import { getSession } from '../../../lib/session';
+import { VoltarAoRadar } from '../VoltarAoRadar';
 import { EditalWorkspace } from './EditalWorkspace';
 
 type DetailPageProps = { params: { editalId: string } };
@@ -14,9 +14,7 @@ export default async function EditalDetailPage({ params }: DetailPageProps) {
   const canAnalyze = Boolean(session && pageAreas('/analise')?.includes(session.area as Area));
   return (
     <div className="ui-page rd-page">
-      <Link className="back-link" href="/radar">
-        ← Voltar ao Radar
-      </Link>
+      <VoltarAoRadar usuario={session?.id ?? 'anonimo'} />
       <header className="ui-header">
         <div>
           <p className="eyebrow">Workspace do edital</p>
@@ -59,6 +57,7 @@ export default async function EditalDetailPage({ params }: DetailPageProps) {
         canPractice={canPractice}
         canAnalyze={canAnalyze}
         signedIn={Boolean(session)}
+        usuario={session?.id ?? 'anonimo'}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   formatarDocumento,
   type ComparacaoDePreco,
@@ -10,6 +10,7 @@ import {
 import { api, errorText } from '../../../lib/api';
 import { reais } from '../../../lib/money';
 import { Alert, Badge, Kpi, formatDate } from '../../components/ui';
+import { SituacaoDoDado, type MetaDoDado } from './SituacaoDoDado';
 import './mercado.css';
 
 type Estatistica = {
@@ -53,10 +54,35 @@ type RespostaPrecos = {
   uf: string | null;
   aviso: string;
   fonte: { nome: string; url: string; consultado_em: string };
+  estado?: 'completo' | 'parcial' | 'sem_itens_comparaveis';
+  cobertura?: {
+    itens_total: number;
+    itens_comparaveis: number;
+    limite: number;
+    codigos_consultados: number;
+    codigos_com_falha: number;
+  };
+  dados?: MetaDoDado | null;
 };
 type Fonte = { id: string; nome: string; url: string; descricao: string };
 type RespostaConcorrentes = {
-  neste_edital: { disponivel: boolean; motivo: string; vencedores: Concorrente[] };
+  neste_edital: {
+    disponivel: boolean;
+    estado?: string;
+    motivo: string;
+    vencedores: Concorrente[];
+    cobertura?: {
+      itens_total: number;
+      consultados: number;
+      publicados: number;
+      falhas: number;
+    } | null;
+  };
+  blocos?: {
+    contratos_do_orgao: { estado: string; paginas_lidas?: number; total_paginas?: number };
+    fornecedores_dos_itens: { estado: string; consultados: number; falhas: number };
+  };
+  dados?: MetaDoDado | null;
   similares: Concorrente[];
   do_orgao: Concorrente[];
   dos_itens: Concorrente[];
@@ -77,12 +103,21 @@ const POSICAO: Record<PosicaoDoPreco, { rotulo: string; tom: string }> = {
   acima_do_maximo: { rotulo: 'Acima do maior preço pago', tom: 'ok' },
 };
 
-/** Hook comum: busca ao abrir e de novo quando `quando` muda. */
-function useBusca<T>(caminho: string, ativo: boolean, quando: string) {
+/**
+ * Hook comum: busca ao abrir e de novo quando `quando` muda. Mantém o último dado na tela
+ * durante uma nova busca ou se ela falhar. Se o servidor avisar que está atualizando por baixo,
+ * confere de novo em poucos segundos.
+ */
+function useBusca<T extends { dados?: MetaDoDado | null }>(
+  caminho: string,
+  ativo: boolean,
+  quando: string,
+) {
   const [ocupado, setOcupado] = useState(ativo);
   const [erro, setErro] = useState('');
   const [dados, setDados] = useState<T | null>(null);
   const [rodada, setRodada] = useState(0);
+  const caminhoAtual = useRef(caminho);
 
   useEffect(() => {
     if (!ativo) {
@@ -90,6 +125,11 @@ function useBusca<T>(caminho: string, ativo: boolean, quando: string) {
       return;
     }
     let vivo = true;
+    // Outro edital: não mostra o dado do anterior.
+    if (caminhoAtual.current !== caminho) {
+      caminhoAtual.current = caminho;
+      setDados(null);
+    }
     setOcupado(true);
     setErro('');
     api<T>(caminho)
@@ -100,6 +140,19 @@ function useBusca<T>(caminho: string, ativo: boolean, quando: string) {
       vivo = false;
     };
   }, [caminho, ativo, quando, rodada]);
+
+  // O servidor está atualizando por baixo: confere de novo algumas vezes.
+  const [conferencias, setConferencias] = useState(0);
+  const atualizandoPorBaixo = Boolean(dados?.dados?.atualizando);
+  useEffect(() => {
+    if (!atualizandoPorBaixo || conferencias >= 4) return;
+    const espera = setTimeout(() => {
+      setConferencias((valor) => valor + 1);
+      setRodada((valor) => valor + 1);
+    }, 5000);
+    return () => clearTimeout(espera);
+  }, [atualizandoPorBaixo, conferencias, dados]);
+  useEffect(() => setConferencias(0), [caminho]);
 
   return { ocupado, erro, dados, atualizar: () => setRodada((valor) => valor + 1) };
 }
@@ -145,8 +198,21 @@ export function PrecosDoEdital({
         </p>
       ) : null}
       {erro ? <Alert kind="error">{erro}</Alert> : null}
+      {erro && !dados ? <Atualizar ocupado={ocupado} aoClicar={atualizar} /> : null}
       {dados ? (
         <>
+          <SituacaoDoDado
+            fonte="Compras.gov.br"
+            meta={dados.dados}
+            cobertura={
+              dados.cobertura
+                ? `${dados.resumo.comparados} de ${dados.cobertura.itens_total} itens comparados` +
+                  (dados.cobertura.codigos_com_falha
+                    ? `, ${dados.cobertura.codigos_com_falha} sem resposta`
+                    : '')
+                : null
+            }
+          />
           <section className="ui-kpis" aria-label="Resumo da comparação de preços">
             <Kpi
               label="Itens comparados"
@@ -261,7 +327,7 @@ function ListaDeConcorrentes({
   ajuda,
   lista,
   vazio,
-}: Readonly<{ titulo: string; ajuda?: string; lista: Concorrente[]; vazio: string }>) {
+}: Readonly<{ titulo: string; ajuda?: string | undefined; lista: Concorrente[]; vazio: string }>) {
   return (
     <section className="mk-grupo">
       <h4>{titulo}</h4>
@@ -343,8 +409,21 @@ export function ConcorrentesDoEdital({
         </p>
       ) : null}
       {erro ? <Alert kind="error">{erro}</Alert> : null}
+      {erro && !dados ? <Atualizar ocupado={ocupado} aoClicar={atualizar} /> : null}
       {dados ? (
         <>
+          <SituacaoDoDado
+            fonte="PNCP e Compras.gov.br"
+            meta={dados.dados}
+            cobertura={
+              dados.contratos_analisados
+                ? `${dados.contratos_analisados} contratos do órgão` +
+                  (dados.blocos?.contratos_do_orgao.estado === 'parcial'
+                    ? ` (${dados.blocos.contratos_do_orgao.paginas_lidas} de ${dados.blocos.contratos_do_orgao.total_paginas} páginas)`
+                    : '')
+                : null
+            }
+          />
           {dados.avisos.map((aviso) => (
             <Alert key={aviso} kind="error">
               {aviso}
@@ -352,8 +431,13 @@ export function ConcorrentesDoEdital({
           ))}
           <ListaDeConcorrentes
             titulo="Neste edital"
+            ajuda={
+              dados.neste_edital.cobertura && dados.neste_edital.estado === 'parcial'
+                ? `Resultado de ${dados.neste_edital.cobertura.publicados} de ${dados.neste_edital.cobertura.consultados} itens.`
+                : undefined
+            }
             lista={dados.neste_edital.vencedores}
-            vazio="Ainda sem resultado publicado."
+            vazio={dados.neste_edital.motivo}
           />
           <ListaDeConcorrentes
             titulo="Venceram compras parecidas neste órgão"

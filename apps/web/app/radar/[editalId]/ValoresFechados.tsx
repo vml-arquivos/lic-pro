@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { api, errorText } from '../../../lib/api';
 import { reais } from '../../../lib/money';
 import { Alert, Kpi, Table, formatDate } from '../../components/ui';
+import { SituacaoDoDado, type MetaDoDado } from './SituacaoDoDado';
 
 type Resultado = {
   numero: string;
@@ -28,6 +29,21 @@ type Resposta = {
     economia_pct: number | null;
   };
   fonte: { nome: string; consultado_em: string };
+  estado?: 'publicado' | 'parcial' | 'aguardando_publicacao' | 'sem_registro';
+  cobertura?: {
+    itens_total: number;
+    consultados: number;
+    limite: number;
+    publicados: number;
+    sem_registro: number;
+    falhas: number;
+  };
+  dados?: MetaDoDado | null;
+};
+
+const SEM_RESULTADO: Record<string, string> = {
+  aguardando_publicacao: 'Aguardando a publicação do resultado.',
+  sem_registro: 'O PNCP não tem resultado registrado para este edital.',
 };
 
 const pct = (value: number | null | undefined) =>
@@ -76,6 +92,21 @@ export function ValoresFechados({
       )}
       {error ? <Alert kind="error">{error}</Alert> : null}
       {data ? (
+        <SituacaoDoDado
+          fonte="PNCP"
+          meta={data.dados}
+          cobertura={
+            data.cobertura
+              ? `${data.cobertura.publicados} de ${data.cobertura.consultados} itens com resultado` +
+                (data.cobertura.consultados < data.cobertura.itens_total
+                  ? ` (consultados ${data.cobertura.consultados} de ${data.cobertura.itens_total})`
+                  : '') +
+                (data.cobertura.falhas ? `, ${data.cobertura.falhas} sem resposta` : '')
+              : null
+          }
+        />
+      ) : null}
+      {data ? (
         data.resumo.com_resultado ? (
           <>
             <section className="ui-kpis" aria-label="Resumo dos valores fechados">
@@ -116,7 +147,7 @@ export function ValoresFechados({
             </Table>
           </>
         ) : (
-          <p>Ainda sem resultado publicado.</p>
+          <p>{(data.estado && SEM_RESULTADO[data.estado]) || 'Ainda sem resultado publicado.'}</p>
         )
       ) : null}
     </div>

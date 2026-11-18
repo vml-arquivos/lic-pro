@@ -20,6 +20,7 @@ export default async function RadarPage() {
         canSave={canWork}
         nichosTravados={area === 'colaborador'}
         area={area ?? null}
+        usuario={session?.id ?? 'anonimo'}
       />
     </Suspense>
   );

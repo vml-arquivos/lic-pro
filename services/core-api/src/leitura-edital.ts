@@ -10,6 +10,7 @@ import {
   type PaginaLida,
 } from '@licitecomigo/shared';
 import { PublicRateLimiter } from './auth-public.js';
+import type { CacheCompartilhado } from './cache-compartilhado.js';
 import { withTenant } from './db.js';
 import { authContext, sendDatabaseUnavailable } from './request-context.js';
 
@@ -21,7 +22,13 @@ import { authContext, sendDatabaseUnavailable } from './request-context.js';
  * Só baixa de endereços do PNCP. Arquivo que não é PDF ou não tem texto é listado como não lido.
  */
 
-export type DocumentoParaLer = { tipo: string | null; nome: string | null; url: string };
+export type DocumentoParaLer = {
+  tipo: string | null;
+  nome: string | null;
+  url: string;
+  /** Data de publicação ou versão informada pela fonte: muda quando o anexo é substituído. */
+  versao?: string | null;
+};
 
 export type EstadoDoDocumento = 'lido' | 'formato' | 'grande' | 'sem_texto' | 'falhou';
 
@@ -42,7 +49,12 @@ export type Leitura = {
   alertas: AlertaDoEdital[];
 };
 
-type Guardado = Leitura & { textos: Map<string, string[]>; assinatura: string };
+type Guardado = Leitura & {
+  textos: Map<string, string[]>;
+  assinatura: string;
+  /** Nenhum documento deixou de ser lido por falha de download. Incompleta vale por pouco tempo. */
+  completa: boolean;
+};
 
 export type LeitorDePdf = (bytes: Uint8Array) => Promise<string[]>;
 
@@ -52,6 +64,9 @@ const MAX_PAGINAS = 300;
 const MAX_CARACTERES_POR_DOCUMENTO = 120_000;
 const VALIDADE_MS = 6 * 60 * 60_000;
 const ESPERA_APOS_ERRO_MS = 2 * 60_000;
+/** Leitura com algum documento que não baixou: tenta de novo logo. */
+const VALIDADE_INCOMPLETA_MS = 3 * 60_000;
+const RETENCAO_COMPARTILHADA_MS = 24 * 60 * 60_000;
 const MAX_NA_MEMORIA = 30;
 
 export const chaveDoDocumento = (url: string): string =>
@@ -59,7 +74,7 @@ export const chaveDoDocumento = (url: string): string =>
 
 const assinaturaDe = (documentos: readonly DocumentoParaLer[]): string =>
   createHash('sha256')
-    .update(documentos.map((doc) => doc.url).join('|'))
+    .update(documentos.map((doc) => `${doc.url}#${doc.versao ?? ''}#${doc.nome ?? ''}`).join('|'))
     .digest('hex')
     .slice(0, 16);
 
@@ -229,49 +244,189 @@ export async function lerDocumentos(
     alertas: alertasDosFatos(fatos),
     textos,
     assinatura: assinaturaDe(documentos),
+    completa: !lidos.some((doc) => doc.estado === 'falhou'),
   };
 }
 
 type Entrada =
   | { estado: 'lendo'; assinatura: string; inicio: number }
-  | { estado: 'pronta'; assinatura: string; em: number; leitura: Guardado }
+  | {
+      estado: 'pronta';
+      assinatura: string;
+      em: number;
+      leitura: Guardado;
+      /** Depois de uma releitura pior que a anterior, só tenta de novo a partir daqui. */
+      tentarDepoisDe?: number;
+      /** Está sendo lida de novo por baixo; esta continua valendo para a tela. */
+      atualizando?: boolean;
+    }
   | { estado: 'erro'; assinatura: string; em: number };
 
-/** Guarda as leituras em memória e evita ler o mesmo edital duas vezes ao mesmo tempo. */
+export type Prioridade = 'alta' | 'baixa';
+
+type Serializado = Omit<Guardado, 'textos'> & { textos: Record<string, string[]> };
+const lidosDe = (leitura: Guardado): number =>
+  leitura.documentos.filter((doc) => doc.estado === 'lido').length;
+
+/**
+ * Guarda as leituras (memória e, se houver, o cache compartilhado) e evita ler o mesmo edital
+ * duas vezes ao mesmo tempo. A fila é única, para pesar pouco na memória: quem abriu o edital
+ * (prioridade alta) passa na frente do preparo antecipado (prioridade baixa).
+ */
 export class CacheDeLeitura {
   private readonly entradas = new Map<string, Entrada>();
-  private fila: Promise<unknown> = Promise.resolve();
+  private readonly pendentes: Array<{ prioridade: Prioridade; executar: () => Promise<void> }> = [];
+  private rodando = false;
+  private compartilhado: CacheCompartilhado | null = null;
 
   constructor(
     private readonly ler: (documentos: readonly DocumentoParaLer[]) => Promise<Guardado>,
     private readonly agora: () => number = Date.now,
   ) {}
 
+  /** Leituras prontas ficam também no cache compartilhado e sobrevivem a um reinício. */
+  usarCompartilhado(cache: CacheCompartilhado): void {
+    this.compartilhado = cache;
+  }
+
+  /** Quantas leituras esperam a vez. */
+  get naFila(): number {
+    return this.pendentes.length;
+  }
+
   consultar(
     editalId: string,
     documentos: readonly DocumentoParaLer[],
+    prioridade: Prioridade = 'alta',
   ): { estado: 'lendo' } | { estado: 'erro' } | { estado: 'pronta'; leitura: Guardado } {
     const assinatura = assinaturaDe(documentos);
     const atual = this.entradas.get(editalId);
     if (atual && atual.assinatura === assinatura) {
-      if (atual.estado === 'pronta' && this.agora() - atual.em < VALIDADE_MS)
-        return { estado: 'pronta', leitura: atual.leitura };
-      if (atual.estado === 'lendo') return { estado: 'lendo' };
+      if (atual.estado === 'pronta') {
+        const validade = atual.leitura.completa ? VALIDADE_MS : VALIDADE_INCOMPLETA_MS;
+        if (
+          atual.atualizando ||
+          this.agora() - atual.em < validade ||
+          this.agora() < (atual.tentarDepoisDe ?? 0)
+        ) {
+          return { estado: 'pronta', leitura: atual.leitura };
+        }
+      }
+      if (atual.estado === 'lendo') {
+        if (prioridade === 'alta') this.subir(editalId);
+        return { estado: 'lendo' };
+      }
       if (atual.estado === 'erro' && this.agora() - atual.em < ESPERA_APOS_ERRO_MS)
         return { estado: 'erro' };
     }
-    this.entradas.set(editalId, { estado: 'lendo', assinatura, inicio: this.agora() });
+    // Releitura (vencida): a leitura anterior continua valendo se a nova ficar pior.
+    const anterior = atual?.estado === 'pronta' && atual.assinatura === assinatura ? atual : null;
+    // Com leitura anterior, a tela continua vendo ela enquanto a nova é feita por baixo.
+    this.entradas.set(
+      editalId,
+      anterior
+        ? { ...anterior, atualizando: true }
+        : { estado: 'lendo', assinatura, inicio: this.agora() },
+    );
     this.limpar();
-    this.fila = this.fila
-      .catch(() => undefined)
-      .then(() => this.ler(documentos))
-      .then((leitura) => {
+    this.empurrar(editalId, prioridade, async () => {
+      try {
+        const leitura = await this.lerOuReaproveitar(editalId, assinatura, documentos, anterior);
+        if (anterior && lidosDe(leitura) < lidosDe(anterior.leitura)) {
+          this.entradas.set(editalId, {
+            ...anterior,
+            atualizando: false,
+            tentarDepoisDe: this.agora() + VALIDADE_INCOMPLETA_MS,
+          });
+          return;
+        }
         this.entradas.set(editalId, { estado: 'pronta', assinatura, em: this.agora(), leitura });
-      })
-      .catch(() => {
+      } catch {
+        if (anterior) {
+          this.entradas.set(editalId, {
+            ...anterior,
+            atualizando: false,
+            tentarDepoisDe: this.agora() + ESPERA_APOS_ERRO_MS,
+          });
+          return;
+        }
         this.entradas.set(editalId, { estado: 'erro', assinatura, em: this.agora() });
-      });
-    return { estado: 'lendo' };
+      }
+    });
+    return anterior ? { estado: 'pronta', leitura: anterior.leitura } : { estado: 'lendo' };
+  }
+
+  private async lerOuReaproveitar(
+    editalId: string,
+    assinatura: string,
+    documentos: readonly DocumentoParaLer[],
+    anterior: { em: number } | null,
+  ): Promise<Guardado> {
+    const chave = `leitura:${editalId}:${assinatura}`;
+    if (this.compartilhado && !anterior) {
+      const salva = await this.compartilhado.ler<Serializado>(chave);
+      if (salva && salva.valor.completa && this.agora() - salva.em < VALIDADE_MS) {
+        return { ...salva.valor, textos: new Map(Object.entries(salva.valor.textos)) };
+      }
+    }
+    const leitura = await this.ler(documentos);
+    if (this.compartilhado && leitura.completa) {
+      const { textos, ...resto } = leitura;
+      await this.compartilhado
+        .gravar<Serializado>(
+          chave,
+          {
+            valor: { ...resto, textos: Object.fromEntries(textos) },
+            em: this.agora(),
+            parcial: false,
+            tentarDepoisDe: 0,
+          },
+          RETENCAO_COMPARTILHADA_MS,
+        )
+        .catch(() => undefined);
+    }
+    return leitura;
+  }
+
+  private empurrar(editalId: string, prioridade: Prioridade, executar: () => Promise<void>): void {
+    const tarefa = { prioridade, executar, editalId } as {
+      prioridade: Prioridade;
+      executar: () => Promise<void>;
+      editalId: string;
+    };
+    if (prioridade === 'alta') {
+      const primeiraBaixa = this.pendentes.findIndex((item) => item.prioridade === 'baixa');
+      if (primeiraBaixa === -1) this.pendentes.push(tarefa);
+      else this.pendentes.splice(primeiraBaixa, 0, tarefa);
+    } else this.pendentes.push(tarefa);
+    void this.bombear();
+  }
+
+  /** Quem abriu o edital agora passa na frente do preparo antecipado. */
+  private subir(editalId: string): void {
+    const indice = this.pendentes.findIndex(
+      (item) =>
+        (item as { editalId?: string }).editalId === editalId && item.prioridade === 'baixa',
+    );
+    if (indice === -1) return;
+    const [tarefa] = this.pendentes.splice(indice, 1);
+    if (!tarefa) return;
+    tarefa.prioridade = 'alta';
+    const primeiraBaixa = this.pendentes.findIndex((item) => item.prioridade === 'baixa');
+    if (primeiraBaixa === -1) this.pendentes.push(tarefa);
+    else this.pendentes.splice(primeiraBaixa, 0, tarefa);
+  }
+
+  private async bombear(): Promise<void> {
+    if (this.rodando) return;
+    this.rodando = true;
+    try {
+      for (let proxima = this.pendentes.shift(); proxima; proxima = this.pendentes.shift()) {
+        await proxima.executar().catch(() => undefined);
+      }
+    } finally {
+      this.rodando = false;
+    }
   }
 
   /** Texto já lido de um edital (vazio se ainda não ficou pronto). */
@@ -319,7 +474,7 @@ export function registerLeituraRoutes(
       ).rows[0];
       if (!edital) return null;
       const docs = await client.query<DocumentoParaLer>(
-        `SELECT tipo, nome_arquivo AS nome, url FROM edital_documentos
+        `SELECT tipo, nome_arquivo AS nome, url, estado AS versao FROM edital_documentos
           WHERE edital_id = $1 AND url IS NOT NULL ORDER BY created_at LIMIT 100`,
         [id],
       );

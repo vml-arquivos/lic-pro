@@ -3,6 +3,8 @@ import type { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
 import { z } from 'zod';
 import { PublicRateLimiter } from './auth-public.js';
+import { CacheCompartilhado, cacheLocal, metaDoDado } from './cache-compartilhado.js';
+import { comPoliticaDeFonte } from './fonte-http.js';
 import type { RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
 import { authContext, sendDatabaseUnavailable } from './request-context.js';
@@ -133,6 +135,9 @@ function listOf(body: unknown): unknown[] {
   return Array.isArray(list) ? list : [];
 }
 
+const TAMANHO_PAGINA = 500;
+const MAX_PAGINAS_DE_ITENS = 10;
+
 export async function buscarDetalhes(
   config: Pick<RuntimeConfig, 'pncpApiBaseUrl'>,
   idExterno: string,
@@ -146,7 +151,17 @@ export async function buscarDetalhes(
       'Este edital não tem identificador do PNCP.',
     );
   const base = `${config.pncpApiBaseUrl}/orgaos/${key.cnpj}/compras/${key.ano}/${key.sequencial}`;
-  const rawItems = listOf(await getJson(fetchImpl, `${base}/itens?pagina=1&tamanhoPagina=500`));
+  // Lê todas as páginas de itens (até o limite). A fonte devolve lista curta na última página.
+  const rawItems: unknown[] = [];
+  for (let pagina = 1; pagina <= MAX_PAGINAS_DE_ITENS; pagina += 1) {
+    const lote = listOf(
+      await getJson(fetchImpl, `${base}/itens?pagina=${pagina}&tamanhoPagina=${TAMANHO_PAGINA}`),
+    );
+    // Página repetida (a fonte ignorou o parâmetro): para, para não duplicar.
+    if (pagina > 1 && JSON.stringify(lote[0]) === JSON.stringify(rawItems[0])) break;
+    rawItems.push(...lote);
+    if (lote.length < TAMANHO_PAGINA) break;
+  }
   const rawDocs = listOf(await getJson(fetchImpl, `${base}/arquivos`));
   const itens = rawItems.map(normalizeItem).filter((item): item is ItemPncp => item !== null);
   const documentos = rawDocs
@@ -174,6 +189,8 @@ export type ItemComResultado = {
   quantidade: number | null;
   valor_unitario_estimado: number | null;
   resultado: ResultadoPncp | null;
+  /** publicado = a fonte tem o resultado; sem_registro = a fonte respondeu e não há; falhou = não deu para saber. */
+  estado_resultado?: 'publicado' | 'sem_registro' | 'falhou';
 };
 
 export function normalizeResultado(raw: unknown): ResultadoPncp | null {
@@ -207,6 +224,7 @@ export async function buscarResultados(
   idExterno: string,
   itens: ReadonlyArray<Omit<ItemComResultado, 'resultado'>>,
   fetchImpl: typeof fetch = fetch,
+  limite = LIMITE_DE_RESULTADOS,
 ): Promise<ItemComResultado[]> {
   const key = parseNumeroControle(idExterno);
   if (!key)
@@ -218,7 +236,7 @@ export async function buscarResultados(
   const base = `${config.pncpApiBaseUrl}/orgaos/${key.cnpj}/compras/${key.ano}/${key.sequencial}/itens`;
   const out: ItemComResultado[] = [];
   let failures = 0;
-  const queue = itens.slice(0, 120);
+  const queue = itens.slice(0, limite);
   const worker = async (): Promise<void> => {
     for (let item = queue.shift(); item; item = queue.shift()) {
       try {
@@ -230,10 +248,14 @@ export async function buscarResultados(
           listOf(body)
             .map(normalizeResultado)
             .find((value): value is ResultadoPncp => value !== null) ?? null;
-        out.push({ ...item, resultado });
+        out.push({
+          ...item,
+          resultado,
+          estado_resultado: resultado ? 'publicado' : 'sem_registro',
+        });
       } catch {
         failures += 1;
-        out.push({ ...item, resultado: null });
+        out.push({ ...item, resultado: null, estado_resultado: 'falhou' });
       }
     }
   };
@@ -249,24 +271,127 @@ export async function buscarResultados(
   return out.sort((a, b) => Number(a.numero) - Number(b.numero));
 }
 
-type Deps = { pool: Pool | undefined; config: RuntimeConfig; fetchImpl?: typeof fetch };
+/** Quantos itens do edital têm o resultado consultado (o mesmo limite para toda a plataforma). */
+export const LIMITE_DE_RESULTADOS = 120;
+
+export type EstadoDosResultados =
+  'publicado' | 'parcial' | 'aguardando_publicacao' | 'sem_registro';
+
+export type ResultadosDoEdital = {
+  itens: ItemComResultado[];
+  cobertura: {
+    itens_total: number;
+    consultados: number;
+    limite: number;
+    publicados: number;
+    sem_registro: number;
+    falhas: number;
+  };
+  estado: EstadoDosResultados;
+  /** Quanto tempo este resultado vale antes de consultar de novo. */
+  validade_ms: number;
+};
+
+export function estadoDosResultados(
+  cobertura: ResultadosDoEdital['cobertura'],
+  fechado: boolean,
+): EstadoDosResultados {
+  if (cobertura.publicados === 0) return fechado ? 'sem_registro' : 'aguardando_publicacao';
+  if (cobertura.publicados === cobertura.consultados) return 'publicado';
+  return 'parcial';
+}
+
+/**
+ * Único caminho para os resultados oficiais de um edital no PNCP. "Valores fechados" e
+ * "Concorrentes" usam este mesmo resultado, guardado uma vez para todos.
+ */
+export async function resultadosDoEdital(
+  deps: {
+    cache: CacheCompartilhado;
+    config: Pick<RuntimeConfig, 'pncpApiBaseUrl'>;
+    fetchImpl: typeof fetch;
+  },
+  idExterno: string,
+  itens: ReadonlyArray<Omit<ItemComResultado, 'resultado'>>,
+  fechado: boolean,
+) {
+  return deps.cache.obter<ResultadosDoEdital>(`pncp:resultados:${idExterno}`, {
+    validadeMs: 10 * 60_000,
+    retencaoMs: 14 * 86_400_000,
+    servirVelhoEAtualizar: true,
+    validadeDoValor: (valor) => valor.validade_ms,
+    buscar: async (anterior) => {
+      const novos = await buscarResultados(deps.config, idExterno, itens, deps.fetchImpl);
+      // Item que falhou agora, mas já tinha resultado publicado antes, mantém o que se sabia.
+      const antes = new Map((anterior?.itens ?? []).map((item) => [item.numero, item]));
+      const lista = novos.map((item) => {
+        const velho = antes.get(item.numero);
+        return item.estado_resultado === 'falhou' && velho?.estado_resultado === 'publicado'
+          ? velho
+          : item;
+      });
+      const cobertura = {
+        itens_total: itens.length,
+        consultados: lista.length,
+        limite: LIMITE_DE_RESULTADOS,
+        publicados: lista.filter((item) => item.estado_resultado === 'publicado').length,
+        sem_registro: lista.filter((item) => item.estado_resultado === 'sem_registro').length,
+        falhas: lista.filter((item) => item.estado_resultado === 'falhou').length,
+      };
+      const estado = estadoDosResultados(cobertura, fechado);
+      // Resultado final de edital fechado muda pouco: guarda por mais tempo.
+      const validade_ms =
+        estado === 'publicado' && fechado ? 24 * 3_600_000 : fechado ? 30 * 60_000 : 10 * 60_000;
+      return {
+        valor: { itens: lista, cobertura, estado, validade_ms },
+        parcial: cobertura.falhas > 0,
+      };
+    },
+  });
+}
+
+type Deps = {
+  pool: Pool | undefined;
+  config: RuntimeConfig;
+  fetchImpl?: typeof fetch;
+  cache?: CacheCompartilhado;
+};
+
+/** O PNCP considera o edital fechado quando as propostas já encerraram ou há valor homologado. */
+const EDITAL_FECHADO_SQL = `(valor_homologado IS NOT NULL
+        OR COALESCE(data_encerramento_propostas, data_encerramento_proposta) < now())`;
+
+/** Por quanto tempo os itens e documentos gravados valem, conforme o estado do edital. */
+export function detalhesVencidos(edital: {
+  coletado_em: Date | string | null;
+  atualizado_em: Date | string | null;
+  fechado: boolean;
+}): boolean {
+  if (!edital.coletado_em) return true;
+  const coletado = new Date(edital.coletado_em).getTime();
+  const agora = Date.now();
+  // O PNCP mudou o edital depois da última coleta dos detalhes.
+  if (edital.atualizado_em && new Date(edital.atualizado_em).getTime() > coletado) return true;
+  const validade = edital.fechado ? 24 * 3_600_000 : 3 * 3_600_000;
+  return agora - coletado > validade;
+}
 
 export function registerDetalhesRoutes(
   app: FastifyInstance,
-  { pool, config, fetchImpl }: Deps,
+  { pool, config, fetchImpl: fetchBase, cache = cacheLocal }: Deps,
 ): void {
-  const limiter = new PublicRateLimiter(20);
-  const resultCache = new Map<string, { at: number; value: unknown }>();
+  const limiter = new PublicRateLimiter(60);
+  const fetchImpl = comPoliticaDeFonte(fetchBase ?? fetch, 'pncp');
 
-  /** Valor fechado e vencedor de cada item do edital (consulta sob demanda ao PNCP). */
+  /** Valor fechado e vencedor de cada item do edital. */
   app.get('/editais/:id/resultados', async (request, reply) => {
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
     limiter.check(`resultados:${request.user.sub}`);
     if (!pool) return sendDatabaseUnavailable(reply);
     const loaded = await withTenant(pool, authContext(request), async (client) => {
       const edital = (
-        await client.query<{ id_externo: string; fonte: string; valor_homologado: string | null }>(
-          'SELECT id_externo, fonte, valor_homologado FROM editais WHERE id = $1',
+        await client.query<{ id_externo: string; fonte: string; fechado: boolean }>(
+          `SELECT id_externo, fonte, ${EDITAL_FECHADO_SQL} AS fechado FROM editais WHERE id = $1`,
           [id],
         )
       ).rows[0];
@@ -292,15 +417,14 @@ export function registerDetalhesRoutes(
         message: 'Os itens do edital ainda não foram buscados.',
       });
     }
-    const hit = resultCache.get(id);
-    if (hit && Date.now() - hit.at < 10 * 60_000) return reply.send(hit.value);
     try {
-      const itens = await buscarResultados(
-        config,
+      const dado = await resultadosDoEdital(
+        { cache, config, fetchImpl },
         loaded.edital.id_externo,
         loaded.itens,
-        fetchImpl,
+        loaded.edital.fechado,
       );
+      const { itens, cobertura, estado } = dado.valor;
       const comResultado = itens.filter((item) => item.resultado);
       const estimado = comResultado.reduce(
         (total, item) => total + (item.valor_unitario_estimado ?? 0) * (item.quantidade ?? 1),
@@ -313,7 +437,7 @@ export function registerDetalhesRoutes(
             item.resultado!.valor_unitario_homologado * (item.quantidade ?? 1)),
         0,
       );
-      const value = {
+      return reply.send({
         itens,
         resumo: {
           itens: itens.length,
@@ -325,11 +449,14 @@ export function registerDetalhesRoutes(
               ? Math.round((1 - fechado / estimado) * 1000) / 10
               : null,
         },
-        fonte: { nome: 'PNCP — resultado dos itens', consultado_em: new Date().toISOString() },
-      };
-      resultCache.set(id, { at: Date.now(), value });
-      if (resultCache.size > 200) resultCache.delete(resultCache.keys().next().value as string);
-      return reply.send(value);
+        estado,
+        cobertura,
+        dados: metaDoDado(dado),
+        fonte: {
+          nome: 'PNCP — resultado dos itens',
+          consultado_em: new Date(dado.em).toISOString(),
+        },
+      });
     } catch (error) {
       if (error instanceof DetalhesError) {
         return reply.code(error.status).send({ error: error.code, message: error.message });
@@ -337,6 +464,11 @@ export function registerDetalhesRoutes(
       throw error;
     }
   });
+
+  /**
+   * Itens e documentos do edital. Sem `force`, só consulta o PNCP se o que está gravado venceu
+   * (3 h em edital aberto, 24 h em fechado, ou o edital mudou depois da última coleta).
+   */
   app.post('/editais/:id/detalhes/atualizar', async (request, reply) => {
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
     const { force } = z.object({ force: z.boolean().default(false) }).parse(request.body ?? {});
@@ -351,11 +483,13 @@ export function registerDetalhesRoutes(
           await client.query<{
             id_externo: string;
             fonte: string;
-            recente: boolean;
+            coletado_em: Date | null;
+            atualizado_em: Date | null;
+            fechado: boolean;
           }>(
-            `SELECT id_externo, fonte,
-                  (detalhes_coletados_em IS NOT NULL AND detalhes_coletados_em > now() - interval '30 minutes') AS recente
-             FROM editais WHERE id = $1`,
+            `SELECT id_externo, fonte, detalhes_coletados_em AS coletado_em,
+                    data_atualizacao AS atualizado_em, ${EDITAL_FECHADO_SQL} AS fechado
+               FROM editais WHERE id = $1`,
             [id],
           )
         ).rows[0],
@@ -367,25 +501,31 @@ export function registerDetalhesRoutes(
         message: 'Os detalhes automáticos só existem para editais do PNCP.',
       });
     }
-    if (edital.recente && !force) return reply.send({ atualizado: false, motivo: 'recente' });
+    if (!force && !detalhesVencidos(edital)) {
+      return reply.send({ atualizado: false, motivo: 'recente' });
+    }
 
     try {
-      const detalhes = await buscarDetalhes(config, edital.id_externo, fetchImpl);
-      const saved = await withTenant(
-        pool,
-        authContext(request),
-        async (client) =>
-          (
-            await client.query<{ itens: number; documentos: number }>(
-              'SELECT itens, documentos FROM coleta_gravar_detalhes($1, $2::jsonb, $3::jsonb)',
-              [id, JSON.stringify(detalhes.itens), JSON.stringify(detalhes.documentos)],
-            )
-          ).rows[0],
-      );
+      const feito = await cache.exclusivo(`detalhes:${id}`, async () => {
+        const detalhes = await buscarDetalhes(config, edital.id_externo, fetchImpl);
+        return withTenant(
+          pool,
+          authContext(request),
+          async (client) =>
+            (
+              await client.query<{ itens: number; documentos: number }>(
+                'SELECT itens, documentos FROM coleta_gravar_detalhes($1, $2::jsonb, $3::jsonb)',
+                [id, JSON.stringify(detalhes.itens), JSON.stringify(detalhes.documentos)],
+              )
+            ).rows[0],
+        );
+      });
+      // Outra pessoa (ou outra instância) já está buscando este mesmo edital agora.
+      if (feito.ocupado) return reply.send({ atualizado: false, motivo: 'em_andamento' });
       return reply.send({
         atualizado: true,
-        itens: saved?.itens ?? 0,
-        documentos: saved?.documentos ?? 0,
+        itens: feito.valor?.itens ?? 0,
+        documentos: feito.valor?.documentos ?? 0,
       });
     } catch (error) {
       if (error instanceof DetalhesError) {

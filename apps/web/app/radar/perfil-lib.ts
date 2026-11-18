@@ -31,34 +31,48 @@ export const PERFIL_VAZIO: Perfil = {
 /** Parâmetro de URL que desliga o perfil nas buscas ("Ver tudo"). */
 export const SEM_PERFIL = 'sem_perfil';
 
-export function usePerfil(): {
+/** Último perfil lido por conta, para a tela abrir sem esperar a resposta do servidor. */
+const perfisEmMemoria = new Map<string, PerfilCompleto>();
+
+export function usePerfil(usuario?: string): {
   dados: PerfilCompleto | null;
   carregando: boolean;
   recarregar: () => void;
 } {
-  const [dados, setDados] = useState<PerfilCompleto | null>(null);
-  const [carregando, setCarregando] = useState(true);
+  const [dados, setDados] = useState<PerfilCompleto | null>(() =>
+    usuario ? (perfisEmMemoria.get(usuario) ?? null) : null,
+  );
+  const [carregando, setCarregando] = useState(dados === null);
   const [versao, setVersao] = useState(0);
 
   useEffect(() => {
     let ativo = true;
     void Promise.all([
-      api<{ perfil: Partial<Perfil> }>('/radar/perfil').catch(() => ({ perfil: PERFIL_VAZIO })),
-      api<{ nicho_preferencias?: string[] | null }>('/me').catch(() => ({
-        nicho_preferencias: [],
-      })),
+      api<{ perfil: Partial<Perfil> }>('/radar/perfil').catch(() => null),
+      api<{ nicho_preferencias?: string[] | null }>('/me').catch(() => null),
     ]).then(([radar, eu]) => {
       if (!ativo) return;
-      setDados({
-        perfil: { ...PERFIL_VAZIO, ...radar.perfil },
-        nichos: Array.isArray(eu.nicho_preferencias) ? eu.nicho_preferencias : [],
-      });
+      const anterior = usuario ? perfisEmMemoria.get(usuario) : undefined;
+      // Se a consulta falhar, mantém o último perfil conhecido em vez de apagar as escolhas.
+      const proximo: PerfilCompleto = {
+        perfil: radar ? { ...PERFIL_VAZIO, ...radar.perfil } : (anterior?.perfil ?? PERFIL_VAZIO),
+        nichos: eu
+          ? Array.isArray(eu.nicho_preferencias)
+            ? eu.nicho_preferencias
+            : []
+          : (anterior?.nichos ?? []),
+      };
+      if (usuario) perfisEmMemoria.set(usuario, proximo);
+      // Só troca o estado se mudou: evita refazer a busca sem necessidade.
+      setDados((atual) =>
+        atual && JSON.stringify(atual) === JSON.stringify(proximo) ? atual : proximo,
+      );
       setCarregando(false);
     });
     return () => {
       ativo = false;
     };
-  }, [versao]);
+  }, [versao, usuario]);
 
   const recarregar = useCallback(() => setVersao((valor) => valor + 1), []);
   return { dados, carregando, recarregar };

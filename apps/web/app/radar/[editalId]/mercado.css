@@ -79,3 +79,11 @@
 .mk-atualizar {
   margin: 0.4rem 0 0;
 }
+.mk-situacao {
+  color: var(--workspace-muted);
+  font-size: 0.82rem;
+  margin: 0;
+}
+.mk-situacao-aviso {
+  color: #92400e;
+}
