@@ -7,6 +7,7 @@ import { Badge } from '../../components/ui';
 import { brl, deadlineInfo, portalDoEdital } from '../radar-lib';
 import { DocumentacaoTecnica } from './DocumentacaoTecnica';
 import './documentacao.css';
+import './ficha.css';
 import { DadosDoEdital, DocumentosDoEdital, useLeitura } from './LeituraDoEdital';
 import { ConcorrentesDoEdital, PrecosDoEdital } from './MercadoDoEdital';
 import { ValoresFechados } from './ValoresFechados';
@@ -147,17 +148,6 @@ function formatCnpj(value: string | null | undefined): string {
   return digits.length === 14
     ? digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
     : (value ?? '—');
-}
-
-/** Pregão já encerrado: o resultado dos itens costuma estar publicado. */
-function fechado(edital: Edital): boolean {
-  if (edital.valor_homologado) return true;
-  // As propostas já encerraram: o resultado pode estar publicado, mesmo sem a situação dizer.
-  const fim = edital.data_encerramento_proposta
-    ? new Date(edital.data_encerramento_proposta).getTime()
-    : null;
-  if (fim !== null && !Number.isNaN(fim) && fim < Date.now()) return true;
-  return /homolog|adjudic|conclu[ií]d|encerrad/i.test(edital.situacao ?? '');
 }
 
 /** Última ficha vista de cada edital, por conta: reabrir mostra na hora e atualiza por baixo. */
@@ -593,7 +583,7 @@ export function EditalWorkspace({
           <p>Nenhum item normalizado ainda.</p>
         )}
         {signedIn && detail.edital.fonte === 'pncp' && detail.itens.length ? (
-          <ValoresFechados editalId={editalId} automatico={fechado(edital)} />
+          <ValoresFechados editalId={editalId} />
         ) : null}
       </section>
       <section id="documentacao" className="detail-card">
@@ -624,24 +614,24 @@ export function EditalWorkspace({
         </section>
       ) : null}
       {signedIn ? (
-        <section id="precos" className="detail-card">
-          <h2>Preços pagos</h2>
-          <PrecosDoEdital
-            editalId={editalId}
-            temItens={detail.itens.length > 0}
-            buscando={fetchingDetails}
-          />
-        </section>
-      ) : null}
-      {signedIn ? (
-        <section id="concorrentes" className="detail-card">
-          <h2>Concorrentes</h2>
-          <ConcorrentesDoEdital
-            editalId={editalId}
-            temItens={detail.itens.length > 0}
-            buscando={fetchingDetails}
-          />
-        </section>
+        <div className="rd-duas">
+          <section id="precos" className="detail-card">
+            <h2>Preços pagos</h2>
+            <PrecosDoEdital
+              editalId={editalId}
+              temItens={detail.itens.length > 0}
+              buscando={fetchingDetails}
+            />
+          </section>
+          <section id="concorrentes" className="detail-card">
+            <h2>Concorrentes</h2>
+            <ConcorrentesDoEdital
+              editalId={editalId}
+              temItens={detail.itens.length > 0}
+              buscando={fetchingDetails}
+            />
+          </section>
+        </div>
       ) : null}
       <section id="historico" className="detail-card">
         <h2>O que mudou</h2>

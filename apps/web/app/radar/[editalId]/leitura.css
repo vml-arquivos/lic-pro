@@ -1,7 +1,15 @@
 /* Leitura do edital: dados, avisos e documentos */
 .lt {
+  align-items: start;
   display: grid;
-  gap: 0.9rem;
+  gap: 0.9rem 1.2rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+}
+.lt > .lt-atencao {
+  grid-column: 1 / -1;
+}
+.lt-grupo {
+  min-width: 0;
 }
 .lt-aguarde {
   align-items: center;

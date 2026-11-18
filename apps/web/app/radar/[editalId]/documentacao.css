@@ -1,7 +1,18 @@
 /* Documentação técnica do edital */
 .dt {
+  align-items: start;
   display: grid;
-  gap: 0.8rem;
+  gap: 0.8rem 1.2rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+}
+.dt > .dt-resumo,
+.dt > .dt-portal,
+.dt > .dt-aviso,
+.dt > .dt-atencao {
+  grid-column: 1 / -1;
+}
+.dt-grupo {
+  min-width: 0;
 }
 .dt-resumo,
 .dt-portal,

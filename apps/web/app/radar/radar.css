@@ -314,9 +314,13 @@
 }
 .rd-facts {
   display: grid;
-  gap: 0.6rem 1.4rem;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.55rem 1.2rem;
+  grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
   margin: 0;
+}
+.rd-facts dd {
+  font-size: 0.92rem;
+  line-height: 1.35;
 }
 .rd-facts dt {
   color: var(--workspace-muted);

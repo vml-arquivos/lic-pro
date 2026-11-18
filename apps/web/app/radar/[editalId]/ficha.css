@@ -1,0 +1,42 @@
+/* Ficha e blocos da página do edital: carregado junto com a página, sem depender do Radar */
+.rd-page .rd-facts {
+  display: grid;
+  gap: 0.55rem 1.2rem;
+  grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
+  margin: 0;
+}
+.rd-page .rd-facts dt {
+  color: var(--workspace-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.rd-page .rd-facts dd {
+  font-size: 0.92rem;
+  line-height: 1.35;
+  margin: 0.1rem 0 0;
+  overflow-wrap: anywhere;
+}
+.rd-page .rd-portal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.2rem;
+  margin: 0.3rem 0 0.8rem;
+}
+
+/* Preços pagos e Concorrentes lado a lado quando há espaço */
+.rd-duas {
+  align-items: start;
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 25rem), 1fr));
+  margin-top: 1.5rem;
+}
+.rd-duas > .detail-card {
+  margin-top: 0;
+  min-width: 0;
+}
+.rd-duas .ui-kpis {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}

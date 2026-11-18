@@ -103,12 +103,18 @@ const POSICAO: Record<PosicaoDoPreco, { rotulo: string; tom: string }> = {
   acima_do_maximo: { rotulo: 'Acima do maior preço pago', tom: 'ok' },
 };
 
+/** Conferência automática enquanto a página está aberta. */
+export const CONFERE_A_CADA_MS = 10 * 60_000;
+/** Esperas entre novas tentativas depois de uma falha (ms). */
+export const ESPERAS_APOS_ERRO_MS = [4_000, 10_000, 25_000];
+
 /**
  * Hook comum: busca ao abrir e de novo quando `quando` muda. Mantém o último dado na tela
- * durante uma nova busca ou se ela falhar. Se o servidor avisar que está atualizando por baixo,
- * confere de novo em poucos segundos.
+ * durante uma nova busca ou se ela falhar. Se a busca falhar, tenta sozinho mais algumas vezes.
+ * Se o servidor avisar que está atualizando por baixo, confere de novo em poucos segundos.
+ * Com a página aberta, confere a cada 10 minutos (e ao voltar para a aba, se já passou o tempo).
  */
-function useBusca<T extends { dados?: MetaDoDado | null }>(
+export function useBusca<T extends { dados?: MetaDoDado | null }>(
   caminho: string,
   ativo: boolean,
   quando: string,
@@ -117,7 +123,9 @@ function useBusca<T extends { dados?: MetaDoDado | null }>(
   const [erro, setErro] = useState('');
   const [dados, setDados] = useState<T | null>(null);
   const [rodada, setRodada] = useState(0);
+  const [falhas, setFalhas] = useState(0);
   const caminhoAtual = useRef(caminho);
+  const ultimaBusca = useRef(0);
 
   useEffect(() => {
     if (!ativo) {
@@ -129,17 +137,37 @@ function useBusca<T extends { dados?: MetaDoDado | null }>(
     if (caminhoAtual.current !== caminho) {
       caminhoAtual.current = caminho;
       setDados(null);
+      setFalhas(0);
     }
     setOcupado(true);
     setErro('');
     api<T>(caminho)
-      .then((resposta) => vivo && setDados(resposta))
-      .catch((causa: unknown) => vivo && setErro(errorText(causa)))
+      .then((resposta) => {
+        if (!vivo) return;
+        ultimaBusca.current = Date.now();
+        setDados(resposta);
+        setFalhas(0);
+      })
+      .catch((causa: unknown) => {
+        if (!vivo) return;
+        setErro(errorText(causa));
+        setFalhas((valor) => valor + 1);
+      })
       .finally(() => vivo && setOcupado(false));
     return () => {
       vivo = false;
     };
   }, [caminho, ativo, quando, rodada]);
+
+  // Falhou: tenta de novo sozinho algumas vezes, com espera crescente.
+  useEffect(() => {
+    if (!ativo || !erro || falhas === 0 || falhas > ESPERAS_APOS_ERRO_MS.length) return;
+    const espera = setTimeout(
+      () => setRodada((valor) => valor + 1),
+      ESPERAS_APOS_ERRO_MS[falhas - 1] ?? 25_000,
+    );
+    return () => clearTimeout(espera);
+  }, [ativo, erro, falhas]);
 
   // O servidor está atualizando por baixo: confere de novo algumas vezes.
   const [conferencias, setConferencias] = useState(0);
@@ -154,7 +182,32 @@ function useBusca<T extends { dados?: MetaDoDado | null }>(
   }, [atualizandoPorBaixo, conferencias, dados]);
   useEffect(() => setConferencias(0), [caminho]);
 
-  return { ocupado, erro, dados, atualizar: () => setRodada((valor) => valor + 1) };
+  // Página aberta: confere no tempo definido e ao voltar para a aba.
+  useEffect(() => {
+    if (!ativo) return;
+    const conferir = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - ultimaBusca.current < CONFERE_A_CADA_MS) return;
+      setRodada((valor) => valor + 1);
+    };
+    const relogio = setInterval(conferir, 60_000);
+    document.addEventListener('visibilitychange', conferir);
+    return () => {
+      clearInterval(relogio);
+      document.removeEventListener('visibilitychange', conferir);
+    };
+  }, [ativo]);
+
+  return {
+    ocupado,
+    erro,
+    tentandoDeNovo: Boolean(erro) && falhas > 0 && falhas <= ESPERAS_APOS_ERRO_MS.length,
+    dados,
+    atualizar: () => {
+      setFalhas(0);
+      setRodada((valor) => valor + 1);
+    },
+  };
 }
 
 function Atualizar({ ocupado, aoClicar }: Readonly<{ ocupado: boolean; aoClicar: () => void }>) {
@@ -178,7 +231,7 @@ export function PrecosDoEdital({
   temItens,
   buscando,
 }: Readonly<{ editalId: string; temItens: boolean; buscando: boolean }>) {
-  const { ocupado, erro, dados, atualizar } = useBusca<RespostaPrecos>(
+  const { ocupado, erro, tentandoDeNovo, dados, atualizar } = useBusca<RespostaPrecos>(
     `/editais/${editalId}/historico-precos`,
     temItens,
     editalId,
@@ -197,8 +250,15 @@ export function PrecosDoEdital({
           Comparando os preços…
         </p>
       ) : null}
-      {erro ? <Alert kind="error">{erro}</Alert> : null}
-      {erro && !dados ? <Atualizar ocupado={ocupado} aoClicar={atualizar} /> : null}
+      {erro && !tentandoDeNovo ? <Alert kind="error">{erro}</Alert> : null}
+      {tentandoDeNovo && !dados ? (
+        <p className="mk-vazio" role="status">
+          Tentando de novo…
+        </p>
+      ) : null}
+      {erro && !tentandoDeNovo && !dados ? (
+        <Atualizar ocupado={ocupado} aoClicar={atualizar} />
+      ) : null}
       {dados ? (
         <>
           <SituacaoDoDado
@@ -315,7 +375,9 @@ export function PrecosDoEdital({
               </ul>
             </details>
           ) : null}
-          <Atualizar ocupado={ocupado} aoClicar={atualizar} />
+          {erro || dados.dados?.desatualizado ? (
+            <Atualizar ocupado={ocupado} aoClicar={atualizar} />
+          ) : null}
         </>
       ) : null}
     </div>
@@ -395,7 +457,7 @@ export function ConcorrentesDoEdital({
   buscando,
 }: Readonly<{ editalId: string; temItens: boolean; buscando: boolean }>) {
   // Espera os itens chegarem para já incluir os fornecedores dos mesmos itens.
-  const { ocupado, erro, dados, atualizar } = useBusca<RespostaConcorrentes>(
+  const { ocupado, erro, tentandoDeNovo, dados, atualizar } = useBusca<RespostaConcorrentes>(
     `/editais/${editalId}/concorrentes`,
     !buscando,
     String(temItens),
@@ -408,8 +470,15 @@ export function ConcorrentesDoEdital({
           Buscando os concorrentes…
         </p>
       ) : null}
-      {erro ? <Alert kind="error">{erro}</Alert> : null}
-      {erro && !dados ? <Atualizar ocupado={ocupado} aoClicar={atualizar} /> : null}
+      {erro && !tentandoDeNovo ? <Alert kind="error">{erro}</Alert> : null}
+      {tentandoDeNovo && !dados ? (
+        <p className="mk-vazio" role="status">
+          Tentando de novo…
+        </p>
+      ) : null}
+      {erro && !tentandoDeNovo && !dados ? (
+        <Atualizar ocupado={ocupado} aoClicar={atualizar} />
+      ) : null}
       {dados ? (
         <>
           <SituacaoDoDado
@@ -454,7 +523,9 @@ export function ConcorrentesDoEdital({
             lista={dados.dos_itens}
             vazio="Nenhum fornecedor encontrado."
           />
-          <Atualizar ocupado={ocupado} aoClicar={atualizar} />
+          {erro || dados.dados?.desatualizado ? (
+            <Atualizar ocupado={ocupado} aoClicar={atualizar} />
+          ) : null}
         </>
       ) : null}
     </div>

@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { api, errorText } from '../../../lib/api';
 import { reais } from '../../../lib/money';
 import { Alert, Kpi, Table, formatDate } from '../../components/ui';
+import { useBusca } from './MercadoDoEdital';
 import { SituacaoDoDado, type MetaDoDado } from './SituacaoDoDado';
 
 type Resultado = {
@@ -49,48 +48,35 @@ const SEM_RESULTADO: Record<string, string> = {
 const pct = (value: number | null | undefined) =>
   typeof value === 'number' ? `${value.toLocaleString('pt-BR')}%` : '—';
 
-/** Valor estimado × valor fechado de cada item, com o vencedor, direto do PNCP. */
-export function ValoresFechados({
-  editalId,
-  automatico = false,
-}: Readonly<{ editalId: string; automatico?: boolean }>) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [data, setData] = useState<Resposta | null>(null);
-
-  async function load() {
-    setBusy(true);
-    setError('');
-    try {
-      setData(await api<Resposta>(`/editais/${editalId}/resultados`));
-    } catch (cause) {
-      setError(errorText(cause));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  useEffect(() => {
-    if (automatico) void load();
-  }, [editalId, automatico]);
+/** Valor estimado × valor fechado de cada item, com o vencedor, direto do PNCP. Carrega sozinho. */
+export function ValoresFechados({ editalId }: Readonly<{ editalId: string }>) {
+  const {
+    ocupado,
+    erro,
+    tentandoDeNovo,
+    dados: data,
+    atualizar,
+  } = useBusca<Resposta>(`/editais/${editalId}/resultados`, true, editalId);
 
   return (
     <div className="rd-fechados">
       <h3>Valores fechados no pregão</h3>
-      {automatico && busy && !data ? <p role="status">Buscando os valores…</p> : null}
-      {automatico && !busy ? null : (
+      {(ocupado || tentandoDeNovo) && !data ? (
+        <p role="status">{tentandoDeNovo ? 'Tentando de novo…' : 'Buscando os valores…'}</p>
+      ) : null}
+      {erro && !tentandoDeNovo ? <Alert kind="error">{erro}</Alert> : null}
+      {erro && !tentandoDeNovo && !data ? (
         <p>
           <button
             type="button"
             className="ui-btn ui-btn-ghost ui-btn-small"
-            disabled={busy}
-            onClick={() => void load()}
+            disabled={ocupado}
+            onClick={atualizar}
           >
-            {busy ? 'Buscando…' : data ? 'Atualizar valores' : 'Ver valores fechados'}
+            Atualizar
           </button>
         </p>
-      )}
-      {error ? <Alert kind="error">{error}</Alert> : null}
+      ) : null}
       {data ? (
         <SituacaoDoDado
           fonte="PNCP"
