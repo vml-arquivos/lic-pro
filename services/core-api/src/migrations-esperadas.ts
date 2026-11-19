@@ -4,7 +4,7 @@
  * quando o banco está atrás do código: telas que dependem de tabelas novas falham até a
  * migration rodar.
  */
-export const ULTIMA_MIGRATION_ESPERADA = '0037_acessos_equipe.sql';
+export const ULTIMA_MIGRATION_ESPERADA = '0038_coleta_pncp_pendencias.sql';
 
 export type EstadoMigrations = {
   esperada: string;

@@ -540,7 +540,9 @@ export function EditalWorkspace({
             <button type="submit">Salvar anotação</button>
           </form>
         ) : null}
-        <h3>Itens ({detail.itens.length})</h3>
+        <h3>
+          {fetchingDetails && !detail.itens.length ? 'Itens' : `Itens (${detail.itens.length})`}
+        </h3>
         {signedIn && detail.edital.fonte === 'pncp' ? (
           <p>
             <button
@@ -580,7 +582,9 @@ export function EditalWorkspace({
             ))}
           </ul>
         ) : (
-          <p>Nenhum item normalizado ainda.</p>
+          <p>
+            {fetchingDetails ? 'Buscando itens do edital…' : 'Nenhum item disponível no catálogo.'}
+          </p>
         )}
         {signedIn && detail.edital.fonte === 'pncp' && detail.itens.length ? (
           <ValoresFechados editalId={editalId} />
@@ -610,6 +614,7 @@ export function EditalWorkspace({
             editalId={editalId}
             estado={leitura.estado}
             publicados={detail.documentos ?? []}
+            buscando={fetchingDetails}
           />
         </section>
       ) : null}

@@ -101,7 +101,7 @@ const supportGroup: MenuGroup = { label: 'Aprender e apoio', items: [academy, an
  */
 export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
   administracao: [
-    { label: '', items: [{ label: 'Visão geral', href: '/admin', icon: 'home' }] },
+    { label: '', items: [{ label: 'Painel de operações', href: '/admin', icon: 'home' }] },
     {
       label: 'Vendas e financeiro',
       items: [
@@ -132,7 +132,7 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
     { label: 'Conta', items: [account] },
   ],
   curso: [
-    { label: '', items: [{ label: 'Visão geral', href: '/gestao', icon: 'home' }] },
+    { label: '', items: [{ label: 'Painel da mentoria', href: '/gestao', icon: 'home' }] },
     {
       label: 'Vendas e financeiro',
       items: [

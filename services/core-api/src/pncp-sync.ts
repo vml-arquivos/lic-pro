@@ -325,21 +325,27 @@ async function getJson(
   fetchImpl: typeof fetch,
   url: string,
   sleep: (ms: number) => Promise<void>,
+  aguardarFonte: () => Promise<void>,
+  pausarFonte: (ms: number) => void,
 ): Promise<Json> {
   const retries = 3;
   for (let attempt = 0; ; attempt += 1) {
     try {
+      await aguardarFonte();
       const response = await fetchImpl(url, {
         headers: { accept: 'application/json', 'user-agent': 'LiciteComigo/1.0 (coleta PNCP)' },
         signal: AbortSignal.timeout(30_000),
       });
       if (response.status === 204) return {};
       if (!response.ok) {
-        const retryAfter = Number(response.headers.get('retry-after'));
+        const header = response.headers.get('retry-after');
+        const segundos = Number(header);
+        const espera =
+          header && !Number.isFinite(segundos) ? Date.parse(header) - Date.now() : segundos * 1000;
         throw new SourceError(
           `PNCP respondeu HTTP ${response.status}`,
           response.status,
-          Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : null,
+          Number.isFinite(espera) && espera > 0 ? espera : null,
         );
       }
       const body: unknown = await response.json();
@@ -356,8 +362,10 @@ async function getJson(
             );
       const retryable =
         sourceError.status === null || [429, 500, 502, 503, 504].includes(sourceError.status);
-      if (!retryable || attempt >= retries) throw sourceError;
-      await sleep(sourceError.retryAfterMs ?? 1000 * 2 ** attempt);
+      const espera = sourceError.retryAfterMs ?? 1000 * 2 ** attempt;
+      if (sourceError.status === 429) pausarFonte(espera);
+      if (!retryable || attempt >= retries || espera > 15_000) throw sourceError;
+      if (sourceError.status !== 429) await sleep(espera);
     }
   }
 }
@@ -436,12 +444,51 @@ export async function runPncpSync(
         `${scope}: ${error instanceof Error ? error.message : 'erro desconhecido'}`.slice(0, 500);
     };
 
-    /** Uma modalidade em um dos feeds do PNCP, página por página. */
-    const coletar = async (feed: 'publicacao' | 'atualizacao', modalidade: number) => {
-      for (let pagina = 1; pagina <= maxPaginas; pagina += 1) {
+    type Feed = 'publicacao' | 'atualizacao';
+    type Pendencia = {
+      feed: Feed;
+      modalidade: number;
+      inicio: string;
+      fim: string;
+      pagina: number;
+    };
+    let bloqueadaAte = 0;
+    const aguardarFonte = async () => {
+      if (bloqueadaAte > Date.now()) {
+        const espera = bloqueadaAte - Date.now();
+        if (espera > 15_000) throw new SourceError('PNCP pediu uma pausa', 429, espera);
+        await sleep(espera);
+      }
+    };
+    const pausarFonte = (ms: number) => {
+      bloqueadaAte = Math.max(bloqueadaAte, Date.now() + ms);
+    };
+    const registrarPendencia = async (tarefa: Pendencia, pagina: number) => {
+      await pool.query(
+        `INSERT INTO coleta_pncp_pendencias (tenant_id, feed, modalidade, inicio, fim, pagina, tentar_em)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (tenant_id, feed, modalidade, inicio, fim) DO UPDATE
+           SET pagina = EXCLUDED.pagina, tentar_em = EXCLUDED.tentar_em`,
+        [
+          tenantId,
+          tarefa.feed,
+          tarefa.modalidade,
+          tarefa.inicio,
+          tarefa.fim,
+          pagina,
+          new Date(Math.max(Date.now() + 5 * 60_000, bloqueadaAte)),
+        ],
+      );
+    };
+
+    /** Avança somente após persistir a página no catálogo. */
+    const coletar = async (tarefa: Pendencia) => {
+      const { feed, modalidade } = tarefa;
+      const limite = tarefa.pagina + maxPaginas - 1;
+      for (let pagina = tarefa.pagina; pagina <= limite; pagina += 1) {
         const query = new URLSearchParams({
-          dataInicial: inicio,
-          dataFinal: fim,
+          dataInicial: tarefa.inicio,
+          dataFinal: tarefa.fim,
           codigoModalidadeContratacao: String(modalidade),
           pagina: String(pagina),
           tamanhoPagina: String(PAGE_SIZE),
@@ -452,9 +499,12 @@ export async function runPncpSync(
             fetchImpl,
             `${config.pncpBaseUrl}/v1/contratacoes/${feed}?${query}`,
             sleep,
+            aguardarFonte,
+            pausarFonte,
           );
         } catch (error) {
           fail(error, `${feed} modalidade ${modalidade} página ${pagina}`);
+          await registrarPendencia(tarefa, pagina);
           return;
         }
         result.paginas += 1;
@@ -479,41 +529,93 @@ export async function runPncpSync(
             result.atualizados += saved.atualizados;
           } catch (error) {
             fail(error, `gravação (${feed}, modalidade ${modalidade}, página ${pagina})`);
+            await registrarPendencia(tarefa, pagina);
             return;
           }
         }
         const totalPaginas = Number(body.totalPaginas ?? 0);
         const restantes = Number(body.paginasRestantes ?? 0);
-        if (!rows.length || (restantes <= 0 && (!totalPaginas || pagina >= totalPaginas))) return;
-        await sleep(pause);
+        if (!rows.length || (restantes <= 0 && (!totalPaginas || pagina >= totalPaginas))) {
+          await pool.query(
+            `DELETE FROM coleta_pncp_pendencias
+              WHERE tenant_id = $1 AND feed = $2 AND modalidade = $3 AND inicio = $4 AND fim = $5`,
+            [tenantId, feed, modalidade, tarefa.inicio, tarefa.fim],
+          );
+          return;
+        }
+        if (pagina === limite) {
+          await registrarPendencia(tarefa, pagina + 1);
+          fail(
+            new Error('Mais páginas disponíveis; continuação agendada'),
+            `${feed} modalidade ${modalidade}`,
+          );
+        } else {
+          await sleep(pause);
+        }
       }
     };
 
     // As consultas (feed × modalidade) correm em paralelo, em número limitado, para a rodada
     // terminar logo sem sobrecarregar o PNCP. Cada uma continua lendo suas páginas em ordem.
-    const tarefas: Array<() => Promise<void>> = [];
+    const pendencias = (
+      await lock.query<Pendencia>(
+        `SELECT feed, modalidade, inicio, fim, pagina
+         FROM coleta_pncp_pendencias WHERE tenant_id = $1 AND tentar_em <= now()
+        ORDER BY tentar_em LIMIT 2`,
+        [tenantId],
+      )
+    ).rows;
+    const aguardando = (
+      await lock.query<Pendencia>(
+        `SELECT feed, modalidade, inicio, fim, pagina FROM coleta_pncp_pendencias
+        WHERE tenant_id = $1 AND inicio = $2 AND fim = $3`,
+        [tenantId, inicio, fim],
+      )
+    ).rows;
+    const tarefas: Pendencia[] = [];
     for (const feed of ['publicacao', 'atualizacao'] as const) {
       for (const modalidade of modalidades) {
-        tarefas.push(async () => {
-          await coletar(feed, modalidade);
-          await sleep(pause);
-        });
+        if (!aguardando.some((p) => p.feed === feed && p.modalidade === modalidade)) {
+          tarefas.push({ feed, modalidade, inicio, fim, pagina: 1 });
+        }
       }
     }
     const trabalhadores = Math.max(1, Math.min(deps.concurrency ?? config.pncpSyncConcurrency, 6));
     let proxima = 0;
-    await Promise.all(
+    const concluidas = await Promise.allSettled(
       Array.from({ length: Math.min(trabalhadores, tarefas.length) }, async () => {
         while (proxima < tarefas.length) {
-          const tarefa = tarefas[proxima];
-          proxima += 1;
-          await tarefa?.();
+          const tarefa = tarefas[proxima++];
+          if (tarefa) await coletar(tarefa);
+          await sleep(pause);
         }
       }),
     );
+    const falhaInterna = concluidas.find((resultado) => resultado.status === 'rejected');
+    if (falhaInterna) throw falhaInterna.reason;
+    for (const pendencia of pendencias) {
+      const vigente = await lock.query<{ pagina: number }>(
+        `SELECT pagina FROM coleta_pncp_pendencias
+          WHERE tenant_id = $1 AND feed = $2 AND modalidade = $3 AND inicio = $4 AND fim = $5
+            AND tentar_em <= now()`,
+        [tenantId, pendencia.feed, pendencia.modalidade, pendencia.inicio, pendencia.fim],
+      );
+      if (vigente.rows[0]) await coletar({ ...pendencia, pagina: vigente.rows[0].pagina });
+    }
 
+    const temPendencia = (
+      await lock.query('SELECT 1 FROM coleta_pncp_pendencias WHERE tenant_id = $1 LIMIT 1', [
+        tenantId,
+      ])
+    ).rowCount;
     result.status =
-      result.erros === 0 ? 'ok' : result.paginas > 0 && result.lidos > 0 ? 'parcial' : 'erro';
+      result.erros === 0
+        ? temPendencia
+          ? 'parcial'
+          : 'ok'
+        : result.paginas > 0 && result.lidos > 0
+          ? 'parcial'
+          : 'erro';
     return result;
   } catch (error) {
     result.erros += 1;

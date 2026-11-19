@@ -130,6 +130,7 @@ type Coleta = {
   consultas_paralelas?: number;
   dias_por_rodada: number;
   max_paginas: number;
+  pendencias?: number;
   fonte: string;
   modalidades: Array<{ codigo: number; nome: string }>;
   catalogo: {
@@ -240,6 +241,13 @@ function PncpCollector() {
                 value={formatNumber(data.catalogo.abertos)}
                 tone={data.catalogo.abertos ? 'ok' : 'warn'}
               />
+              {data.pendencias !== undefined ? (
+                <Kpi
+                  label="Trechos a retomar"
+                  value={formatNumber(data.pendencias)}
+                  tone={data.pendencias ? 'warn' : undefined}
+                />
+              ) : null}
               <Kpi label="Capturados em 24 h" value={formatNumber(data.catalogo.capturados_24h)} />
               <Kpi
                 label="Última publicação lida"

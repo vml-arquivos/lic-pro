@@ -114,7 +114,15 @@ export function registerCollectionRoutes(
            FROM editais WHERE tenant_id = $1 AND fonte = 'pncp'`,
         [request.user.tenantId],
       );
-      return { execucoes: runs.rows, catalogo: catalog.rows[0] };
+      const pendencias = await client.query<{ total: number }>(
+        'SELECT count(*)::int AS total FROM coleta_pncp_pendencias WHERE tenant_id = $1',
+        [request.user.tenantId],
+      );
+      return {
+        execucoes: runs.rows,
+        catalogo: catalog.rows[0],
+        pendencias: pendencias.rows[0]?.total ?? 0,
+      };
     });
     return reply.send({
       ligada: config.pncpSyncEnabled,

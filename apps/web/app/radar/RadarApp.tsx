@@ -62,6 +62,7 @@ export function RadarApp({
     if (!final.get('page_size')) final.set('page_size', '10');
     return final;
   }, [params, usandoPerfil, perfilDados]);
+  const ufsEfetivas = efetivos.getAll('uf').join(', ');
   const chave = useMemo(() => chaveDaLista(usuario, efetivos), [usuario, efetivos]);
   const chaveAtual = useRef(chave);
   chaveAtual.current = chave;
@@ -251,6 +252,9 @@ export function RadarApp({
             setProfileVersion((value) => value + 1);
           }}
         />
+      ) : null}
+      {signedIn && ufsEfetivas ? (
+        <p className="rd-filtros-efetivos">Estados na busca: {ufsEfetivas}</p>
       ) : null}
       <RadarFilters
         params={params}

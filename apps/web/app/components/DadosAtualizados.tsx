@@ -6,6 +6,7 @@ import { EVENTO_DADOS_ATUALIZADOS, EVENTO_SYNC_INICIADA } from './SincronizarAoA
 
 type Atualizacao = {
   ligada: boolean;
+  status?: 'ok' | 'parcial' | null;
   ultima_atualizacao_em: string | null;
   rodada_rapida_minutos: number;
 };
@@ -62,16 +63,18 @@ export function DadosAtualizados() {
   }, []);
 
   if (!dados?.ultima_atualizacao_em) return null;
+  const parcial = dados.status === 'parcial';
   const atrasada =
     agora - new Date(dados.ultima_atualizacao_em).getTime() >
     Math.max(30, dados.rodada_rapida_minutos * 4) * 60_000;
   return (
     <p
-      className={`dados-atualizados${atrasada ? ' dados-atualizados-atrasado' : ''}`}
+      className={`dados-atualizados${atrasada || parcial ? ' dados-atualizados-atrasado' : ''}`}
       role="status"
     >
       <i aria-hidden="true" />
-      Dados do PNCP atualizados {textoDeIdade(dados.ultima_atualizacao_em, agora)}
+      {parcial ? 'Coleta parcial do PNCP' : 'Dados do PNCP atualizados'}{' '}
+      {textoDeIdade(dados.ultima_atualizacao_em, agora)}
       {dados.ligada ? '' : ' (coleta automática desligada)'}
       {atualizando ? ' · buscando novidades agora…' : ''}
     </p>

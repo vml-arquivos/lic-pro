@@ -18,7 +18,7 @@ export default async function EditalDetailPage({ params }: DetailPageProps) {
       <header className="ui-header">
         <div>
           <p className="eyebrow">Radar</p>
-          <h1>Edital</h1>
+          <h1>Detalhes do edital</h1>
         </div>
       </header>
       <nav className="tabs" aria-label="Seções do edital">

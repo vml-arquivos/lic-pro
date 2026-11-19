@@ -167,8 +167,10 @@ export function RadarFilters({
         <Select
           label="Ordenar por"
           name="ordem"
-          value={params.get('ordem') ?? ''}
-          options={ORDENS.filter(([code]) => code !== 'compat' || hasProfile)}
+          value={params.get('ordem') === 'recentes' ? '' : (params.get('ordem') ?? '')}
+          options={ORDENS.filter(
+            ([code]) => code !== 'recentes' && (code !== 'compat' || hasProfile),
+          )}
           empty="Mais recentes"
         />
       </div>
