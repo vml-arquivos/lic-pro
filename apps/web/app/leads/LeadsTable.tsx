@@ -13,16 +13,14 @@ type Lead = {
   origem?: string | null;
   created_at: string;
 };
-const COPY: Record<Modulo, { eyebrow: string; title: string; text: string }> = {
+const COPY: Record<Modulo, { eyebrow: string; title: string }> = {
   profissional: {
     eyebrow: 'Painel admin',
     title: 'Leads de empresas',
-    text: 'Empresas interessadas no sistema profissional, captadas pelo site. Somente a equipe vê esta lista.',
   },
   curso: {
     eyebrow: 'Painel da mentoria',
     title: 'Leads de alunos',
-    text: 'Interessados no curso e na mentoria, captados pelo site. Somente a equipe vê esta lista.',
   },
 };
 
@@ -49,7 +47,6 @@ export function LeadsTable({ modulo = 'profissional' }: Readonly<{ modulo?: Modu
       <div className="page-heading">
         <p className="eyebrow">{COPY[modulo].eyebrow}</p>
         <h1>{COPY[modulo].title}</h1>
-        <p>{COPY[modulo].text}</p>
       </div>
       {message ? (
         <p className="notice">{message}</p>

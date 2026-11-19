@@ -47,7 +47,7 @@ export function PraticaCard({
   return (
     <Panel
       title={pratica.titulo}
-      description={`${pratica.aluno} · ${pratica.orgao ?? 'órgão não informado'} · enviada em ${formatDate(pratica.enviada_em, true)}`}
+      meta={`${pratica.aluno} · ${pratica.orgao ?? 'órgão não informado'} · enviada em ${formatDate(pratica.enviada_em, true)}`}
       actions={
         <Link className="ui-btn ui-btn-ghost ui-btn-small" href={`/radar/${pratica.edital_id}`}>
           Abrir o edital

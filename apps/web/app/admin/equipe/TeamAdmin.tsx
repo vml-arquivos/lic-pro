@@ -142,10 +142,7 @@ export function TeamAdmin() {
   const [editando, setEditando] = useState<Member | null>(null);
   return (
     <>
-      <Panel
-        title="Convidar administrador"
-        description="A pessoa recebe um link e cria a senha. Escolha o painel e marque o que ela não pode abrir."
-      >
+      <Panel title="Convidar administrador">
         <InviteForm
           kind="equipe"
           podeBloquear

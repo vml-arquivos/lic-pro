@@ -9,11 +9,7 @@ export default async function MateriaisPage() {
   await requireArea('administracao', 'curso', 'aluno', 'mentor');
   return (
     <div className="ui-page">
-      <PageHeader
-        eyebrow="Meu curso"
-        title="Materiais"
-        description="Modelos, checklists e guias organizados pela etapa em que você está."
-      />
+      <PageHeader eyebrow="Meu curso" title="Materiais" />
       <MateriaisBiblioteca />
     </div>
   );

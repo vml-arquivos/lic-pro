@@ -139,10 +139,6 @@ export function PerfilRadar({
       <h2 className="rd-perfil-titulo">
         {configurado ? 'Editar meu perfil' : 'Comece pelo seu perfil'}
       </h2>
-      <p className="rd-hint">
-        Preencha uma vez. O Radar, a Análise e os Pregões passam a mostrar só o que combina com
-        você. Nada disso sai do Licite Comigo.
-      </p>
       <form
         className="ui-form rd-perfil-form"
         onSubmit={(event) => {

@@ -282,7 +282,7 @@ export function FichaUsuario({
             </p>
             <Panel
               title={usuario.nome}
-              description={`${TIPO_LABEL[usuario.tipo]} · ${usuario.email}`}
+              meta={`${TIPO_LABEL[usuario.tipo]} · ${usuario.email}`}
               actions={<Badge>{usuario.ativo ? 'Ativo' : 'Inativo'}</Badge>}
             >
               {error ? <Alert kind="error">{error}</Alert> : null}
@@ -338,11 +338,7 @@ export function FichaUsuario({
                     : 'Ainda sem entrada registrada'
                 }
               />
-              <Kpi
-                label="Entradas no sistema"
-                value={formatNumber(acesso.entradas)}
-                hint="Desde o início do registro"
-              />
+              <Kpi label="Entradas no sistema" value={formatNumber(acesso.entradas)} />
               <Kpi
                 label="Dias com uso (30 dias)"
                 value={formatNumber(acesso.dias_ativos_30d)}
@@ -389,10 +385,7 @@ export function FichaUsuario({
               </dl>
             </Panel>
 
-            <Panel
-              title="O que está procurando"
-              description="Nichos escolhidos, buscas salvas e as últimas buscas feitas no Radar e em Preços pagos."
-            >
+            <Panel title="O que está procurando">
               <p>
                 <strong>Nichos: </strong>
                 {usuario.nichos.length
@@ -442,10 +435,7 @@ export function FichaUsuario({
               )}
             </Panel>
 
-            <Panel
-              title="O que já acessou"
-              description={`${forCompany ? 'Uso de todos os usuários da empresa' : 'Uso desta pessoa'} nos últimos 30 dias, por área do sistema.`}
-            >
+            <Panel title="O que já acessou">
               {acesso.por_recurso.length ? (
                 <Table
                   label="Uso por área"
@@ -585,14 +575,7 @@ export function FichaUsuario({
               </Panel>
             ) : null}
 
-            <Panel
-              title="Histórico recente"
-              description={
-                forCompany
-                  ? 'Últimas ações de todos os usuários da empresa.'
-                  : 'Últimas ações desta pessoa e o que a equipe fez na conta dela.'
-              }
-            >
+            <Panel title="Histórico recente">
               {data.historico.length ? (
                 <Table label="Histórico" head={['Quando', 'O que aconteceu']}>
                   {data.historico.map((item, index) => (

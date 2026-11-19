@@ -153,10 +153,7 @@ function PlanForm({
   }
 
   return (
-    <Panel
-      title={`Editar: ${plan.nome}`}
-      description="Mudanças valem para novas vendas; quem já assinou mantém o que contratou."
-    >
+    <Panel title={`Editar: ${plan.nome}`}>
       <form className="ui-form plan-edit" onSubmit={(event) => void save(event)}>
         <label>
           Nome

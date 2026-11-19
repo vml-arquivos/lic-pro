@@ -22,11 +22,7 @@ export default async function PrecosPage() {
   return (
     <main className="ui-page">
       <LicitacoesNav atual="/precos" area={session?.area} />
-      <PageHeader
-        eyebrow="Ferramentas"
-        title="Preços pagos"
-        description="Quanto o governo pagou por um item e como os pregões do seu nicho fecharam, com a fonte oficial."
-      />
+      <PageHeader eyebrow="Ferramentas" title="Preços pagos" />
       <PrecosApp nichos={nichos} />
     </main>
   );

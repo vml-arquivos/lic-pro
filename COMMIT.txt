@@ -1,5 +1,5 @@
 Resumo:
-Acesso master, leitura automática do edital, Quadro de decisão, Radar que mantém a busca e página do edital em colunas
+Acesso master, leitura automática do edital, Quadro de decisão, Radar que mantém a busca, página do edital em colunas e painéis sem textos de ajuda
 
 Descrição:
 - Acesso master (superadmin) pelo e-mail em SUPERADMIN_EMAILS: vê tudo, cria acessos de equipe e marca o que cada um não pode abrir (menu, páginas e API). Nova tela em Equipe administrativa e também no convite.
@@ -30,3 +30,6 @@ Descrição:
 - Novo docs/radar-diagnostico-2026-11.md. Sem migration nova e sem variável nova.
 - Página do edital: ficha em colunas; documentação técnica e leitura dos PDFs em duas colunas; Preços pagos e Concorrentes lado a lado; listas de concorrentes em colunas.
 - Concorrentes, Preços pagos e Valores fechados carregam sozinhos (sem botão). Se falhar, tentam de novo sozinhos e conferem a cada 10 minutos com a página aberta. O botão Atualizar só aparece se não der certo.
+- Todos os painéis: removidos os subtítulos e textos explicativos; títulos curtos (Radar de licitações, Pregões, Alertas, Agenda, Pipeline etc.).
+- Cabeçalho de página redesenhado e igual em todos os painéis.
+- Cartões do Radar e dos painéis sem legendas explicativas; ficam só os números.

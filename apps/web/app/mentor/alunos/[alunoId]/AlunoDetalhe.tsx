@@ -138,7 +138,7 @@ export function AlunoDetalhe({
         const pendingPractices = data.praticas.filter((p) => p.status === 'enviada').length;
         return (
           <>
-            <PageHeader eyebrow="Aluno" title={data.aluno.nome} description={data.aluno.email} />
+            <PageHeader eyebrow="Aluno" title={data.aluno.nome} meta={data.aluno.email} />
             <div className="ui-kpis">
               <Kpi label="Aulas concluídas" value={`${done}/${data.aulas.length}`} />
               <Kpi
@@ -174,7 +174,7 @@ export function AlunoDetalhe({
 
             {tab === 'progresso' ? (
               <>
-                <Panel title="Diagnóstico inicial" description="O que o aluno respondeu ao entrar.">
+                <Panel title="Diagnóstico inicial">
                   {data.diagnostico ? (
                     <dl className="ui-dl">
                       <dt>Como vai atuar</dt>
@@ -241,9 +241,7 @@ export function AlunoDetalhe({
             {tab === 'plano' ? (
               <Panel
                 title="Plano de 30 dias"
-                description={
-                  data.plano ? `Início em ${formatDate(data.plano.inicio)}` : 'Sem plano ainda'
-                }
+                meta={data.plano ? `Início em ${formatDate(data.plano.inicio)}` : 'Sem plano ainda'}
                 actions={
                   canEdit ? (
                     <button

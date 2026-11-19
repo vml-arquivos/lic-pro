@@ -22,10 +22,7 @@ export function CancelarAlertas({ token }: Readonly<{ token: string }>) {
   if (!token)
     return <Alert kind="error">Link incompleto. Use o link do e-mail que você recebeu.</Alert>;
   return (
-    <Panel
-      title="Parar de receber e-mails de alerta?"
-      description="Você continua vendo os avisos no sino e na página Alertas. Para voltar a receber e-mails, ligue a opção em Alertas."
-    >
+    <Panel title="Parar de receber e-mails de alerta?">
       {state === 'done' ? (
         <Alert kind="success">Pronto. Você não vai mais receber e-mails de alerta.</Alert>
       ) : null}

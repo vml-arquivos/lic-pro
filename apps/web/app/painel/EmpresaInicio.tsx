@@ -49,7 +49,6 @@ export function EmpresaInicio({
       <PageHeader
         eyebrow={operacao ? 'Operação' : 'Minha empresa'}
         title={`Olá, ${nome.split(' ')[0] ?? nome}`}
-        description="O que mudou hoje, o que vence nesta semana e o que fazer a seguir."
         actions={
           <Link className="ui-btn" href="/radar">
             Buscar no Radar
@@ -72,11 +71,10 @@ export function EmpresaInicio({
                   value={novos}
                   hint={`${alteracoes} alteração(ões) nos seus editais`}
                 />
-                <Kpi label="Buscas com aviso" value={data.buscas_ativas} hint="Salvas e ativas" />
+                <Kpi label="Buscas com aviso" value={data.buscas_ativas} />
                 <Kpi
                   label="Sessões ao vivo hoje"
                   value={data.hoje.sessao ?? 0}
-                  hint="Avisos de disputa começando"
                   tone={data.hoje.sessao ? 'warn' : undefined}
                 />
                 <Kpi
@@ -84,7 +82,7 @@ export function EmpresaInicio({
                   value={data.prazos_semana.length}
                   tone={data.prazos_semana.length ? 'warn' : undefined}
                 />
-                <Kpi label="No pipeline" value={pipelineTotal} hint="Oportunidades acompanhadas" />
+                <Kpi label="No pipeline" value={pipelineTotal} />
                 <Kpi
                   label="Documentos"
                   value={data.documentos.total}
@@ -94,14 +92,7 @@ export function EmpresaInicio({
               </section>
 
               <div className="op-home">
-                <Panel
-                  title="O que fazer agora"
-                  description={
-                    beginner
-                      ? 'Um caminho simples para começar. Some quando você tiver a primeira oportunidade no pipeline.'
-                      : 'Sugestões pelo que está na sua conta.'
-                  }
-                >
+                <Panel title="O que fazer agora">
                   {avisos.length === 0 && !beginner ? (
                     <Empty>Tudo em dia. Quando algo precisar de atenção, aparece aqui.</Empty>
                   ) : null}

@@ -112,11 +112,7 @@ export function QuizView({
                 >
                   Enviar respostas
                 </button>
-              ) : (
-                <p className="cs-hint">
-                  As respostas são corrigidas e salvas só para contas de aluno.
-                </p>
-              )}
+              ) : null}
             </>
           );
         }}

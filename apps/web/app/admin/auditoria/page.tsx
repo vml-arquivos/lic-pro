@@ -11,11 +11,7 @@ export default async function AuditPage() {
   await requireArea('administracao');
   return (
     <main className="ui-page">
-      <PageHeader
-        eyebrow="Painel admin"
-        title="Auditoria"
-        description="Quem fez o quê na administração, incluindo as visualizações “ver como”."
-      />
+      <PageHeader eyebrow="Painel admin" title="Auditoria" />
       <AuditAdmin />
     </main>
   );

@@ -63,10 +63,7 @@ export default function CompaniesPage() {
       </Link>
       <div className="page-heading">
         <p className="eyebrow">Conta e empresas</p>
-        <h1>Organize os CNPJs atendidos.</h1>
-        <p>
-          Empresas ficam isoladas por tenant. Mentores só enxergam empresas com concessão explícita.
-        </p>
+        <h1>Empresas</h1>
       </div>
       <section className="dashboard-columns">
         <EmpresaForm

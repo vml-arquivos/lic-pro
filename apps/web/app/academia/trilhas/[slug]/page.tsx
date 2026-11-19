@@ -44,7 +44,7 @@ export default function TrackPage({ params }: { params: { slug: string } }) {
       <Resource value={track}>
         {(data) => (
           <>
-            <PageHeader eyebrow="Trilha" title={data.titulo} description={data.descricao} />
+            <PageHeader eyebrow="Trilha" title={data.titulo} />
             {data.modulos.map((module) => {
               const lessons = module.aulas.filter((lesson) => lesson.id);
               const quiz = quizState(module.id);
@@ -52,7 +52,7 @@ export default function TrackPage({ params }: { params: { slug: string } }) {
                 <Panel
                   key={module.id}
                   title={`Módulo ${module.ordem} · ${module.titulo}`}
-                  description={module.resumo}
+                  meta={module.resumo}
                   actions={
                     module.status !== 'publicado' ? <Badge tone="warn">Em revisão</Badge> : null
                   }

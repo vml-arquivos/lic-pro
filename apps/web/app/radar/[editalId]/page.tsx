@@ -17,9 +17,8 @@ export default async function EditalDetailPage({ params }: DetailPageProps) {
       <VoltarAoRadar usuario={session?.id ?? 'anonimo'} />
       <header className="ui-header">
         <div>
-          <p className="eyebrow">Workspace do edital</p>
-          <h1>Leia, confira a fonte e decida com calma</h1>
-          <p>Tudo do edital em um só lugar.</p>
+          <p className="eyebrow">Radar</p>
+          <h1>Edital</h1>
         </div>
       </header>
       <nav className="tabs" aria-label="Seções do edital">

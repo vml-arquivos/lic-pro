@@ -49,10 +49,7 @@ export function CompaniesAdmin() {
   const [invitesKey, setInvitesKey] = useState(0);
   return (
     <>
-      <Panel
-        title="Convidar empresa"
-        description="Gera um link de cadastro. A empresa cria a própria senha e entra com um usuário."
-      >
+      <Panel title="Convidar empresa">
         <InviteForm
           kind="empresa"
           onCreated={() => {
@@ -61,10 +58,7 @@ export function CompaniesAdmin() {
           }}
         />
       </Panel>
-      <Panel
-        title="Empresas cadastradas"
-        description="Abra a ficha para ver o que cada empresa já acessou, buscou e está procurando. Em “Editar” você corrige nome, e-mail e empresa; “Link de senha” gera um novo link para a empresa definir a senha."
-      >
+      <Panel title="Empresas cadastradas">
         {error ? <Alert kind="error">{error}</Alert> : null}
         {link ? <ResetLinkBox link={link} onClose={() => setLink(null)} /> : null}
         <Resource value={companies}>

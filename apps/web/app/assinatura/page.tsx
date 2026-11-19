@@ -13,11 +13,7 @@ export default async function AssinaturaPage() {
   await requireArea('empresa');
   return (
     <main className="ui-page">
-      <PageHeader
-        eyebrow="Conta"
-        title="Assinatura"
-        description="O plano da sua empresa, a situação do pagamento e o que ele inclui."
-      />
+      <PageHeader eyebrow="Conta" title="Assinatura" />
       <AssinaturaPanel />
     </main>
   );

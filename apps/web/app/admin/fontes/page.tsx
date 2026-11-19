@@ -11,11 +11,7 @@ export default async function SourcesPage() {
   await requireArea('administracao');
   return (
     <main className="ui-page">
-      <PageHeader
-        eyebrow="Painel admin"
-        title="Fontes de dados"
-        description="De onde vêm os editais e se a coleta está rodando."
-      />
+      <PageHeader eyebrow="Painel admin" title="Fontes de dados" />
       <SourcesAdmin />
     </main>
   );

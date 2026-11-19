@@ -9,11 +9,7 @@ export default async function GestaoMateriaisPage() {
   await requireArea('curso');
   return (
     <div className="ui-page">
-      <PageHeader
-        eyebrow="Painel da mentoria"
-        title="Materiais do aluno"
-        description="A biblioteca que o aluno vê. Item sem texto e sem link fica oculto até você anexar o link do arquivo."
-      />
+      <PageHeader eyebrow="Painel da mentoria" title="Materiais do aluno" />
       <MateriaisAdmin />
     </div>
   );

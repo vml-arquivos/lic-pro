@@ -11,11 +11,7 @@ export default async function MentorsPage() {
   await requireArea('curso');
   return (
     <main className="ui-page">
-      <PageHeader
-        eyebrow="Painel da mentoria"
-        title="Mentores"
-        description="Quem acompanha os alunos do curso."
-      />
+      <PageHeader eyebrow="Painel da mentoria" title="Mentores" />
       <MentorsAdmin />
     </main>
   );

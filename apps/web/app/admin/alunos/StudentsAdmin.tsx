@@ -118,10 +118,7 @@ export function StudentsAdmin() {
 
       {tab === 'alunos' ? (
         <>
-          <Panel
-            title="Matricular aluno"
-            description="Gera um convite com a turma escolhida. O aluno cria a senha e entra na área do curso."
-          >
+          <Panel title="Matricular aluno">
             <InviteForm
               kind="aluno"
               classes={activeClasses}
@@ -129,10 +126,7 @@ export function StudentsAdmin() {
               onCreated={reloadAll}
             />
           </Panel>
-          <Panel
-            title="Alunos matriculados"
-            description="Abra a ficha para ver o que o aluno já acessou e o andamento no curso. “Link de senha” gera um link para ele definir uma nova senha."
-          >
+          <Panel title="Alunos matriculados">
             {link ? <ResetLinkBox link={link} onClose={() => setLink(null)} /> : null}
             <Resource value={students}>
               {({ data }) =>
@@ -283,10 +277,7 @@ function ClassesTab({
 
   return (
     <>
-      <Panel
-        title="Nova turma"
-        description="A turma agrupa os alunos e define o mentor responsável."
-      >
+      <Panel title="Nova turma">
         <form className="ui-form" onSubmit={(event) => void create(event)} aria-label="Nova turma">
           <label>
             Nome da turma
@@ -422,10 +413,7 @@ function InvitationsTab({
   }
 
   return (
-    <Panel
-      title="Convites enviados"
-      description="O link de um convite só aparece quando ele é criado ou reenviado. Para gerar outro, use “Novo link”."
-    >
+    <Panel title="Convites enviados">
       <Resource value={invitations}>
         {({ data }) =>
           data.length ? (
@@ -520,10 +508,7 @@ function TurmaPrazos({
 
   if (!rows.length) return null;
   return (
-    <Panel
-      title="Prazos e grupo da turma"
-      description="Depois do prazo, o aluno deixa de abrir aulas e materiais (acesso) ou de ver encontros e o grupo (mentoria). Deixe vazio para não ter prazo."
-    >
+    <Panel title="Prazos e grupo da turma">
       <form
         className="ui-form"
         key={turmaId}

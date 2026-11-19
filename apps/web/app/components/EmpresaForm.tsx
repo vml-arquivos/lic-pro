@@ -221,9 +221,6 @@ export function EmpresaForm({
   return (
     <form className="dashboard-card auth-form empresa-form" onSubmit={enviar}>
       <h2>{empresa ? 'Editar empresa' : 'Nova empresa'}</h2>
-      <p className="empresa-form-dica">
-        Digite o CNPJ e os dados da empresa vêm da Receita. Digite o CEP e o endereço se completa.
-      </p>
 
       <label>
         CNPJ

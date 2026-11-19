@@ -13,11 +13,7 @@ export default async function PlanosPage() {
   await requireArea('curso');
   return (
     <main className="ui-page">
-      <PageHeader
-        eyebrow="Painel da mentoria"
-        title="Preço do curso"
-        description="O curso e a turma que ele libera. O curso só aparece para venda depois de ativado."
-      />
+      <PageHeader eyebrow="Painel da mentoria" title="Preço do curso" />
       <PlansAdmin modulo="curso" />
     </main>
   );

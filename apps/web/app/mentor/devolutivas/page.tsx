@@ -9,11 +9,7 @@ export default async function DevolutivasPage() {
   const session = await requireArea('administracao', 'curso', 'mentor');
   return (
     <div className="ui-page">
-      <PageHeader
-        eyebrow="Mentoria"
-        title="Devolutivas"
-        description="Práticas com edital real que os alunos enviaram. Comente, dê uma nota de 1 a 5 e devolva."
-      />
+      <PageHeader eyebrow="Mentoria" title="Devolutivas" />
       <Devolutivas canReply={session.area === 'mentor'} />
     </div>
   );

@@ -68,10 +68,7 @@ export function MentoriaAluno() {
               </ul>
             )}
           </Panel>
-          <Panel
-            title="Recados do mentor"
-            description="Só aparece o que o mentor escolheu compartilhar com você."
-          >
+          <Panel title="Recados do mentor">
             {notas.length === 0 ? (
               <Empty>Nenhum recado por enquanto.</Empty>
             ) : (

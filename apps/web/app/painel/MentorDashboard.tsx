@@ -40,7 +40,6 @@ export function MentorDashboard({ nome, hub }: Readonly<{ nome: string; hub?: Re
       <PageHeader
         eyebrow="Mentor"
         title={`Olá, ${first}`}
-        description="O que precisa da sua atenção hoje."
         actions={
           <Link className="ui-btn" href="/mentor/devolutivas">
             Devolutivas pendentes

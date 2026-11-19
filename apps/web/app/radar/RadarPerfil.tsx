@@ -59,11 +59,7 @@ export function RadarPerfil({
   if (!perfil) return null;
   return (
     <details className="ui-panel rd-profile">
-      <summary>Meu perfil do Radar (usado na nota de compatibilidade)</summary>
-      <p className="rd-hint">
-        A nota é calculada por regras simples e visíveis: nicho, estado, faixa de valor, palavras de
-        interesse e modalidade. Nada disso é enviado para fora do Licite Comigo.
-      </p>
+      <summary>Meu perfil</summary>
       <form
         className="ui-form"
         key={JSON.stringify(perfil)}

@@ -83,10 +83,7 @@ export function AvisosPorNicho({
   };
 
   return (
-    <Panel
-      title="Avisos por nicho"
-      description="Marque o que você quer receber de cada nicho. Os avisos chegam no sino e aqui, e a sessão ao vivo avisa 1 hora e 15 minutos antes e quando começa."
-    >
+    <Panel title="Avisos por nicho">
       {message ? <Alert kind={message.kind}>{message.text}</Alert> : null}
       {nichos.length === 0 ? (
         <Empty>

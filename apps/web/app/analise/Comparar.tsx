@@ -287,10 +287,6 @@ export function Comparar({
           ))}
         </div>
       </div>
-      <p className="an-aviso">
-        Comparação de apoio: as notas usam dados públicos e o seu perfil, não preveem vitória.
-        Confirme sempre no edital.
-      </p>
     </>
   );
 }

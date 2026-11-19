@@ -12,11 +12,7 @@ export default async function TeamPage() {
   await requireSuperadmin();
   return (
     <main className="ui-page">
-      <PageHeader
-        eyebrow="Painel admin"
-        title="Equipe administrativa"
-        description="Usuários do sistema administrativo. Convide novos administradores, edite os dados e gere link de senha."
-      />
+      <PageHeader eyebrow="Painel admin" title="Equipe administrativa" />
       <TeamAdmin />
     </main>
   );

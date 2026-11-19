@@ -1132,3 +1132,42 @@ body {
 :root .auth-page > p:not(.eyebrow):not(.notice) {
   font-size: var(--t-base);
 }
+
+/* 99. Cabeçalho de página: um só desenho para todos os painéis ------------------------------ */
+:root:root .ui-header {
+  align-items: center;
+  gap: var(--sp-3, 0.75rem) var(--sp-4, 1rem);
+  margin-bottom: 1.25rem;
+}
+:root:root .ui-header .eyebrow {
+  align-items: center;
+  color: var(--lc-primary, #4f46e5);
+  display: inline-flex;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  gap: 0.45rem;
+  letter-spacing: 0.1em;
+  margin: 0 0 0.35rem;
+  text-transform: uppercase;
+}
+:root:root .ui-header .eyebrow::before {
+  background: currentcolor;
+  border-radius: 999px;
+  content: '';
+  height: 0.4rem;
+  width: 0.4rem;
+}
+:root:root .ui-header h1 {
+  font-size: clamp(1.5rem, 1.15rem + 1.1vw, 1.9rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  margin: 0;
+}
+:root:root .ui-header .ui-meta,
+:root:root .ui-panel-head .ui-meta {
+  color: var(--workspace-muted, #667085);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  margin: 0.3rem 0 0;
+}

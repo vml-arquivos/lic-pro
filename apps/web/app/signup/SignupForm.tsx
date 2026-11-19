@@ -50,9 +50,6 @@ export function SignupForm() {
       </label>
       <fieldset className="auth-fieldset">
         <legend>Nichos de atuação</legend>
-        <p className="form-hint">
-          Escolha de um a três nichos para receber oportunidades e alertas do seu escopo.
-        </p>
         {[1, 2, 3].map((index) => (
           <label key={index}>
             {`Nicho ${index}`}

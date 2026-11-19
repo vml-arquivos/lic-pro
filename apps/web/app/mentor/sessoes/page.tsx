@@ -9,11 +9,7 @@ export default async function SessoesPage() {
   const session = await requireArea('administracao', 'curso', 'mentor');
   return (
     <div className="ui-page">
-      <PageHeader
-        eyebrow="Mentoria"
-        title="Sessões"
-        description="Marque conversas com seus alunos, registre o que foi combinado e compartilhe o resumo."
-      />
+      <PageHeader eyebrow="Mentoria" title="Sessões" />
       <Sessoes canEdit={session.area === 'mentor'} />
     </div>
   );

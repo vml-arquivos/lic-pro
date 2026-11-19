@@ -97,7 +97,7 @@ export function PortaisApp() {
               )}
 
               {semEditais.length ? (
-                <Panel title="Outros portais comuns" description="Ainda sem editais na sua lista.">
+                <Panel title="Outros portais comuns">
                   <ul className="pt-outros">
                     {semEditais.map((portal) => (
                       <li key={portal.slug}>

@@ -174,10 +174,7 @@ export function PrecosApp({ nichos }: Readonly<{ nichos: readonly NichoOption[] 
 
   return (
     <>
-      <Panel
-        title="Quanto o governo pagou"
-        description="Escolha o nicho e o item. O resultado aparece na hora, com a fonte oficial."
-      >
+      <Panel title="Quanto o governo pagou">
         <div className="ui-form precos-form">
           <label>
             Nicho
@@ -298,7 +295,7 @@ export function PrecosApp({ nichos }: Readonly<{ nichos: readonly NichoOption[] 
         stats ? (
           <>
             <section className="ui-kpis" aria-label="Resumo dos preços">
-              <Kpi label="Mediana" value={reais(stats.mediana)} hint="valor central" tone="ok" />
+              <Kpi label="Mediana" value={reais(stats.mediana)} tone="ok" />
               <Kpi label="Média" value={reais(stats.media)} />
               <Kpi label="Menor" value={reais(stats.minimo)} />
               <Kpi label="Maior" value={reais(stats.maximo)} />
@@ -322,7 +319,7 @@ export function PrecosApp({ nichos }: Readonly<{ nichos: readonly NichoOption[] 
             </section>
             <Panel
               title={result.descricao ?? chosen?.descricao ?? `CATMAT ${result.catmat}`}
-              description={`${result.extremos_removidos ? `${result.extremos_removidos} valor(es) muito fora da curva foram desconsiderados no resumo. ` : ''}Faixa comum (25% a 75%): ${reais(stats.p25)} a ${reais(stats.p75)}.`}
+              meta={`${result.extremos_removidos ? `${result.extremos_removidos} valor(es) muito fora da curva foram desconsiderados no resumo. ` : ''}Faixa comum (25% a 75%): ${reais(stats.p25)} a ${reais(stats.p75)}.`}
             >
               <p>
                 <button
@@ -389,10 +386,7 @@ export function PrecosApp({ nichos }: Readonly<{ nichos: readonly NichoOption[] 
         )
       ) : null}
 
-      <Panel
-        title="Pregões já fechados no nicho"
-        description="Quanto foi estimado e quanto o pregão realmente fechou (valor homologado)."
-      >
+      <Panel title="Pregões já fechados no nicho">
         {fechados.state === 'loading' ? <p className="ui-loading">Carregando…</p> : null}
         {fechados.state === 'error' ? <Alert kind="error">{fechados.message}</Alert> : null}
         {fechados.state === 'ready' ? (
@@ -405,7 +399,6 @@ export function PrecosApp({ nichos }: Readonly<{ nichos: readonly NichoOption[] 
                 <Kpi
                   label="Economia média"
                   value={pct(fechados.data.resumo.economia_pct)}
-                  hint="sobre o estimado"
                   tone="ok"
                 />
               </section>

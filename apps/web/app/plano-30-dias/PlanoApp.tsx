@@ -92,7 +92,7 @@ export function PlanoApp({ canEdit }: Readonly<{ canEdit: boolean }>) {
             <>
               <Panel
                 title={`${plano.resumo.feitos} de ${plano.resumo.total} dias concluídos`}
-                description={`Início em ${formatDate(plano.inicio)}${plano.trilha ? ` · trilha “${plano.trilha}”` : ''} · ${plano.resumo.revisados} revisado(s) pelo mentor`}
+                meta={`Início em ${formatDate(plano.inicio)}${plano.trilha ? ` · trilha “${plano.trilha}”` : ''} · ${plano.resumo.revisados} revisado(s) pelo mentor`}
                 actions={
                   canEdit ? (
                     <button

@@ -9,11 +9,7 @@ export default async function EncontrosPage() {
   await requireArea('administracao', 'curso', 'aluno');
   return (
     <div className="ui-page">
-      <PageHeader
-        eyebrow="Meu curso"
-        title="Encontros ao vivo"
-        description="Os encontros em grupo da sua turma e o atalho para o grupo de conversa."
-      />
+      <PageHeader eyebrow="Meu curso" title="Encontros ao vivo" />
       <EncontrosAluno />
     </div>
   );

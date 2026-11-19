@@ -63,10 +63,7 @@ export function AlertasApp() {
   return (
     <>
       {message ? <Alert kind={message.kind}>{message.text}</Alert> : null}
-      <Panel
-        title="Como você recebe"
-        description="Vale para todas as suas buscas. Cada busca ainda tem frequência e tipos próprios."
-      >
+      <Panel title="Como você recebe">
         <Resource value={prefs}>
           {({ preferencias, email_disponivel }) => (
             <div className="ui-form al-form">

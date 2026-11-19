@@ -42,8 +42,7 @@ export function HomeWorkspace({ demoMode }: HomeWorkspaceProps) {
     <main className="workspace-page">
       <div className="workspace-heading">
         <p className="eyebrow">LiciteComigo · Empresas</p>
-        <h1>O que você precisa verificar hoje?</h1>
-        <p>Encontre a informação certa, confira a fonte e registre o próximo passo.</p>
+        <h1>Início</h1>
       </div>
       <section className="workspace-hero" aria-labelledby="hero-title">
         <div>

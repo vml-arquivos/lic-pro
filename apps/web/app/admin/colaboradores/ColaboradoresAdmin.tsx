@@ -112,10 +112,7 @@ export function ColaboradoresAdmin() {
   const [invitesKey, setInvitesKey] = useState(0);
   return (
     <>
-      <Panel
-        title="Convidar colaborador"
-        description="A pessoa recebe um link, cria a senha e entra na área de Colaborador. Depois do convite, libere os nichos dela abaixo."
-      >
+      <Panel title="Convidar colaborador">
         <InviteForm
           kind="colaborador"
           onCreated={() => {
@@ -124,10 +121,7 @@ export function ColaboradoresAdmin() {
           }}
         />
       </Panel>
-      <Panel
-        title="Colaboradores cadastrados"
-        description="Para salvar oportunidades e agenda, cadastre os dados da empresa do Licite Comigo em Dados da empresa (área de Colaborador)."
-      >
+      <Panel title="Colaboradores cadastrados">
         {error ? <Alert kind="error">{error}</Alert> : null}
         {link ? <ResetLinkBox link={link} onClose={() => setLink(null)} /> : null}
         <Resource value={people}>

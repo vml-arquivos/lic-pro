@@ -40,11 +40,11 @@ export function MateriaisBiblioteca() {
             )}
           </p>
           {items.length === 0 ? <Empty>Nenhum material liberado por enquanto.</Empty> : null}
-          {ETAPAS.map(([id, titulo, descricao]) => {
+          {ETAPAS.map(([id, titulo]) => {
             const lista = items.filter((item) => item.etapa === id);
             if (!lista.length) return null;
             return (
-              <Panel key={id} title={titulo} description={descricao}>
+              <Panel key={id} title={titulo}>
                 <ul className="ui-list">
                   {lista.map((item) => (
                     <li key={item.id}>

@@ -9,11 +9,7 @@ export default async function Plano30Page() {
   const session = await requireArea('administracao', 'curso', 'aluno');
   return (
     <div className="ui-page">
-      <PageHeader
-        eyebrow="Meu curso"
-        title="Plano de 30 dias"
-        description="Um passo por dia: aulas, práticas com editais reais e revisão. O mentor pode ajustar o plano e comentar cada dia."
-      />
+      <PageHeader eyebrow="Meu curso" title="Plano de 30 dias" />
       <PlanoApp canEdit={session.area === 'aluno'} />
     </div>
   );

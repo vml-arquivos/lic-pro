@@ -51,11 +51,7 @@ export function StudentDashboard({
   const first = nome.split(/\s+/)[0] ?? nome;
   return (
     <main className="ui-page">
-      <PageHeader
-        eyebrow="Aluno"
-        title={`Olá, ${first}`}
-        description="Seu espaço do curso: estude, pratique com editais reais e acompanhe o que o mentor comentou."
-      />
+      <PageHeader eyebrow="Aluno" title={`Olá, ${first}`} />
       {hub}
       <Resource value={home}>
         {(data) => {
@@ -71,10 +67,7 @@ export function StudentDashboard({
                 </Alert>
               ) : null}
               {data.diagnostico_feito === false ? (
-                <Panel
-                  title="Comece pelo seu diagnóstico"
-                  description="Cinco minutos para o seu mentor conhecer o seu ponto de partida e para os materiais seguirem o seu caminho."
-                >
+                <Panel title="Comece pelo seu diagnóstico">
                   <Link className="ui-btn" href="/diagnostico">
                     Responder agora
                   </Link>
@@ -189,7 +182,7 @@ export function StudentDashboard({
           );
         }}
       </Resource>
-      <Panel title="Seus nichos de prática" description="Definem o que o Radar mostra para você.">
+      <Panel title="Seus nichos de prática">
         {nichos.length ? (
           <ul className="ui-list">
             {nichos.map((code) => (

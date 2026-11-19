@@ -13,11 +13,7 @@ export default async function CuponsPage() {
   await requireArea('administracao');
   return (
     <main className="ui-page">
-      <PageHeader
-        eyebrow="Painel admin"
-        title="Cupons de desconto"
-        description="Crie códigos para campanhas e parcerias. O desconto vale para as assinaturas escolhidas."
-      />
+      <PageHeader eyebrow="Painel admin" title="Cupons de desconto" />
       <CouponsAdmin modulo="profissional" />
     </main>
   );

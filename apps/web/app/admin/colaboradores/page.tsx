@@ -11,11 +11,7 @@ export default async function ColaboradoresPage() {
   await requireArea('administracao');
   return (
     <main className="ui-page">
-      <PageHeader
-        eyebrow="Painel admin"
-        title="Colaboradores"
-        description="Equipe que busca e acompanha licitações pela operação do Licite Comigo. Cada colaborador só enxerga os nichos que você liberar."
-      />
+      <PageHeader eyebrow="Painel admin" title="Colaboradores" />
       <ColaboradoresAdmin />
     </main>
   );

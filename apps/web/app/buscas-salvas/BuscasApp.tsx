@@ -100,7 +100,7 @@ export function BuscasApp() {
                               <Panel
                                 key={busca.id}
                                 title={busca.nome}
-                                description={`Atualizada em ${formatDate(busca.updated_at, true)}`}
+                                meta={`Atualizada em ${formatDate(busca.updated_at, true)}`}
                                 actions={
                                   <div className="ui-table-actions">
                                     <Link

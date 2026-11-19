@@ -96,12 +96,7 @@ export function AdminOverview({ modulo = 'profissional' }: Readonly<{ modulo?: M
             </div>
 
             <div className="ui-grid">
-              <Panel
-                title="Uso da plataforma"
-                description={
-                  doCurso ? 'Atividade dos alunos e da mentoria.' : 'Atividade das empresas.'
-                }
-              >
+              <Panel title="Uso da plataforma">
                 <ul className="ui-list">
                   {doCurso ? null : (
                     <>
@@ -121,10 +116,7 @@ export function AdminOverview({ modulo = 'profissional' }: Readonly<{ modulo?: M
                   </li>
                 </ul>
               </Panel>
-              <Panel
-                title="Contas por tipo"
-                description={doCurso ? 'Alunos e mentores.' : 'Empresas, colaboradores e equipe.'}
-              >
+              <Panel title="Contas por tipo">
                 <ul className="ui-list">
                   {data.contas_por_papel.map((row) => (
                     <li key={row.papel}>
@@ -139,7 +131,6 @@ export function AdminOverview({ modulo = 'profissional' }: Readonly<{ modulo?: M
               {doCurso ? null : (
                 <Panel
                   title="Coleta de editais"
-                  description="Situação da leitura das fontes públicas."
                   actions={<Link href="/admin/fontes">Ver detalhes</Link>}
                 >
                   <ul className="ui-list">

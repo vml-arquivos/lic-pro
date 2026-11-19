@@ -19,11 +19,7 @@ export default async function OnboardingPage() {
       </Link>
       <div className="page-heading">
         <p className="eyebrow">Primeiro acesso</p>
-        <h1>Vamos montar seu perfil.</h1>
-        <p>
-          Duas escolhas rápidas: seus nichos e como prefere as explicações. Estados e faixa de valor
-          você ajusta depois, no Radar.
-        </p>
+        <h1>Seu perfil</h1>
       </div>
       <OnboardingForm area={session.area} initialProfile={session.perfil_jornada} />
     </main>

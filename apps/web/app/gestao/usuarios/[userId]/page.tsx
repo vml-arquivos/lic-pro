@@ -19,11 +19,7 @@ export default async function UserFichaPage({
   const session = await requireArea('curso');
   return (
     <main className="ui-page">
-      <PageHeader
-        eyebrow="Painel da mentoria"
-        title="Ficha do usuário"
-        description="Quem é, o que já acessou, o que buscou e o que está procurando."
-      />
+      <PageHeader eyebrow="Painel da mentoria" title="Ficha do usuário" />
       <FichaUsuario
         userId={params.userId}
         selfId={session.id}

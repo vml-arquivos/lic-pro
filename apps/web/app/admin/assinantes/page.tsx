@@ -13,11 +13,7 @@ export default async function AssinantesPage() {
   await requireArea('administracao');
   return (
     <main className="ui-page">
-      <PageHeader
-        eyebrow="Painel admin"
-        title="Assinantes"
-        description="Quem está em teste grátis, quem assina e o que fazer com cada conta."
-      />
+      <PageHeader eyebrow="Painel admin" title="Assinantes" />
       <SubscribersAdmin />
     </main>
   );

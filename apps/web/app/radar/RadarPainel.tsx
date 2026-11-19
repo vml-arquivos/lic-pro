@@ -22,7 +22,6 @@ type Painel = {
 type CardDef = {
   key: keyof Painel['cards'];
   label: string;
-  hint: string;
   tone?: 'warn' | 'ok';
   filter: (since: string) => Record<string, string>;
 };
@@ -31,53 +30,45 @@ const CARDS: CardDef[] = [
   {
     key: 'novas',
     label: 'Novas desde a última visita',
-    hint: 'Publicadas depois do seu último acesso',
     tone: 'ok',
     filter: (since) => ({ periodo_tipo: 'publicacao', periodo_de: since }),
   },
   {
     key: 'encerram_hoje',
     label: 'Encerram hoje',
-    hint: 'Propostas ainda abertas',
     tone: 'warn',
     filter: () => ({ situacao_prazo: 'vencendo_hoje', ordem: 'encerram' }),
   },
   {
     key: 'encerram_3_dias',
     label: 'Encerram em 3 dias',
-    hint: 'Hora de decidir',
     tone: 'warn',
     filter: () => ({ situacao_prazo: 'vencendo_3', ordem: 'encerram' }),
   },
   {
     key: 'alteradas',
     label: 'Alteradas',
-    hint: 'Mudaram depois da sua última visita',
     filter: (since) => ({ alterados_desde: since }),
   },
   {
     key: 'compativeis',
     label: 'Muito compatíveis',
-    hint: 'Nota de 70% ou mais, com propostas abertas',
     tone: 'ok',
     filter: () => ({ compat_min: '70', situacao_prazo: 'abertas', ordem: 'compat' }),
   },
   {
     key: 'grande_vulto',
     label: 'Grande vulto',
-    hint: 'Acima de R$ 200 milhões, em aberto',
     filter: () => ({ grande_vulto: 'true', situacao_prazo: 'abertas' }),
   },
   {
     key: 'favoritas',
     label: 'Favoritas',
-    hint: 'As que você marcou',
     filter: () => ({ estado: 'favoritas' }),
   },
   {
     key: 'abertas',
     label: 'Com propostas abertas',
-    hint: 'No seu escopo de nichos',
     filter: () => ({ situacao_prazo: 'abertas' }),
   },
 ];
@@ -124,12 +115,7 @@ export function RadarPainel({
             onClick={() => onPick(card.filter(data.desde))}
             aria-label={`${card.label}: ${data.cards[card.key]}. Ver editais.`}
           >
-            <Kpi
-              label={card.label}
-              value={data.cards[card.key]}
-              hint={card.hint}
-              tone={card.tone}
-            />
+            <Kpi label={card.label} value={data.cards[card.key]} tone={card.tone} />
           </button>
         ))}
       </div>

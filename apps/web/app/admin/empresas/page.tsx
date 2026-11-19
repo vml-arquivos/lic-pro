@@ -11,11 +11,7 @@ export default async function CompaniesPage() {
   await requireArea('administracao');
   return (
     <main className="ui-page">
-      <PageHeader
-        eyebrow="Painel admin"
-        title="Empresas clientes"
-        description="Cada empresa tem uma conta própria e isolada. Convide, acompanhe e desative por aqui."
-      />
+      <PageHeader eyebrow="Painel admin" title="Empresas clientes" />
       <CompaniesAdmin />
     </main>
   );

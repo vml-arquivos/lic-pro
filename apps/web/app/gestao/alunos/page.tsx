@@ -11,11 +11,7 @@ export default async function StudentsPage() {
   await requireArea('curso');
   return (
     <main className="ui-page">
-      <PageHeader
-        eyebrow="Painel da mentoria"
-        title="Alunos e turmas"
-        description="O aluno só entra por matrícula feita aqui. Crie a turma, gere o convite e acompanhe o progresso."
-      />
+      <PageHeader eyebrow="Painel da mentoria" title="Alunos e turmas" />
       <StudentsAdmin />
     </main>
   );

@@ -38,10 +38,7 @@ export function MentorsAdmin() {
   const [invitesKey, setInvitesKey] = useState(0);
   return (
     <>
-      <Panel
-        title="Convidar mentor"
-        description="O mentor recebe um link, cria a senha e já entra na área de Mentor."
-      >
+      <Panel title="Convidar mentor">
         <InviteForm
           kind="mentor"
           onCreated={() => {
@@ -50,10 +47,7 @@ export function MentorsAdmin() {
           }}
         />
       </Panel>
-      <Panel
-        title="Mentores cadastrados"
-        description="Ficha, edição e link para o mentor definir uma nova senha."
-      >
+      <Panel title="Mentores cadastrados">
         {error ? <Alert kind="error">{error}</Alert> : null}
         {link ? <ResetLinkBox link={link} onClose={() => setLink(null)} /> : null}
         <Resource value={mentors}>

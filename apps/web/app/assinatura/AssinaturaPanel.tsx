@@ -199,10 +199,7 @@ export function AssinaturaPanel() {
               </Panel>
             ) : null}
 
-            <Panel
-              title="Planos"
-              description="Cobrança recorrente por Pix, boleto ou cartão. Sem fidelidade: cancele quando quiser."
-            >
+            <Panel title="Planos">
               {!info.vendas_ativas ? (
                 <Alert kind="info">
                   A contratação online ainda não está habilitada. Fale com a equipe para ativar o

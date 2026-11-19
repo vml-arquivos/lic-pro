@@ -87,10 +87,6 @@ export default async function HomePage() {
           </article>
         ))}
       </section>
-      <p className="landing-foot">
-        Dados de fontes públicas oficiais (PNCP e Compras.gov.br). Sempre confira o edital original
-        antes de decidir.
-      </p>
     </main>
   );
 }

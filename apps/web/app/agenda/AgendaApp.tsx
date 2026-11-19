@@ -58,9 +58,8 @@ export function AgendaApp() {
   return (
     <div className="ui-page">
       <PageHeader
-        eyebrow="Agenda"
-        title="Prazos e tarefas"
-        description="Os prazos dos editais que você salvou entram sozinhos. Você recebe um aviso no sino 3 dias e 1 dia antes."
+        eyebrow="Minha empresa"
+        title="Agenda"
         actions={
           <label className="op-move">
             Mostrar próximos
@@ -76,10 +75,7 @@ export function AgendaApp() {
       <Resource value={agenda}>
         {(data) => (
           <div className="op-agenda">
-            <Panel
-              title="Prazos"
-              description="Em ordem de vencimento. Atrasados dos últimos 7 dias aparecem primeiro."
-            >
+            <Panel title="Prazos">
               {data.prazos.length === 0 ? (
                 <Empty>
                   Nenhum prazo no período. Salve oportunidades no pipeline ou adicione um prazo
@@ -192,7 +188,7 @@ export function AgendaApp() {
               </form>
             </Panel>
 
-            <Panel title="Tarefas" description="O que precisa ser feito, com ou sem data.">
+            <Panel title="Tarefas">
               {data.tarefas.length === 0 ? <Empty>Nenhuma tarefa aberta.</Empty> : null}
               <ul className="op-list">
                 {data.tarefas.map((item) => {

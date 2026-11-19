@@ -314,16 +314,8 @@ export function Ranking({
       {estado.state === 'ready' ? (
         <>
           <div className="ui-kpis an-kpis">
-            <Kpi
-              label="Editais analisados"
-              value={estado.data.total_candidatos}
-              hint={`até ${estado.data.limite_candidatos} por consulta`}
-            />
-            <Kpi
-              label="No ranking"
-              value={estado.data.itens.length}
-              hint={`${FOCO_ROTULOS[foco]} · 10 por página`}
-            />
+            <Kpi label="Editais analisados" value={estado.data.total_candidatos} />
+            <Kpi label="No ranking" value={estado.data.itens.length} />
             <Kpi
               label="Lucro estimado do topo"
               value={moeda(
@@ -331,7 +323,6 @@ export function Ranking({
                   .slice(0, 5)
                   .reduce((soma, item) => soma + (item.analise.lucro_estimado ?? 0), 0),
               )}
-              hint="soma dos 5 primeiros"
             />
           </div>
           {!estado.data.perfil_definido ? (

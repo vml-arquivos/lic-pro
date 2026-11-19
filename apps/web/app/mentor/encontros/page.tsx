@@ -9,11 +9,7 @@ export default async function EncontrosEquipePage() {
   await requireArea('administracao', 'curso', 'mentor');
   return (
     <div className="ui-page">
-      <PageHeader
-        eyebrow="Mentoria"
-        title="Encontros ao vivo"
-        description="Marque encontros para a turma toda. Os alunos são avisados e veem o link na página deles."
-      />
+      <PageHeader eyebrow="Mentoria" title="Encontros ao vivo" />
       <EncontrosEquipe />
     </div>
   );

@@ -57,10 +57,7 @@ export function InvitationsPanel({
   }
 
   return (
-    <Panel
-      title="Convites de cadastro"
-      description="Quem foi convidado e ainda não criou a senha. “Novo link” gera outro link de cadastro (o anterior deixa de valer)."
-    >
+    <Panel title="Convites de cadastro">
       {error ? <Alert kind="error">{error}</Alert> : null}
       <Resource value={invitations}>
         {({ data }) => {

@@ -110,7 +110,7 @@ export function OportunidadeDetalhe({ id }: Readonly<{ id: string }>) {
             <PageHeader
               eyebrow="Oportunidade"
               title={data.oportunidade.titulo}
-              description={[
+              meta={[
                 data.oportunidade.orgao,
                 data.oportunidade.municipio_nome,
                 data.oportunidade.uf,
@@ -154,10 +154,7 @@ function StatusPanel({ data, run }: Readonly<{ data: Detail; run: Run }>) {
   const o = data.oportunidade;
   const [editing, setEditing] = useState(false);
   return (
-    <Panel
-      title="Etapa e decisão"
-      description="A decisão fica no histórico, com o motivo e a data."
-    >
+    <Panel title="Etapa e decisão">
       <div className="op-status-row">
         <Badge tone="muted">{STATUS_LABEL[o.status] ?? o.status}</Badge>
         {o.decisao ? (
@@ -246,10 +243,7 @@ function ChecklistPanel({ data, run }: Readonly<{ data: Detail; run: Run }>) {
   const [models] = useResource<Models>('/checklist-models');
   const [model, setModel] = useState(data.modelo_sugerido);
   return (
-    <Panel
-      title="Checklist de habilitação"
-      description="Lista de apoio. Cada edital pede coisas diferentes: confira o edital e ajuste os itens."
-    >
+    <Panel title="Checklist de habilitação">
       <Resource value={models}>
         {(catalog) => (
           <form
@@ -376,10 +370,7 @@ function AgendaPanel({ data, run }: Readonly<{ data: Detail; run: Run }>) {
   const [deadline, setDeadline] = useState({ titulo: '', tipo: 'esclarecimento', quando: '' });
   const [task, setTask] = useState({ titulo: '', prioridade: 'normal', quando: '' });
   return (
-    <Panel
-      title="Prazos e tarefas desta oportunidade"
-      description="As datas do edital entram sozinhas. Acrescente as suas."
-    >
+    <Panel title="Prazos e tarefas desta oportunidade">
       <h3 className="op-sub">Prazos</h3>
       {data.prazos.length === 0 ? <Empty>Sem prazos. O edital não trouxe datas.</Empty> : null}
       <ul className="op-list">

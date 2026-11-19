@@ -61,10 +61,6 @@ export function OnboardingForm({
     <form className="onboarding-form" onSubmit={(event) => void submit(event)}>
       <fieldset className="question-card">
         <legend>Seus nichos de atuação</legend>
-        <p className="form-hint">
-          Escolha de um a três nichos. Eles definem o escopo padrão do Radar, das buscas salvas e
-          dos alertas.
-        </p>
         {niches.map((niche, index) => (
           <label key={index}>
             {`Nicho ${index + 1}`}

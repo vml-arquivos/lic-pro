@@ -68,7 +68,6 @@ function AlertEngine() {
   return (
     <Panel
       title="Motor de alertas"
-      description="Procura oportunidades novas para as buscas salvas e entrega os avisos."
       actions={
         <button
           type="button"
@@ -201,7 +200,6 @@ function PncpCollector() {
   return (
     <Panel
       title="Editais do governo (PNCP)"
-      description="Leitura direta do Portal Nacional de Contratações Públicas, sem serviço extra."
       actions={
         <span className="ui-header-actions">
           <label className="sr-only" htmlFor="coleta-dias">
@@ -236,11 +234,7 @@ function PncpCollector() {
         {(data) => (
           <>
             <div className="ui-kpis">
-              <Kpi
-                label="Editais no catálogo"
-                value={formatNumber(data.catalogo.total)}
-                hint="Vindos do PNCP"
-              />
+              <Kpi label="Editais no catálogo" value={formatNumber(data.catalogo.total)} />
               <Kpi
                 label="Com proposta aberta"
                 value={formatNumber(data.catalogo.abertos)}
@@ -339,7 +333,6 @@ function IntegrationTests() {
   return (
     <Panel
       title="Testar integrações"
-      description="Confere agora se o PNCP, o Compras.gov.br, o Asaas e o e-mail respondem. Só leitura: não cobra nem grava nada."
       actions={
         <button
           type="button"
@@ -394,11 +387,7 @@ function LegacyIngest({ ingest }: Readonly<{ ingest: Loaded<Ingest> }>) {
       {(data) => (
         <>
           <div className="ui-kpis">
-            <Kpi
-              label="Fontes acompanhadas"
-              value={formatNumber(data.checkpoints.checkpoints)}
-              hint="Com ponto de leitura registrado"
-            />
+            <Kpi label="Fontes acompanhadas" value={formatNumber(data.checkpoints.checkpoints)} />
             <Kpi
               label="Atualizadas em 24 h"
               value={formatNumber(data.checkpoints.atualizados_24h)}
@@ -411,10 +400,7 @@ function LegacyIngest({ ingest }: Readonly<{ ingest: Loaded<Ingest> }>) {
               tone={data.dead_letters.pendentes ? 'warn' : 'ok'}
             />
           </div>
-          <Panel
-            title="Serviço de coleta externo (opcional)"
-            description="Só aparece atividade aqui se o serviço de ingestão separado estiver ligado."
-          >
+          <Panel title="Serviço de coleta externo (opcional)">
             <ul className="ui-list">
               <li>
                 <span>Última atualização de fonte</span>

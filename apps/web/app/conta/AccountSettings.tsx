@@ -262,7 +262,7 @@ export function AccountSettings() {
       <main className="account-page">
         <section className="access-denied" role="alert">
           <p className="eyebrow">Minha conta</p>
-          <h1>Entre para acessar seus dados.</h1>
+          <h1>Entre na sua conta</h1>
           <p>
             Perfil, empresas, segurança e painéis ficam disponíveis somente para a conta
             autenticada.
@@ -397,9 +397,6 @@ export function AccountSettings() {
             ) : (
               <fieldset className="account-fieldset">
                 <legend>Nichos do Radar</legend>
-                <p className="form-hint">
-                  Esses nichos definem o escopo de oportunidades e alertas da conta.
-                </p>
                 <div className="account-form-grid account-niche-grid">
                   {niches.map((value, index) => (
                     <label key={index}>

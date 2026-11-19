@@ -144,25 +144,14 @@ export function Simulador({ inicial }: Readonly<{ inicial: SimulacaoInicial | nu
           <h2>Seus números</h2>
           <div className="an-sim-grid">
             <Campo rotulo="Quantidade" valor={quantidade} onChange={setQuantidade} />
-            <Campo
-              rotulo="Seu custo por unidade (R$)"
-              valor={custo}
-              onChange={setCusto}
-              ajuda="Compra, produção ou serviço, sem imposto de venda."
-            />
+            <Campo rotulo="Seu custo por unidade (R$)" valor={custo} onChange={setCusto} />
             <Campo rotulo="Frete total (R$)" valor={frete} onChange={setFrete} />
-            <Campo
-              rotulo="Outros custos totais (R$)"
-              valor={outros}
-              onChange={setOutros}
-              ajuda="Embalagem, garantia, mão de obra."
-            />
+            <Campo rotulo="Outros custos totais (R$)" valor={outros} onChange={setOutros} />
             <Campo
               rotulo="Impostos sobre a venda"
               valor={impostos}
               onChange={setImpostos}
               sufixo="%"
-              ajuda="Confirme com seu contador (Simples, Presumido…)."
             />
             <Campo
               rotulo="Comissão / intermediação"
@@ -199,7 +188,6 @@ export function Simulador({ inicial }: Readonly<{ inicial: SimulacaoInicial | nu
                   rotulo="Teto da taxa por processo (R$)"
                   valor={taxaTeto}
                   onChange={setTaxaTeto}
-                  ajuda="Deixe vazio se não há teto."
                 />
                 <Campo
                   rotulo="Valor fixo por processo (R$)"
@@ -213,19 +201,16 @@ export function Simulador({ inicial }: Readonly<{ inicial: SimulacaoInicial | nu
               valor={margemMin}
               onChange={setMargemMin}
               sufixo="%"
-              ajuda="Lucro sobre o valor vendido."
             />
             <Campo
               rotulo="Preço de referência do edital (R$ por unidade)"
               valor={referencia}
               onChange={setReferencia}
-              ajuda="O valor estimado pelo órgão, que é o teto."
             />
             <Campo
               rotulo="Preço de mercado (R$ por unidade)"
               valor={mercado}
               onChange={setMercado}
-              ajuda="Opcional. Ex.: a mediana em Preços pagos."
             />
           </div>
         </section>
@@ -239,15 +224,10 @@ export function Simulador({ inicial }: Readonly<{ inicial: SimulacaoInicial | nu
             <>
               <div className="ui-kpis an-kpis">
                 <Kpi label="Custo total" value={moeda2(resultado.custo_total)} />
-                <Kpi
-                  label="Ponto de equilíbrio"
-                  value={moeda2(resultado.preco_equilibrio)}
-                  hint="preço por unidade sem lucro"
-                />
+                <Kpi label="Ponto de equilíbrio" value={moeda2(resultado.preco_equilibrio)} />
                 <Kpi
                   label="Preço mínimo com margem"
                   value={moeda2(resultado.preco_minimo)}
-                  hint={`para ${margemMin || 0}% de margem`}
                   tone={resultado.preco_minimo === null ? 'warn' : 'ok'}
                 />
                 <Kpi
@@ -257,7 +237,6 @@ export function Simulador({ inicial }: Readonly<{ inicial: SimulacaoInicial | nu
                       ? '—'
                       : `${resultado.desconto_maximo_pct.toLocaleString('pt-BR')}%`
                   }
-                  hint="sobre o preço de referência"
                 />
               </div>
               {resultado.leitura_mercado ? (
@@ -304,10 +283,6 @@ export function Simulador({ inicial }: Readonly<{ inicial: SimulacaoInicial | nu
                   </table>
                 </div>
               ) : null}
-              <p className="an-aviso">
-                Simulação de apoio com os números que você informou. Confira tributos, garantias e
-                regras do edital antes de dar o lance.
-              </p>
             </>
           )}
         </section>

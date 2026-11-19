@@ -132,9 +132,6 @@ export function InviteForm({
             <option value="curso">Só o Painel da mentoria (alunos, turmas e materiais)</option>
             <option value="tudo">Acesso total (os dois painéis e a equipe)</option>
           </select>
-          <small>
-            Quem tem acesso só a um painel não vê o dinheiro, os leads nem as contas do outro.
-          </small>
         </label>
       ) : null}
       {kind === 'equipe' && podeBloquear ? (

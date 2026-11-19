@@ -124,7 +124,6 @@ export function FinanceAdmin({ modulo = 'profissional' }: Readonly<{ modulo?: Mo
                   <Kpi
                     label="Receita recorrente (MRR)"
                     value={brl(info.assinaturas.mrr_centavos)}
-                    hint="assinaturas pagas, por mês"
                   />
                   <Kpi label="Assinantes ativos" value={formatNumber(info.assinaturas.ativas)} />
                   <Kpi
@@ -148,10 +147,7 @@ export function FinanceAdmin({ modulo = 'profissional' }: Readonly<{ modulo?: Mo
               </Alert>
             ) : null}
 
-            <Panel
-              title="Receita por mês"
-              description="Pagamentos confirmados nos últimos 6 meses."
-            >
+            <Panel title="Receita por mês">
               {info.receita_por_mes.length ? (
                 <ol className="fin-bars" aria-label="Receita por mês">
                   {info.receita_por_mes.map((row) => (

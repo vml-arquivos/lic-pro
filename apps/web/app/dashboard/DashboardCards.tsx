@@ -135,11 +135,7 @@ export function DashboardCards() {
         </div>
         <div className="dashboard-card">
           <p className="eyebrow">Próximos passos</p>
-          <h2>Decida com evidência</h2>
-          <p>
-            Use o Radar para encontrar oportunidades, salve as que interessam e confira sempre o
-            edital original.
-          </p>
+          <h2>Radar de licitações</h2>
           <div className="dashboard-links">
             <Link href="/radar">Abrir Radar</Link>
             <Link href="/academia">Ir para Academia</Link>

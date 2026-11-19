@@ -16,11 +16,7 @@ export default async function PortaisPage() {
   return (
     <div className="ui-page">
       <LicitacoesNav atual="/portais" area={session.area} />
-      <PageHeader
-        eyebrow="Portais de compras"
-        title="Portais de compras"
-        description="Quantos editais cada portal tem."
-      />
+      <PageHeader eyebrow="Licitações" title="Portais de compras" />
       <PortaisApp />
     </div>
   );

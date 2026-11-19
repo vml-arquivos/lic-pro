@@ -70,10 +70,7 @@ function Formulario({
       {!canEdit ? (
         <Alert kind="info">Só o aluno responde ao diagnóstico. Você está vendo como equipe.</Alert>
       ) : null}
-      <Panel
-        title="Como você pretende atuar?"
-        description="Isso ajusta os materiais e o plano. Você pode trocar quando quiser."
-      >
+      <Panel title="Como você pretende atuar?">
         <div className="ui-form">
           {Object.entries(ATUACAO).map(([value, label]) => (
             <label key={value} className="ui-choice">

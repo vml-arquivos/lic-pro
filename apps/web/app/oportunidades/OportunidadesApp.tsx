@@ -81,8 +81,7 @@ export function OportunidadesApp() {
     <div className="ui-page">
       <PageHeader
         eyebrow="Oportunidades"
-        title="Seu pipeline de licitações"
-        description="Acompanhe cada edital do primeiro olhar até a decisão. Mova o card de etapa quando avançar, e registre o motivo de participar ou não."
+        title="Pipeline"
         actions={
           <Link className="ui-btn" href="/radar">
             Buscar no Radar

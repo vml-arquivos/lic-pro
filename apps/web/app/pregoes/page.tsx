@@ -21,12 +21,8 @@ export default async function PregoesPage() {
       {session ? <DadosAtualizados /> : null}
       <header className="ui-header">
         <div>
-          <p className="eyebrow">Mercado público</p>
-          <h1>Pregões publicados no seu escopo</h1>
-          <p>
-            Esta visão usa a modalidade oficial de pregão e mostra somente registros capturados. Não
-            é sala de lances nem substitui o portal oficial.
-          </p>
+          <p className="eyebrow">Licitações</p>
+          <h1>Pregões</h1>
         </div>
       </header>
       <PregoesResults

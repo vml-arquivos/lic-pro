@@ -6,12 +6,13 @@ import { api, errorText } from '../../lib/api';
 export function PageHeader({
   eyebrow,
   title,
-  description,
+  meta,
   actions,
 }: Readonly<{
   eyebrow: string;
   title: string;
-  description?: string;
+  /** Só dado do registro aberto (ex.: e-mail), nunca texto de ajuda. */
+  meta?: string;
   actions?: React.ReactNode;
 }>) {
   return (
@@ -19,7 +20,7 @@ export function PageHeader({
       <div>
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>
-        {description ? <p>{description}</p> : null}
+        {meta ? <p className="ui-meta">{meta}</p> : null}
       </div>
       {actions ? <div className="ui-header-actions">{actions}</div> : null}
     </header>
@@ -48,12 +49,13 @@ export function Kpi({
 
 export function Panel({
   title,
-  description,
+  meta,
   actions,
   children,
 }: Readonly<{
   title: string;
-  description?: string;
+  /** Só dado do registro aberto, nunca texto de ajuda. */
+  meta?: string;
   actions?: React.ReactNode;
   children: React.ReactNode;
 }>) {
@@ -62,7 +64,7 @@ export function Panel({
       <div className="ui-panel-head">
         <div>
           <h2>{title}</h2>
-          {description ? <p>{description}</p> : null}
+          {meta ? <p className="ui-meta">{meta}</p> : null}
         </div>
         {actions}
       </div>

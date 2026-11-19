@@ -137,7 +137,7 @@ export function PraticarForm({
       {pratica?.status === 'devolvida' ? (
         <Panel
           title={`Devolutiva do mentor${pratica.nota ? ` · nota ${pratica.nota}/5` : ''}`}
-          description={pratica.devolvida_em ? `Em ${formatDate(pratica.devolvida_em, true)}` : ''}
+          meta={pratica.devolvida_em ? `Em ${formatDate(pratica.devolvida_em, true)}` : ''}
         >
           <p className="cs-answer">{pratica.devolutiva}</p>
           <p className="cs-hint">Você pode ajustar as respostas e enviar de novo.</p>

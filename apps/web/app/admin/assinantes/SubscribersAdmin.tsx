@@ -88,7 +88,6 @@ export function SubscribersAdmin() {
               label="Teste acaba em até 3 dias"
               value={formatNumber(info.resumo.teste_vencendo_3d)}
               tone={info.resumo.teste_vencendo_3d ? 'warn' : undefined}
-              hint="boa hora para falar com eles"
             />
             <Kpi
               label="Em atraso"
@@ -97,7 +96,7 @@ export function SubscribersAdmin() {
             />
             <Kpi label="Encerradas" value={formatNumber(info.resumo.encerradas)} />
           </section>
-          <Panel title="Empresas" description="As 300 assinaturas mais recentes.">
+          <Panel title="Empresas">
             {info.assinantes.length ? (
               <Table label="Assinantes" head={['Empresa', 'Plano', 'Situação', 'Até', 'Pago', '']}>
                 {info.assinantes.map((row) => (

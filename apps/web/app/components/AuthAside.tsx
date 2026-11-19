@@ -14,11 +14,7 @@ export function AuthAside() {
       <p className="hub-eyebrow" style={{ color: 'rgba(255,255,255,0.8)' }}>
         Rede de especialistas
       </p>
-      <h2>Uma mentora. Inteligência conectada.</h2>
-      <p>
-        Radar de licitações, prazos, documentos e curso reunidos em um só lugar, com a Ana como
-        núcleo que organiza tudo para você.
-      </p>
+      <h2>Radar, prazos, documentos e curso.</h2>
       <ul>
         {POINTS.map(([icon, text]) => (
           <li key={text}>

@@ -24,11 +24,7 @@ export default function AcademyPage() {
       : null;
   return (
     <div className="ui-page">
-      <PageHeader
-        eyebrow="Academia"
-        title="Estude licitações no seu ritmo"
-        description="Trilhas com aulas, questionários e progresso salvo. O conteúdo vem direto da plataforma; o que ainda está em revisão aparece marcado."
-      />
+      <PageHeader eyebrow="Aprender" title="Academia" />
       <Resource value={tracks}>
         {(list) =>
           list.length === 0 ? (
@@ -40,7 +36,7 @@ export default function AcademyPage() {
               {list.map((track) => {
                 const concluidas = done(track.slug);
                 return (
-                  <Panel key={track.id} title={track.titulo} description={track.descricao}>
+                  <Panel key={track.id} title={track.titulo}>
                     <div className="ui-table-actions">
                       <Badge tone={track.status === 'publicado' ? 'ok' : 'warn'}>
                         {track.status === 'publicado' ? 'Publicada' : 'Em revisão'}

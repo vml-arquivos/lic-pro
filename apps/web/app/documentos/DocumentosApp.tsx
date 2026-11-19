@@ -121,20 +121,13 @@ export function DocumentosApp() {
 
   return (
     <div className="ui-page">
-      <PageHeader
-        eyebrow="Documentos"
-        title="Documentos da empresa e validades"
-        description="Cadastre o que costuma ser pedido na habilitação e a data de validade. Você recebe um aviso no sino 30 e 7 dias antes de vencer."
-      />
+      <PageHeader eyebrow="Minha empresa" title="Documentos" />
       <Resource value={docs}>
         {({ data, aviso }) => (
           <>
             <Alert kind="info">{aviso}</Alert>
             {notice ? <Alert kind={notice.kind}>{notice.text}</Alert> : null}
-            <Panel
-              title={editing ? 'Editar documento' : 'Novo documento'}
-              description="O arquivo fica com você. Aqui guardamos o nome, a validade e, se quiser, o link de onde ele está."
-            >
+            <Panel title={editing ? 'Editar documento' : 'Novo documento'}>
               <form className="ui-form" onSubmit={(event) => void save(event)}>
                 <label>
                   Tipo

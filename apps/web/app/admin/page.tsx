@@ -12,11 +12,7 @@ export default async function AdminPage() {
   await requireArea('administracao');
   return (
     <main className="ui-page">
-      <PageHeader
-        eyebrow="Painel admin"
-        title="Visão geral"
-        description="Como está a operação hoje: empresas clientes, assinaturas e coleta de editais."
-      />
+      <PageHeader eyebrow="Painel admin" title="Visão geral" />
       <AreaHub area="administracao" />
       <AdminOverview modulo="profissional" />
     </main>

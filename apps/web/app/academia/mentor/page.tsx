@@ -42,11 +42,7 @@ export default function MentorDashboardPage() {
         ← Voltar para Academia
       </Link>
       <p className="eyebrow">Painel do mentor</p>
-      <h1>Acompanhe o próximo passo, não só a nota.</h1>
-      <p className="lead">
-        O painel mostra progresso, perfil de jornada e indicação de próxima ação. Empresas aparecem
-        apenas com concessão explícita.
-      </p>
+      <h1>Alunos</h1>
       {message ? <p className="notice">{message}</p> : null}
       <section className="dashboard-card mentor-companies">
         <p className="eyebrow">Escopo concedido</p>

@@ -13,11 +13,7 @@ export default async function PlanosPage() {
   await requireArea('administracao');
   return (
     <main className="ui-page">
-      <PageHeader
-        eyebrow="Painel admin"
-        title="Planos e preços"
-        description="As assinaturas do sistema profissional. Um plano só aparece para venda depois de ativado."
-      />
+      <PageHeader eyebrow="Painel admin" title="Planos e preços" />
       <PlansAdmin modulo="profissional" />
     </main>
   );

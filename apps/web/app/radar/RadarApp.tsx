@@ -226,11 +226,7 @@ export function RadarApp({
 
   return (
     <div className="ui-page rd-page">
-      <PageHeader
-        eyebrow="Radar"
-        title="Encontre licitações para analisar com calma"
-        description="Os dados vêm de fontes públicas e sempre mostram a origem. Confira o edital e o portal oficial antes de decidir."
-      />
+      <PageHeader eyebrow="Radar" title="Radar de licitações" />
       <LicitacoesNav atual="/radar" area={area} />
       {signedIn ? <DadosAtualizados /> : null}
       {signedIn ? (
@@ -298,7 +294,6 @@ export function RadarApp({
       {state === 'anonymous' ? (
         <section className="ui-panel">
           <h2>Entre para usar o Radar</h2>
-          <p>A busca mostra os editais do seu escopo e guarda suas escolhas.</p>
           <Link className="ui-btn" href="/login">
             Entrar
           </Link>
@@ -309,18 +304,12 @@ export function RadarApp({
           {nichosTravados ? (
             <>
               <h2>Seus nichos ainda não foram liberados</h2>
-              <p>
-                Os nichos do Radar para a sua conta são definidos pelo Painel admin. Peça a
-                liberação para começar a buscar.
-              </p>
+              <p>Peça a liberação à equipe.</p>
             </>
           ) : (
             <>
               <h2>Escolha seus nichos para usar o Radar</h2>
-              <p>
-                Preencha o perfil acima com de um a três nichos. Eles definem o que aparece na sua
-                busca.
-              </p>
+              <p>Escolha de um a três nichos no perfil acima.</p>
             </>
           )}
         </section>
@@ -397,16 +386,10 @@ export function RadarApp({
             ) : null}
             {notice ? <Alert kind={notice.kind}>{notice.text}</Alert> : null}
             {canExport && result.total > 5000 ? (
-              <Alert kind="info">
-                A exportação leva no máximo 5.000 editais. Refine os filtros para exportar o resto.
-              </Alert>
+              <Alert kind="info">A exportação leva até 5.000 editais.</Alert>
             ) : null}
             {result.data.length === 0 ? (
-              <Empty>
-                Nenhum edital encontrado com esses filtros. Desmarque “Filtrar pelo meu perfil”,
-                tire algum filtro ou amplie o prazo. O Radar não inventa resultados sem fonte
-                oficial.
-              </Empty>
+              <Empty>Nenhum edital com esses filtros. Tire algum filtro ou amplie o prazo.</Empty>
             ) : (
               <ResultList
                 key={params.toString()}

@@ -9,11 +9,7 @@ export default async function PraticarPage() {
   await requireArea('administracao', 'curso', 'aluno');
   return (
     <div className="ui-page">
-      <PageHeader
-        eyebrow="Meu curso"
-        title="Praticar com editais reais"
-        description="Leia um edital de verdade, responda perguntas guiadas e receba a devolutiva do mentor. Aqui não existe proposta, lance nem acesso a portal."
-      />
+      <PageHeader eyebrow="Meu curso" title="Praticar" />
       <PraticarList />
     </div>
   );

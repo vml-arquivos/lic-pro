@@ -43,7 +43,7 @@ export function EncontrosAluno() {
               </Alert>
             ) : null}
             {grupo_url ? (
-              <Panel title="Grupo da turma" description="Dúvidas do dia a dia, com a equipe.">
+              <Panel title="Grupo da turma">
                 <a className="ui-btn" href={grupo_url} target="_blank" rel="noreferrer">
                   Entrar no grupo
                 </a>

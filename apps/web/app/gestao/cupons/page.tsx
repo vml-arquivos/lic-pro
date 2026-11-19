@@ -13,11 +13,7 @@ export default async function CuponsPage() {
   await requireArea('curso');
   return (
     <main className="ui-page">
-      <PageHeader
-        eyebrow="Painel da mentoria"
-        title="Cupons do curso"
-        description="Crie códigos para campanhas e parcerias. O desconto vale para o curso."
-      />
+      <PageHeader eyebrow="Painel da mentoria" title="Cupons do curso" />
       <CouponsAdmin modulo="curso" />
     </main>
   );

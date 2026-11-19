@@ -100,10 +100,7 @@ export function CouponsAdmin({ modulo = 'profissional' }: Readonly<{ modulo?: Mo
       {(info) => (
         <>
           {message ? <Alert kind={message.kind}>{message.text}</Alert> : null}
-          <Panel
-            title="Novo cupom"
-            description="O cupom reduz o valor de cada cobrança do plano escolhido (na assinatura, vale para todas as mensalidades). O valor final nunca fica abaixo de R$ 5,00."
-          >
+          <Panel title="Novo cupom">
             <form className="ui-form" onSubmit={(event) => void create(event)}>
               <label>
                 Código

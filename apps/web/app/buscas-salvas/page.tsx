@@ -11,9 +11,8 @@ export default function BuscasSalvasPage() {
   return (
     <div className="ui-page">
       <PageHeader
-        eyebrow="Buscas salvas"
-        title="Suas buscas e os avisos de cada uma"
-        description="Abra uma busca no Radar, ou escolha quando e como quer ser avisado quando aparecer algo novo."
+        eyebrow="Radar"
+        title="Buscas salvas"
         actions={
           <Link className="ui-btn ui-btn-ghost" href="/alertas">
             Ver avisos recebidos

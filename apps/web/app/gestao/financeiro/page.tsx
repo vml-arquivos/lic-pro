@@ -13,11 +13,7 @@ export default async function VendasPage() {
   await requireArea('curso');
   return (
     <main className="ui-page">
-      <PageHeader
-        eyebrow="Painel da mentoria"
-        title="Vendas do curso"
-        description="Quanto entrou e quem comprou o curso. As assinaturas das empresas ficam no Painel admin."
-      />
+      <PageHeader eyebrow="Painel da mentoria" title="Vendas do curso" />
       <FinanceAdmin modulo="curso" />
     </main>
   );
