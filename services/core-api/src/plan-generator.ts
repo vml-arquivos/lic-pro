@@ -41,7 +41,7 @@ export function buildPlan(lessons: readonly PlanLesson[]): PlanDay[] {
         tipo: 'pratica',
         objetivo: 'Aplicar o que estudou em um edital de verdade',
         atividade:
-          'Escolha um edital no Farol, clique em “Praticar este edital” e responda as perguntas guiadas. O mentor devolve com comentários.',
+          'Escolha um edital no Alerta de Licitações, clique em “Praticar este edital” e responda as perguntas guiadas. O mentor devolve com comentários.',
         aula_id: null,
       });
     } else if (dia === 29) {
@@ -70,7 +70,7 @@ export function buildPlan(lessons: readonly PlanLesson[]): PlanDay[] {
           tipo: 'livre',
           objetivo: 'Dia livre de estudo',
           atividade:
-            'Reveja a aula do dia anterior, explore o Farol ou tire uma dúvida com a Ana. Nada obrigatório hoje.',
+            'Reveja a aula do dia anterior, explore o Alerta de Licitações ou tire uma dúvida com a Ana. Nada obrigatório hoje.',
           aula_id: null,
         });
       } else {

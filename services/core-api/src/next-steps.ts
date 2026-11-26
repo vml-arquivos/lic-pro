@@ -69,13 +69,14 @@ export function nextSteps(input: StepInput): Step[] {
   if (input.buscas_ativas === 0)
     steps.push({
       codigo: 'busca',
-      texto: 'Salve uma busca no Farol para receber avisos de oportunidades novas.',
+      texto: 'Salve uma busca no Alerta de Licitações para receber avisos de oportunidades novas.',
       href: '/radar',
     });
   if (input.pipeline_total === 0 && input.buscas_ativas > 0)
     steps.push({
       codigo: 'pipeline',
-      texto: 'Favorite uma oportunidade no Farol e salve no pipeline para acompanhar.',
+      texto:
+        'Favorite uma oportunidade no Alerta de Licitações e salve no pipeline para acompanhar.',
       href: '/radar',
     });
   return steps.slice(0, 6);

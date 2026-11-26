@@ -257,7 +257,7 @@ export function registerRadarRoutes(app: FastifyInstance, { pool }: Deps): void 
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
     reply.header('Content-Disposition', `attachment; filename="radar-${stamp}.xlsx"`);
-    return reply.send(buildXlsx('Farol', EXPORT_HEADER, data));
+    return reply.send(buildXlsx('Alerta de Licitações', EXPORT_HEADER, data));
   });
 
   app.post('/editais/:editalId/interacao', async (request, reply) => {

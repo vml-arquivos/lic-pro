@@ -21,7 +21,7 @@ import { buildEditalExportQuery, editalSearchSchema } from './search.js';
  * Análise de oportunidades: ranking de editais por foco, comparação lado a lado e simulador.
  *
  * Os números vêm do que já está no banco (editais, itens, valores finais de pregões fechados) e
- * do perfil do Farol. A nota é explicável e não prevê vitória; o lucro é uma estimativa com a
+ * do perfil do Alerta de Licitações. A nota é explicável e não prevê vitória; o lucro é uma estimativa com a
  * margem informada por quem consulta. Quando falta dado, a resposta diz (premissa, sem histórico).
  */
 
@@ -35,7 +35,7 @@ const extras = z.object({
   foco: z.enum(FOCOS_ANALISE).default('interessantes'),
   margem_pct: z.coerce.number().min(0).max(90).default(15),
   limite: z.coerce.number().int().min(1).max(100).default(30),
-  /** Usa estados, faixa de valor e palavras do perfil do Farol quando o filtro não foi informado. */
+  /** Usa estados, faixa de valor e palavras do perfil do Alerta de Licitações quando o filtro não foi informado. */
   usar_perfil: z.preprocess((value) => value !== 'false' && value !== false, z.boolean()),
 });
 const rankingQuery = editalSearchSchema.and(extras);

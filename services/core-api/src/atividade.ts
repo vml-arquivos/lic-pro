@@ -29,7 +29,7 @@ export type RecursoUso =
 
 export const RECURSO_LABEL: Record<RecursoUso, string> = {
   login: 'Entrou no sistema',
-  radar: 'Farol de editais',
+  radar: 'Alerta de Licitações',
   edital: 'Abriu editais',
   precos: 'Preços pagos',
   ana: 'Conversou com a Ana',

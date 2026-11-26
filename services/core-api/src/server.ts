@@ -400,7 +400,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (error instanceof Error && error.message === 'niche_preferences_required') {
       reply.code(409).send({
         error: 'niche_preferences_required',
-        message: 'Selecione de um a três nichos no onboarding antes de usar o Farol e os alertas.',
+        message:
+          'Selecione de um a três nichos no onboarding antes de usar o Alerta de Licitações e os alertas.',
       });
       return;
     }
