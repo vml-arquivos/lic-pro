@@ -120,6 +120,7 @@ suite('histórico de preços e concorrentes (PostgreSQL real, fontes simuladas)'
   let server!: Server;
   const calls: string[] = [];
   let contratosFora = false;
+  let contratosLentosMs = 0;
   let resultadosFora = false;
   const platformTenant = randomUUID();
   const clientTenant = randomUUID();
@@ -168,6 +169,11 @@ suite('histórico de preços e concorrentes (PostgreSQL real, fontes simuladas)'
       }
       if (url.includes('/v1/contratos')) {
         if (contratosFora) return send(500, {});
+        if (contratosLentosMs) {
+          const atraso = contratosLentosMs;
+          contratosLentosMs = 0;
+          return void setTimeout(() => send(200, { totalPaginas: 1, data: [] }), atraso);
+        }
         const contrato = (ni: string, nome: string, objeto: string, valor: number, n: number) => ({
           niFornecedor: ni,
           nomeRazaoSocialFornecedor: nome,
@@ -216,6 +222,8 @@ suite('histórico de preços e concorrentes (PostgreSQL real, fontes simuladas)'
     const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
     pool = new Pool({ connectionString: connectionString! });
     setup = new Pool({ connectionString: setupConnectionString! });
+    // O cache das fontes agora fica no banco: cada execução parte do zero.
+    await setup.query('DELETE FROM cache_fontes');
     app = buildApp({
       jwtSecret: 'test-secret',
       logger: false,
@@ -497,5 +505,70 @@ suite('histórico de preços e concorrentes (PostgreSQL real, fontes simuladas)'
     const valores = await get(`/editais/${editalFechado}/resultados`);
     expect(valores.statusCode).toBe(200);
     expect(valores.json()).toMatchObject({ estado: 'parcial', cobertura: { publicados: 1 } });
+  });
+  it('fonte lenta na primeira busca: responde "carregando" e a pergunta seguinte já encontra o dado', async () => {
+    process.env.PRAZO_DA_TELA_MS = '150';
+    try {
+      const outroEdital = randomUUID();
+      extras.push(outroEdital);
+      const cnpjLento = '00394460009999';
+      const idLento = `${cnpjLento}-1-000777/2026`;
+      await setup.query(
+        `INSERT INTO editais (id, tenant_id, fonte, id_externo, titulo, orgao, uf, hash_conteudo, conteudo_texto, data_encerramento_propostas)
+         VALUES ($1, $2, 'pncp', $3, 'Aquisição de papel A4 lento', 'Prefeitura Lenta', 'RR', $4, 'texto', now() + interval '5 days')`,
+        [outroEdital, platformTenant, idLento, `hl-${suffix}`],
+      );
+      contratosLentosMs = 600;
+      const primeira = await get(`/editais/${outroEdital}/concorrentes`);
+      expect(primeira.statusCode).toBe(202);
+      expect(primeira.json()).toMatchObject({
+        estado: 'carregando',
+        dados: { atualizando: true },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      const segunda = await get(`/editais/${outroEdital}/concorrentes`);
+      expect(segunda.statusCode).toBe(200);
+      expect(segunda.json().blocos.contratos_do_orgao.estado).toBe('sem_registro');
+    } finally {
+      delete process.env.PRAZO_DA_TELA_MS;
+    }
+  });
+
+  it('aquecer deixa os dados do edital guardados para a tela abrir na hora', async () => {
+    const antes = calls.length;
+    const resposta = await app.inject({
+      method: 'POST',
+      url: '/editais/aquecer',
+      headers: headers(),
+      payload: { ids: [editalFechado] },
+    });
+    expect(resposta.statusCode).toBe(202);
+    expect(resposta.json()).toEqual({ aquecendo: 1 });
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(calls.length).toBeGreaterThanOrEqual(antes);
+    const inicio = calls.length;
+    const aberta = await get(`/editais/${editalFechado}/concorrentes`);
+    expect(aberta.statusCode).toBe(200);
+    // Contratos do órgão e preços já estavam guardados: a abertura não volta às fontes deles.
+    expect(calls.slice(inicio).some((url) => url.includes('/v1/contratos'))).toBe(false);
+    expect(
+      (
+        await app.inject({
+          method: 'POST',
+          url: '/editais/aquecer',
+          payload: { ids: [editalFechado] },
+        })
+      ).statusCode,
+    ).toBe(401);
+    expect(
+      (
+        await app.inject({
+          method: 'POST',
+          url: '/editais/aquecer',
+          headers: headers(),
+          payload: { ids: [] },
+        })
+      ).statusCode,
+    ).toBe(400);
   });
 });

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { CacheCompartilhado, type ClienteRedis } from '../src/cache-compartilhado.js';
+import {
+  CacheCompartilhado,
+  CarregandoError,
+  type ClienteRedis,
+} from '../src/cache-compartilhado.js';
 
 /** Redis de mentira, compartilhado entre "instâncias" nos testes. */
 function redisFalso(): ClienteRedis & { dados: Map<string, string> } {
@@ -291,5 +295,47 @@ describe('cache compartilhado', () => {
     const depois = await a.exclusivo('edital:1', trabalho);
     expect(depois.ocupado).toBe(false);
     expect(rodou).toBe(2);
+  });
+  it('passado o prazo sem dado guardado, avisa "carregando" e o resultado entra no cache depois', async () => {
+    const cache = new CacheCompartilhado(undefined);
+    let chamadas = 0;
+    const pedido = {
+      validadeMs: 60_000,
+      retencaoMs: 600_000,
+      prazoMs: 30,
+      buscar: async () => {
+        chamadas += 1;
+        await pausa(120);
+        return { valor: { ok: true } };
+      },
+    };
+    await expect(cache.obter('lento', pedido)).rejects.toBeInstanceOf(CarregandoError);
+    // Segundo acesso durante a busca: junta-se a ela, sem nova consulta à fonte.
+    await expect(cache.obter('lento', pedido)).rejects.toBeInstanceOf(CarregandoError);
+    await pausa(200);
+    const pronto = await cache.obter('lento', pedido);
+    expect(pronto).toMatchObject({ origem: 'cache', valor: { ok: true } });
+    expect(chamadas).toBe(1);
+  });
+
+  it('prazo não atrapalha: fonte rápida responde normal e falha da fonte continua falha', async () => {
+    const cache = new CacheCompartilhado(undefined);
+    const rapido = await cache.obter('rapido', {
+      validadeMs: 60_000,
+      retencaoMs: 600_000,
+      prazoMs: 500,
+      buscar: async () => ({ valor: 1 }),
+    });
+    expect(rapido.origem).toBe('fonte');
+    await expect(
+      cache.obter('quebrada', {
+        validadeMs: 60_000,
+        retencaoMs: 600_000,
+        prazoMs: 500,
+        buscar: async () => {
+          throw new Error('fonte caiu');
+        },
+      }),
+    ).rejects.toThrow('fonte caiu');
   });
 });

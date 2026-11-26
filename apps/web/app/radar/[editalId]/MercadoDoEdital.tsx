@@ -107,6 +107,9 @@ const POSICAO: Record<PosicaoDoPreco, { rotulo: string; tom: string }> = {
 export const CONFERE_A_CADA_MS = 10 * 60_000;
 /** Esperas entre novas tentativas depois de uma falha (ms). */
 export const ESPERAS_APOS_ERRO_MS = [4_000, 10_000, 25_000];
+/** Primeira busca ainda em andamento no servidor: pergunta de novo a cada tanto, até o limite. */
+export const ESPERA_BUSCANDO_MS = 3_000;
+export const MAX_ESPERAS_BUSCANDO = 30;
 
 /**
  * Hook comum: busca ao abrir e de novo quando `quando` muda. Mantém o último dado na tela
@@ -124,6 +127,7 @@ export function useBusca<T extends { dados?: MetaDoDado | null }>(
   const [dados, setDados] = useState<T | null>(null);
   const [rodada, setRodada] = useState(0);
   const [falhas, setFalhas] = useState(0);
+  const [buscando, setBuscando] = useState(0);
   const caminhoAtual = useRef(caminho);
   const ultimaBusca = useRef(0);
 
@@ -138,15 +142,22 @@ export function useBusca<T extends { dados?: MetaDoDado | null }>(
       caminhoAtual.current = caminho;
       setDados(null);
       setFalhas(0);
+      setBuscando(0);
     }
     setOcupado(true);
     setErro('');
     api<T>(caminho)
       .then((resposta) => {
         if (!vivo) return;
+        // O servidor ainda está buscando na fonte pela primeira vez: a tela segue em "buscando".
+        if ((resposta as { estado?: string } | null)?.estado === 'carregando') {
+          setBuscando((valor) => valor + 1);
+          return;
+        }
         ultimaBusca.current = Date.now();
         setDados(resposta);
         setFalhas(0);
+        setBuscando(0);
       })
       .catch((causa: unknown) => {
         if (!vivo) return;
@@ -169,15 +180,22 @@ export function useBusca<T extends { dados?: MetaDoDado | null }>(
     return () => clearTimeout(espera);
   }, [ativo, erro, falhas]);
 
+  // Primeira busca em andamento no servidor: pergunta de novo em poucos segundos.
+  useEffect(() => {
+    if (!ativo || buscando === 0 || buscando > MAX_ESPERAS_BUSCANDO) return;
+    const espera = setTimeout(() => setRodada((valor) => valor + 1), ESPERA_BUSCANDO_MS);
+    return () => clearTimeout(espera);
+  }, [ativo, buscando]);
+
   // O servidor está atualizando por baixo: confere de novo algumas vezes.
   const [conferencias, setConferencias] = useState(0);
   const atualizandoPorBaixo = Boolean(dados?.dados?.atualizando);
   useEffect(() => {
-    if (!atualizandoPorBaixo || conferencias >= 4) return;
+    if (!atualizandoPorBaixo || conferencias >= 12) return;
     const espera = setTimeout(() => {
       setConferencias((valor) => valor + 1);
       setRodada((valor) => valor + 1);
-    }, 5000);
+    }, 4000);
     return () => clearTimeout(espera);
   }, [atualizandoPorBaixo, conferencias, dados]);
   useEffect(() => setConferencias(0), [caminho]);
@@ -198,13 +216,18 @@ export function useBusca<T extends { dados?: MetaDoDado | null }>(
     };
   }, [ativo]);
 
+  const esgotouEspera = buscando > MAX_ESPERAS_BUSCANDO && !dados;
   return {
-    ocupado,
-    erro,
+    // Enquanto o servidor busca pela primeira vez, a tela continua em "buscando".
+    ocupado: ocupado || (buscando > 0 && !esgotouEspera && !dados),
+    erro: esgotouEspera
+      ? 'A fonte oficial está demorando mais que o normal. Toque em Atualizar para tentar de novo.'
+      : erro,
     tentandoDeNovo: Boolean(erro) && falhas > 0 && falhas <= ESPERAS_APOS_ERRO_MS.length,
     dados,
     atualizar: () => {
       setFalhas(0);
+      setBuscando(0);
       setRodada((valor) => valor + 1);
     },
   };
@@ -511,17 +534,29 @@ export function ConcorrentesDoEdital({
           <ListaDeConcorrentes
             titulo="Venceram compras parecidas neste órgão"
             lista={dados.similares}
-            vazio="Nenhum contrato parecido encontrado."
+            vazio={
+              dados.blocos?.contratos_do_orgao.estado === 'carregando'
+                ? 'Buscando os contratos do órgão…'
+                : 'Nenhum contrato parecido encontrado.'
+            }
           />
           <ListaDeConcorrentes
             titulo="Mais contratados pelo órgão"
             lista={dados.do_orgao}
-            vazio="Nenhum contrato encontrado."
+            vazio={
+              dados.blocos?.contratos_do_orgao.estado === 'carregando'
+                ? 'Buscando os contratos do órgão…'
+                : 'Nenhum contrato encontrado.'
+            }
           />
           <ListaDeConcorrentes
             titulo="Fornecedores dos mesmos itens"
             lista={dados.dos_itens}
-            vazio="Nenhum fornecedor encontrado."
+            vazio={
+              dados.blocos?.fornecedores_dos_itens.estado === 'carregando'
+                ? 'Buscando os fornecedores dos itens…'
+                : 'Nenhum fornecedor encontrado.'
+            }
           />
           {erro || dados.dados?.desatualizado ? (
             <Atualizar ocupado={ocupado} aoClicar={atualizar} />

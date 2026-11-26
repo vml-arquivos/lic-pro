@@ -6,7 +6,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Area } from '@licitecomigo/shared';
 import { api, errorText, send } from '../../lib/api';
 import { DadosAtualizados } from '../components/DadosAtualizados';
-import { EVENTO_DADOS_ATUALIZADOS } from '../components/SincronizarAoAcessar';
+import {
+  EVENTO_DADOS_ATUALIZADOS,
+  EVENTO_SYNC_PROGRESSO,
+} from '../components/SincronizarAoAcessar';
 import { LicitacoesNav } from '../components/LicitacoesNav';
 import { Alert, Empty, PageHeader } from '../components/ui';
 import { RadarFilters } from './RadarFilters';
@@ -171,12 +174,32 @@ export function RadarApp({
       if (!guardada || guardada.idade >= FRESCO_MS) revalidar();
     };
     window.addEventListener(EVENTO_DADOS_ATUALIZADOS, revalidar);
+    // A rodada ainda corre, mas já entraram editais: mostra sem esperar o fim.
+    window.addEventListener(EVENTO_SYNC_PROGRESSO, revalidar);
     document.addEventListener('visibilitychange', aoVoltar);
     return () => {
       window.removeEventListener(EVENTO_DADOS_ATUALIZADOS, revalidar);
+      window.removeEventListener(EVENTO_SYNC_PROGRESSO, revalidar);
       document.removeEventListener('visibilitychange', aoVoltar);
     };
   }, [signedIn]);
+
+  // Deixa pronto, por baixo, o que a tela do edital vai pedir (concorrentes e preços pagos) para
+  // os primeiros da lista; ao abrir um deles, o dado já está guardado.
+  const aquecidos = useRef(new Set<string>());
+  useEffect(() => {
+    if (!signedIn || !result?.data.length) return;
+    const ids = result.data
+      .slice(0, 6)
+      .map((edital) => edital.id)
+      .filter((id) => !aquecidos.current.has(id));
+    if (!ids.length) return;
+    const espera = setTimeout(() => {
+      ids.forEach((id) => aquecidos.current.add(id));
+      void send('POST', '/editais/aquecer', { ids }).catch(() => undefined);
+    }, 1500);
+    return () => clearTimeout(espera);
+  }, [signedIn, result]);
 
   useEffect(() => {
     void api<{ modalidade?: string[] }>('/catalog/filters')

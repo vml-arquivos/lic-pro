@@ -42,13 +42,24 @@ export function registerCollectionRoutes(
           WHERE status IN ('ok', 'parcial') AND finalizado_em IS NOT NULL
           ORDER BY finalizado_em DESC LIMIT 1`,
       );
-      return found.rows[0] ?? null;
+      const andamento = await client.query<{ novos: number }>(
+        `SELECT (inseridos + atualizados)::int AS novos
+           FROM coleta_pncp_execucoes
+          WHERE status = 'rodando' AND iniciado_em > now() - interval '3 hours'
+          ORDER BY iniciado_em DESC LIMIT 1`,
+      );
+      return found.rows[0]
+        ? { ...found.rows[0], novos: andamento.rows[0]?.novos ?? null }
+        : { ultima: null, status: null, novos: andamento.rows[0]?.novos ?? null };
     });
     return reply.send({
       fonte: 'PNCP',
       ligada: config.pncpSyncEnabled,
       ultima_atualizacao_em: row?.ultima ?? null,
       status: row?.status ?? null,
+      // Rodada em andamento: quantos editais já entraram ou mudaram (null = nenhuma rodando).
+      rodando: row?.novos !== null && row?.novos !== undefined,
+      novos_na_rodada: row?.novos ?? null,
       rodada_rapida_minutos: config.pncpSyncFastMinutes,
       rodada_completa_minutos: config.pncpSyncIntervalMinutes,
     });

@@ -482,6 +482,17 @@ export async function runPncpSync(
             return;
           }
         }
+        // Progresso da rodada: a tela mostra os editais novos sem esperar o fim.
+        if (runId) {
+          await pool
+            .query(
+              `UPDATE coleta_pncp_execucoes
+                  SET paginas = $2, lidos = $3, inseridos = $4, atualizados = $5
+                WHERE id = $1 AND status = 'rodando'`,
+              [runId, result.paginas, result.lidos, result.inseridos, result.atualizados],
+            )
+            .catch(() => undefined);
+        }
         const totalPaginas = Number(body.totalPaginas ?? 0);
         const restantes = Number(body.paginasRestantes ?? 0);
         if (!rows.length || (restantes <= 0 && (!totalPaginas || pagina >= totalPaginas))) return;

@@ -34,7 +34,7 @@ O site institucional será reescrito com comunicação objetiva, visual claro e 
 - `apps/web/app/AppShell.tsx`: navegação funcional e acesso admin.
 - `apps/web/app/workspace/HomeWorkspace.tsx`: home autenticada sem cartões demonstrativos em produção.
 - `apps/web/app/(rotas)`: páginas funcionais e páginas demo condicionadas.
-- `apps/web/public/manus-routes.json`: manifesto público das rotas reais.
+- `docs/manus-routes.json`: manifesto das rotas reais (fora da pasta pública do site).
 - `apps/site/app/page.tsx`: home institucional.
 - `apps/site/app/layout.tsx`, `robots.ts`, `sitemap.ts`: SEO técnico e metadados.
 - `db/migrations/0013_feature_expansion.sql`: campos canônicos de fontes, documentos/eventos, buscas, alertas e checkpoints retomáveis.

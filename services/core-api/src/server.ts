@@ -51,6 +51,7 @@ import { registerConcorrenciaRoutes } from './concorrencia.js';
 import { registerHistoricoRoutes } from './historico-mercado.js';
 import { leituras, registerLeituraRoutes } from './leitura-edital.js';
 import { CacheCompartilhado } from './cache-compartilhado.js';
+import { clienteDoBanco } from './cache-banco.js';
 import { registerPlatformRoutes } from './platform.js';
 import { loadConfig, panelBaseUrl, type RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
@@ -2226,7 +2227,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
   registerPriceRoutes(app, { config, pool });
   // Cache e trabalho único das fontes oficiais, compartilhado entre instâncias quando há Redis.
-  const cacheDasFontes = new CacheCompartilhado(config.redisUrl);
+  // Sem Redis, o cache fica no próprio banco (tabela cache_fontes) e sobrevive a deploy.
+  const cacheDasFontes = new CacheCompartilhado(
+    config.redisUrl,
+    pool && !config.redisUrl ? { cliente: clienteDoBanco(pool) } : {},
+  );
   app.addHook('onClose', async () => cacheDasFontes.fechar());
   leituras.usarCompartilhado(cacheDasFontes);
   registerDetalhesRoutes(app, { pool, config, cache: cacheDasFontes });

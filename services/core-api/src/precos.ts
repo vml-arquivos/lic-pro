@@ -165,7 +165,7 @@ async function getJson(
   url: string,
 ): Promise<{ status: number; body: unknown }> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 25_000);
+  const timer = setTimeout(() => controller.abort(), 12_000);
   try {
     const response = await fetchImpl(url, {
       headers: { accept: 'application/json', 'user-agent': 'LiciteComigo/1.0' },
@@ -237,9 +237,14 @@ export async function consultarPrecos(
   };
   const firstPage = pick(first.body);
   rows.push(...firstPage.items);
-  for (let page = 2; page <= Math.min(firstPage.totalPages, 3); page += 1) {
-    const next = await getJson(fetchImpl, build(page));
-    if (next.status >= 400) break;
+  // As páginas seguintes saem juntas; uma que falhe só deixa o resultado com menos amostras.
+  const more = await Promise.all(
+    Array.from({ length: Math.max(0, Math.min(firstPage.totalPages, 3) - 1) }, (_, index) =>
+      getJson(fetchImpl, build(index + 2)).catch(() => null),
+    ),
+  );
+  for (const next of more) {
+    if (!next || next.status >= 400) continue;
     pages += 1;
     rows.push(...pick(next.body).items);
   }

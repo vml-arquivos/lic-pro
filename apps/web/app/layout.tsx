@@ -8,6 +8,7 @@ import { getSessionResult } from '../lib/session';
 import { AnaWidget } from './ana/AnaWidget';
 import { AppShell } from './AppShell';
 import { WrongPanel } from './WrongPanel';
+import { ProtecaoDeCodigo } from './components/ProtecaoDeCodigo';
 import { SincronizarAoAcessar } from './components/SincronizarAoAcessar';
 import '@fontsource-variable/inter/wght.css';
 import './globals.css';
@@ -61,6 +62,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <html lang="pt-BR">
         <body>
           <WrongPanel url={result.url} />
+          <ProtecaoDeCodigo />
         </body>
       </html>
     );
@@ -76,6 +78,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <AppShell session={session} paineis={painelLinks(session)}>
           {children}
         </AppShell>
+        <ProtecaoDeCodigo />
         {session ? <AnaWidget /> : null}
         {session ? <SincronizarAoAcessar /> : null}
       </body>

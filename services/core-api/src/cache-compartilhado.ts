@@ -23,6 +23,17 @@ export type EntradaDeCache<T> = {
 
 export type OrigemDoDado = 'cache' | 'fonte' | 'antigo';
 
+/**
+ * A fonte ainda não respondeu dentro do prazo pedido. A consulta continua por baixo e o resultado
+ * entra no cache; quem chamou deve mostrar "buscando" e perguntar de novo em poucos segundos.
+ */
+export class CarregandoError extends Error {
+  constructor() {
+    super('carregando');
+    this.name = 'CarregandoError';
+  }
+}
+
 export type ResultadoDoCache<T> = {
   valor: T;
   em: number;
@@ -46,6 +57,11 @@ export type PedidoDeCache<T> = {
   servirVelhoEAtualizar?: boolean;
   /** Se pronto, o dado fresco vale por mais tempo (ex.: resultado final já homologado). */
   validadeDoValor?: (valor: T) => number | null;
+  /**
+   * Sem nenhum dado guardado, espera a fonte só até aqui. Passado o prazo, lança
+   * `CarregandoError` e a consulta segue por baixo (e vai para o cache quando terminar).
+   */
+  prazoMs?: number;
 };
 
 export type OpcoesDoCache = {
@@ -249,7 +265,29 @@ export class CacheCompartilhado {
       }
       this.falhasRecentes.delete(chave);
     }
-    return this.atualizar(chave, pedido, entrada);
+    return this.comPrazo(this.atualizar(chave, pedido, entrada), pedido.prazoMs);
+  }
+
+  /** Espera o trabalho até o prazo; depois dele, deixa o trabalho correr e avisa quem espera. */
+  private comPrazo<R>(trabalho: Promise<R>, prazoMs: number | undefined): Promise<R> {
+    if (!prazoMs || prazoMs <= 0) return trabalho;
+    return new Promise<R>((resolve, rejeitar) => {
+      const relogio = setTimeout(() => {
+        // O trabalho segue sozinho; se falhar depois do prazo, a falha já fica no cache negativo.
+        trabalho.catch(() => undefined);
+        rejeitar(new CarregandoError());
+      }, prazoMs);
+      trabalho.then(
+        (valor) => {
+          clearTimeout(relogio);
+          resolve(valor);
+        },
+        (erro: unknown) => {
+          clearTimeout(relogio);
+          rejeitar(erro);
+        },
+      );
+    });
   }
 
   /** Uma só consulta por chave: acessos juntos esperam o mesmo trabalho. */
@@ -434,3 +472,18 @@ export function metaDoDado(resultado: ResultadoDoCache<unknown>, agora = Date.no
     parcial: resultado.parcial,
   };
 }
+
+/** Meta de um dado que ainda está sendo buscado pela primeira vez (a tela pergunta de novo). */
+export function metaCarregando(agora = Date.now()) {
+  return {
+    consultado_em: new Date(agora).toISOString(),
+    idade_segundos: 0,
+    origem: 'fonte' as const,
+    desatualizado: false,
+    atualizando: true,
+    parcial: false,
+  };
+}
+
+/** Quanto a tela espera a fonte na primeira busca antes de mostrar "buscando" e voltar a perguntar. */
+export const prazoDaTelaMs = (): number => Number(process.env.PRAZO_DA_TELA_MS) || 9_000;

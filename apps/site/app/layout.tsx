@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import './globals.css';
 import { CookieBanner } from '../components/CookieBanner';
+import { ProtecaoDeCodigo } from '../components/ProtecaoDeCodigo';
 import { companyPanelUrl, hasSeparateStudentPanel, studentPanelUrl } from '../lib/panels';
 
 const siteUrl = process.env.SITE_URL ?? 'http://localhost:3100';
@@ -39,6 +40,7 @@ export default function SiteLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="pt-BR">
       <body>
+        <ProtecaoDeCodigo />
         <header className="site-header">
           <Link className="wordmark" href="/" aria-label="Licite Comigo — início">
             <span className="mark">LC</span>

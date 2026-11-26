@@ -146,6 +146,8 @@ suite('concorrência e acompanhamento (PostgreSQL real, PNCP simulado)', () => {
     const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
     pool = new Pool({ connectionString: connectionString! });
     setup = new Pool({ connectionString: setupConnectionString! });
+    // O cache das fontes agora fica no banco: cada execução parte do zero.
+    await setup.query('DELETE FROM cache_fontes');
     app = buildApp({
       jwtSecret: 'test-secret',
       logger: false,

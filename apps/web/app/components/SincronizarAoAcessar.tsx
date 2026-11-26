@@ -6,13 +6,18 @@ import { api } from '../../lib/api';
 /** Eventos que a tela escuta para mostrar "atualizando…" e recarregar listas. */
 export const EVENTO_SYNC_INICIADA = 'licite:sync-iniciada';
 export const EVENTO_DADOS_ATUALIZADOS = 'licite:dados-atualizados';
+/** A rodada ainda não acabou, mas já entraram editais novos. */
+export const EVENTO_SYNC_PROGRESSO = 'licite:sync-progresso';
 
 const CHAVE = 'licite:sync-acesso';
 const INTERVALO_MS = 5 * 60_000;
-const ESPERA_MS = 8_000;
-const TENTATIVAS = 15;
+const ESPERA_MS = 4_000;
+const TENTATIVAS = 40;
 
-type Atualizacao = { ultima_atualizacao_em: string | null };
+type Atualizacao = {
+  ultima_atualizacao_em: string | null;
+  novos_na_rodada?: number | null;
+};
 
 function lerUltimo(): number {
   try {
@@ -44,6 +49,7 @@ export function SincronizarAoAcessar() {
       if (acompanhando) return;
       acompanhando = true;
       window.dispatchEvent(new CustomEvent(EVENTO_SYNC_INICIADA));
+      let novosVistos = 0;
       for (let i = 0; i < TENTATIVAS && ativo; i += 1) {
         await new Promise((resolve) => setTimeout(resolve, ESPERA_MS));
         if (!ativo) break;
@@ -53,6 +59,12 @@ export function SincronizarAoAcessar() {
             window.dispatchEvent(new CustomEvent(EVENTO_DADOS_ATUALIZADOS));
             acompanhando = false;
             return;
+          }
+          // Ainda rodando: se já entraram editais novos, as listas se atualizam agora.
+          const novos = agora.novos_na_rodada ?? 0;
+          if (novos > novosVistos) {
+            novosVistos = novos;
+            window.dispatchEvent(new CustomEvent(EVENTO_SYNC_PROGRESSO));
           }
         } catch {
           // tenta de novo na próxima volta

@@ -18,7 +18,10 @@ import type { RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
 import {
   CacheCompartilhado,
+  CarregandoError,
+  prazoDaTelaMs,
   cacheLocal,
+  metaCarregando,
   metaDoDado,
   type ResultadoDoCache,
 } from './cache-compartilhado.js';
@@ -124,7 +127,7 @@ async function getJson(
   url: string,
 ): Promise<{ status: number; body: unknown }> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 25_000);
+  const timer = setTimeout(() => controller.abort(), 12_000);
   try {
     const response = await fetchImpl(url, {
       headers: { accept: 'application/json', 'user-agent': 'LiciteComigo/1.0' },
@@ -197,22 +200,26 @@ export async function buscarContratosDoOrgao(
     brutos.push(...inicial.itens);
     let paginas = 1;
     let incompleto = false;
-    for (
-      let pagina = 2;
-      pagina <= Math.min(inicial.totalPaginas, PAGINAS_DE_CONTRATOS);
-      pagina += 1
-    ) {
-      try {
-        const proxima = await getJson(fetchImpl, montar(pagina));
-        if (proxima.status >= 400) {
-          incompleto = true;
-          break;
+    // As páginas seguintes saem juntas: o tempo é o da mais lenta, não a soma.
+    const demais = Array.from(
+      { length: Math.max(0, Math.min(inicial.totalPaginas, PAGINAS_DE_CONTRATOS) - 1) },
+      (_, indice) => indice + 2,
+    );
+    const lidas = await Promise.all(
+      demais.map(async (pagina) => {
+        try {
+          const proxima = await getJson(fetchImpl, montar(pagina));
+          return proxima.status >= 400 ? null : lista(proxima.body).itens;
+        } catch {
+          return null;
         }
+      }),
+    );
+    for (const itens of lidas) {
+      if (itens === null) incompleto = true;
+      else {
         paginas += 1;
-        brutos.push(...lista(proxima.body).itens);
-      } catch {
-        incompleto = true;
-        break;
+        brutos.push(...itens);
       }
     }
     return {
@@ -283,6 +290,7 @@ export function itensParaComparar(itens: readonly Item[], limite: number): Item[
 }
 
 const MESES = 12;
+const MENSAGEM_CARREGANDO_PRECO = 'Buscando os preços deste item…';
 const RESUMO_ITEM = (item: Item) => ({
   numero: item.numero,
   descricao: item.descricao,
@@ -350,6 +358,7 @@ type EstadoDoBloco =
   | 'aguardando_publicacao'
   | 'parcial'
   | 'fonte_indisponivel'
+  | 'carregando'
   | 'nao_se_aplica';
 
 const MENSAGEM_DO_ESTADO: Record<EstadoDoBloco, string> = {
@@ -358,6 +367,7 @@ const MENSAGEM_DO_ESTADO: Record<EstadoDoBloco, string> = {
   aguardando_publicacao: 'Ainda sem resultado publicado.',
   parcial: 'Resultado parcial.',
   fonte_indisponivel: 'A fonte não respondeu agora.',
+  carregando: 'Buscando…',
   nao_se_aplica: 'Só existe para editais do PNCP.',
 };
 
@@ -366,28 +376,37 @@ export function registerHistoricoRoutes(
   { pool, config, fetchImpl: fetchBase, cache = cacheLocal }: Deps,
 ): void {
   const limiter = new PublicRateLimiter(60);
-  const fetchPncp = comPoliticaDeFonte(fetchBase ?? fetch, 'pncp');
-  const fetchCompras = comPoliticaDeFonte(fetchBase ?? fetch, 'compras', { concorrencia: 3 });
+  // Consulta feita com a pessoa esperando: poucas esperas entre tentativas.
+  const fetchPncp = comPoliticaDeFonte(fetchBase ?? fetch, 'pncp', {
+    concorrencia: 8,
+    esperaMaximaMs: 4_000,
+  });
+  const fetchCompras = comPoliticaDeFonte(fetchBase ?? fetch, 'compras', {
+    concorrencia: 4,
+    esperaMaximaMs: 4_000,
+  });
 
   /** Preços do CATMAT: um resultado por código para toda a plataforma. */
-  const precosDoCatmat = (catmat: string) =>
+  const precosDoCatmat = (catmat: string, prazoMs: number = prazoDaTelaMs()) =>
     cache.obter<PrecosResultado>(`compras:precos:${catmat}:${MESES}`, {
       validadeMs: 6 * 3_600_000,
       retencaoMs: 7 * 86_400_000,
       servirVelhoEAtualizar: true,
+      prazoMs,
       buscar: async () => ({
         valor: await consultarPrecos({ config, fetchImpl: fetchCompras }, { catmat, meses: MESES }),
       }),
     });
 
   /** Contratos do órgão: um resultado por órgão, usado por todos os editais dele. */
-  const contratosDoOrgao = (cnpj: string) =>
+  const contratosDoOrgao = (cnpj: string, prazoMs: number = prazoDaTelaMs()) =>
     cache.obter<Awaited<ReturnType<typeof buscarContratosDoOrgao>>>(
       `pncp:contratos:${cnpj}:${MESES}`,
       {
         validadeMs: 6 * 3_600_000,
         retencaoMs: 7 * 86_400_000,
         servirVelhoEAtualizar: true,
+        prazoMs,
         buscar: async () => {
           const valor = await buscarContratosDoOrgao(config, cnpj, { meses: MESES }, fetchPncp);
           return { valor, parcial: valor.incompleto };
@@ -428,6 +447,82 @@ export function registerHistoricoRoutes(
     });
   };
 
+  /**
+   * Deixa pronto o que a tela do edital vai pedir: contratos do órgão, preços dos itens e
+   * resultados. A lista do Radar chama isto para os primeiros editais que aparecem, de modo que,
+   * ao abrir um deles, o dado já está guardado. Responde na hora; o trabalho corre por baixo, no
+   * máximo dois por vez, e o que já está guardado não volta à fonte.
+   */
+  const fila: Array<() => Promise<void>> = [];
+  let ativos = 0;
+  const LIMITE_DA_FILA = 40;
+  const andar = (): void => {
+    while (ativos < 2 && fila.length) {
+      const tarefa = fila.shift()!;
+      ativos += 1;
+      void tarefa()
+        .catch(() => undefined)
+        .finally(() => {
+          ativos -= 1;
+          andar();
+        });
+    }
+  };
+  const aquecerEdital = async (
+    edital: { id_externo: string; fonte: string; fechado: boolean },
+    itens: Item[],
+  ): Promise<void> => {
+    const chave = edital.fonte === 'pncp' ? parseNumeroControle(edital.id_externo) : null;
+    const trabalhos: Array<() => Promise<unknown>> = [];
+    if (chave) trabalhos.push(() => contratosDoOrgao(chave.cnpj, 0));
+    for (const item of itensParaComparar(itens, 4)) {
+      trabalhos.push(() => precosDoCatmat(item.catmat_catser!, 0));
+    }
+    if (chave && edital.fechado && itens.length) {
+      trabalhos.push(() =>
+        resultadosDoEdital(
+          { cache, config, fetchImpl: fetchPncp },
+          edital.id_externo,
+          itens.map((item) => ({
+            numero: item.numero,
+            descricao: item.descricao,
+            unidade: item.unidade,
+            quantidade: item.quantidade,
+            valor_unitario_estimado: item.valor_unitario_estimado,
+          })),
+          true,
+        ),
+      );
+    }
+    for (const trabalho of trabalhos) {
+      if (fila.length >= LIMITE_DA_FILA) return;
+      fila.push(async () => {
+        await trabalho();
+      });
+    }
+    andar();
+  };
+
+  app.post('/editais/aquecer', async (request, reply) => {
+    const { ids } = z
+      .object({ ids: z.array(z.string().uuid()).min(1).max(8) })
+      .parse(request.body ?? {});
+    limiter.check(`aquecer:${request.user.sub}`);
+    if (!pool) return reply.code(202).send({ aquecendo: 0 });
+    let aquecendo = 0;
+    for (const id of [...new Set(ids)]) {
+      try {
+        const carregado = await carregar(request, id);
+        if (carregado === 'sem_banco' || !carregado) continue;
+        aquecendo += 1;
+        await aquecerEdital(carregado.edital, carregado.itens);
+      } catch (error) {
+        request.log.warn({ err: error }, 'aquecer edital falhou');
+      }
+    }
+    return reply.code(202).send({ aquecendo });
+  });
+
   /** Preço estimado de cada item × o que foi pago em outras compras do mesmo item (CATMAT). */
   app.get('/editais/:id/historico-precos', async (request, reply) => {
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
@@ -448,6 +543,7 @@ export function registerHistoricoRoutes(
     const idades: ResultadoDoCache<PrecosResultado>[] = [];
     const fila = [...new Set(escolhidos.map((item) => item.catmat_catser!))];
     let falhas = 0;
+    let carregando = 0;
     const trabalhador = async (): Promise<void> => {
       for (let catmat = fila.shift(); catmat; catmat = fila.shift()) {
         try {
@@ -455,6 +551,11 @@ export function registerHistoricoRoutes(
           idades.push(dado);
           porCatmat.set(catmat, dado.valor);
         } catch (error) {
+          if (error instanceof CarregandoError) {
+            carregando += 1;
+            porCatmat.set(catmat, MENSAGEM_CARREGANDO_PRECO);
+            continue;
+          }
           falhas += 1;
           porCatmat.set(
             catmat,
@@ -466,7 +567,11 @@ export function registerHistoricoRoutes(
       }
     };
     const total = fila.length;
-    await Promise.all(Array.from({ length: Math.min(3, total) }, trabalhador));
+    // Todos os códigos ao mesmo tempo: o limite por fonte já protege o Compras.gov.br.
+    await Promise.all(Array.from({ length: Math.min(4, total) }, trabalhador));
+    if (total > 0 && carregando === total) {
+      return reply.code(202).send({ estado: 'carregando', dados: metaCarregando() });
+    }
     if (total > 0 && falhas === total) {
       return reply.code(502).send({
         error: 'fonte_indisponivel',
@@ -535,7 +640,12 @@ export function registerHistoricoRoutes(
       periodo_meses: MESES,
       uf: edital.uf,
       aviso: AVISO_HISTORICO,
-      estado: falhas > 0 ? 'parcial' : escolhidos.length ? 'completo' : 'sem_itens_comparaveis',
+      estado:
+        falhas > 0 || carregando > 0
+          ? 'parcial'
+          : escolhidos.length
+            ? 'completo'
+            : 'sem_itens_comparaveis',
       cobertura: {
         itens_total: itens.length,
         itens_comparaveis: escolhidos.length,
@@ -543,7 +653,14 @@ export function registerHistoricoRoutes(
         codigos_consultados: total,
         codigos_com_falha: falhas,
       },
-      dados: idades.length ? metaDoPiorCaso(idades) : null,
+      dados: idades.length
+        ? {
+            ...metaDoPiorCaso(idades),
+            atualizando: carregando > 0 || metaDoPiorCaso(idades).atualizando,
+          }
+        : carregando > 0
+          ? metaCarregando()
+          : null,
       fonte: {
         ...FONTES_HISTORICO[2],
         consultado_em: idades.length
@@ -589,6 +706,7 @@ export function registerHistoricoRoutes(
               valor_unitario_estimado: item.valor_unitario_estimado,
             })),
             edital.fechado,
+            prazoDaTelaMs(),
           );
           dadosUsados.push(dado);
           const registros: RegistroDeCompra[] = dado.valor.itens.flatMap((item) =>
@@ -620,6 +738,9 @@ export function registerHistoricoRoutes(
             cobertura: dado.valor.cobertura,
           };
         } catch (error) {
+          if (error instanceof CarregandoError) {
+            return { estado: 'carregando' as EstadoDoBloco, vencedores: [] };
+          }
           avisos.push(
             error instanceof DetalhesError
               ? error.message
@@ -641,6 +762,7 @@ export function registerHistoricoRoutes(
           dadosUsados.push(dado);
           return dado.valor;
         } catch (error) {
+          if (error instanceof CarregandoError) return 'carregando' as const;
           avisos.push(
             error instanceof HistoricoError
               ? error.message
@@ -654,6 +776,7 @@ export function registerHistoricoRoutes(
         const catmats = itensParaComparar(itens, 4);
         const registros: RegistroDeCompra[] = [];
         let falhas = 0;
+        let carregando = 0;
         await Promise.all(
           catmats.map(async (item) => {
             try {
@@ -663,15 +786,16 @@ export function registerHistoricoRoutes(
                 const registro = registroDePreco(preco);
                 if (registro) registros.push(registro);
               }
-            } catch {
-              falhas += 1;
+            } catch (error) {
+              if (error instanceof CarregandoError) carregando += 1;
+              else falhas += 1;
             }
           }),
         );
         if (catmats.length && falhas === catmats.length) {
           avisos.push('O Compras.gov.br não respondeu agora; fornecedores por item indisponíveis.');
         }
-        return { catmats, registros, falhas };
+        return { catmats, registros, falhas, carregando };
       })(),
     ]);
 
@@ -691,8 +815,11 @@ export function registerHistoricoRoutes(
       estado: EstadoDoBloco;
       paginas_lidas?: number;
       total_paginas?: number;
-    } = { estado: chave ? 'fonte_indisponivel' : 'nao_se_aplica' };
-    if (contratos && contratos !== 'falhou') {
+    } = {
+      estado:
+        contratos === 'carregando' ? 'carregando' : chave ? 'fonte_indisponivel' : 'nao_se_aplica',
+    };
+    if (contratos && contratos !== 'falhou' && contratos !== 'carregando') {
       contratosAnalisados = contratos.registros.length;
       mesesContratos = contratos.meses;
       doOrgao = agruparConcorrentes(contratos.registros, 10);
@@ -714,17 +841,24 @@ export function registerHistoricoRoutes(
     const blocoItens = {
       estado: (!porItem.catmats.length
         ? 'sem_registro'
-        : porItem.falhas === porItem.catmats.length
-          ? 'fonte_indisponivel'
-          : porItem.falhas > 0
-            ? 'parcial'
-            : dosItens.length
-              ? 'disponivel'
-              : 'sem_registro') as EstadoDoBloco,
+        : porItem.carregando > 0 && !dosItens.length
+          ? 'carregando'
+          : porItem.falhas === porItem.catmats.length
+            ? 'fonte_indisponivel'
+            : porItem.falhas > 0 || porItem.carregando > 0
+              ? 'parcial'
+              : dosItens.length
+                ? 'disponivel'
+                : 'sem_registro') as EstadoDoBloco,
       consultados: porItem.catmats.length,
       falhas: porItem.falhas,
     };
 
+    // Ainda buscando pela primeira vez: se nada ficou pronto, a tela espera e pergunta de novo.
+    const algoCarregando =
+      resultadoDoEdital.estado === 'carregando' ||
+      contratos === 'carregando' ||
+      porItem.carregando > 0;
     const semNada =
       !nesteEdital.vencedores.length && !doOrgao.length && !similares.length && !dosItens.length;
     const nadaConsultadoNosItens =
@@ -733,6 +867,15 @@ export function registerHistoricoRoutes(
       nesteEdital.estado === 'fonte_indisponivel' ||
       nesteEdital.estado === 'nao_se_aplica' ||
       nesteEdital.estado === 'aguardando_publicacao';
+    if (
+      algoCarregando &&
+      semNada &&
+      !dadosUsados.length &&
+      resultadoDoEdital.estado !== 'fonte_indisponivel' &&
+      contratos !== 'falhou'
+    ) {
+      return reply.code(202).send({ estado: 'carregando', dados: metaCarregando() });
+    }
     if (
       semNada &&
       contratos === 'falhou' &&
@@ -757,7 +900,14 @@ export function registerHistoricoRoutes(
       avisos,
       aviso: AVISO_HISTORICO,
       fontes: FONTES_HISTORICO,
-      dados: dadosUsados.length ? metaDoPiorCaso(dadosUsados) : null,
+      dados: dadosUsados.length
+        ? {
+            ...metaDoPiorCaso(dadosUsados),
+            atualizando: algoCarregando || metaDoPiorCaso(dadosUsados).atualizando,
+          }
+        : algoCarregando
+          ? metaCarregando()
+          : null,
       consultado_em: dadosUsados.length
         ? new Date(Math.min(...dadosUsados.map((dado) => dado.em))).toISOString()
         : new Date().toISOString(),

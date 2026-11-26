@@ -1,7 +1,13 @@
 Resumo:
-Novo nome Alerta de Licitações (antes Farol), portais por filtro, página de Portais com números e alerta, seis filtros do PNCP e proteção contra migration atrasada
+Carregamento de concorrentes, preços pagos e editais mais rápido e sem erro, e bloqueio de visualização de código
 
 Descrição:
+- Concorrentes, Preços pagos e Valores fechados: as páginas do PNCP e do Compras.gov.br são lidas ao mesmo tempo e com tempo de espera menor. Se a fonte demorar, a tela mostra "buscando" e atualiza sozinha, em vez de dar erro.
+- O que foi lido das fontes passa a ficar guardado no banco e continua valendo depois de deploy ou reinício (migration 0040, tabela cache_fontes). Sem a migration, o sistema segue funcionando e guarda só na memória.
+- Ao listar os editais, os primeiros já têm contratos do órgão e preços pagos preparados em segundo plano; ao abrir o edital, o dado está pronto.
+- Sincronização: os editais novos aparecem na lista enquanto a rodada ainda corre, sem esperar o fim; a tela confere a cada 4 segundos.
+- Bloqueio de código: sem botão direito, sem atalhos de inspeção (F12, Ctrl+U, Ctrl+S, Ctrl+Shift+I/J/C), sem selecionar nem copiar o texto da página e sem arrastar imagens. Campos de digitação e botões de copiar continuam funcionando.
+- Sem mapas de código no navegador, sem aviso da tecnologia do servidor, sem mensagens de console em produção e com cabeçalhos de segurança nos dois sites. O arquivo manus-routes.json saiu da pasta pública e foi para docs.
 - Portais: o filtro do Alerta de Licitações agora lista todos os portais (os conhecidos e os que aparecem na coleta, com a quantidade de cada um) e deixa escolher vários de uma vez.
 - Página Portais refeita: editais, abertos, que encerram em 3 dias e valor dos abertos por portal; filtros por estado, modalidade e palavra-chave; ordenação; busca pelo nome do portal; botão "Avisar de novos" (cria a busca e o alerta do portal) e "Ver editais" já com os filtros.
 - A contagem por portal passa a ser direta pelo identificador do portal; antes usava só os 40 maiores e um portal pequeno podia aparecer com zero.

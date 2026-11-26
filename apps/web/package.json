@@ -7,7 +7,7 @@
     "dev": "next dev",
     "lint": "eslint .",
     "start": "next start",
-    "test": "vitest run --config ../../vitest.config.ts app/components/holo-voxel.test.ts app/radar/radar-cache.test.ts",
+    "test": "vitest run --config ../../vitest.config.ts app/components/holo-voxel.test.ts app/radar/radar-cache.test.ts app/components/protecao-de-codigo.test.ts",
     "pretypecheck": "pnpm --filter @licitecomigo/ui build",
     "typecheck": "tsc --noEmit"
   },

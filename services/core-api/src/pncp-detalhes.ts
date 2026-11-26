@@ -3,7 +3,14 @@ import type { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
 import { z } from 'zod';
 import { PublicRateLimiter } from './auth-public.js';
-import { CacheCompartilhado, cacheLocal, metaDoDado } from './cache-compartilhado.js';
+import {
+  CacheCompartilhado,
+  CarregandoError,
+  prazoDaTelaMs,
+  cacheLocal,
+  metaCarregando,
+  metaDoDado,
+} from './cache-compartilhado.js';
 import { comPoliticaDeFonte } from './fonte-http.js';
 import type { RuntimeConfig } from './config.js';
 import { withTenant } from './db.js';
@@ -99,9 +106,9 @@ export function normalizeDocumento(raw: unknown, base: string): DocumentoPncp | 
   };
 }
 
-async function getJson(fetchImpl: typeof fetch, url: string): Promise<unknown> {
+async function getJson(fetchImpl: typeof fetch, url: string, tempoMs = 25_000): Promise<unknown> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 25_000);
+  const timer = setTimeout(() => controller.abort(), tempoMs);
   try {
     const response = await fetchImpl(url, {
       headers: { accept: 'application/json', 'user-agent': 'LiciteComigo/1.0' },
@@ -243,6 +250,7 @@ export async function buscarResultados(
         const body = await getJson(
           fetchImpl,
           `${base}/${encodeURIComponent(item.numero)}/resultados`,
+          12_000,
         );
         const resultado =
           listOf(body)
@@ -314,8 +322,10 @@ export async function resultadosDoEdital(
   idExterno: string,
   itens: ReadonlyArray<Omit<ItemComResultado, 'resultado'>>,
   fechado: boolean,
+  prazoMs?: number,
 ) {
   return deps.cache.obter<ResultadosDoEdital>(`pncp:resultados:${idExterno}`, {
+    ...(prazoMs ? { prazoMs } : {}),
     validadeMs: 10 * 60_000,
     retencaoMs: 14 * 86_400_000,
     servirVelhoEAtualizar: true,
@@ -423,6 +433,7 @@ export function registerDetalhesRoutes(
         loaded.edital.id_externo,
         loaded.itens,
         loaded.edital.fechado,
+        prazoDaTelaMs(),
       );
       const { itens, cobertura, estado } = dado.valor;
       const comResultado = itens.filter((item) => item.resultado);
@@ -458,6 +469,9 @@ export function registerDetalhesRoutes(
         },
       });
     } catch (error) {
+      if (error instanceof CarregandoError) {
+        return reply.code(202).send({ estado: 'carregando', dados: metaCarregando() });
+      }
       if (error instanceof DetalhesError) {
         return reply.code(error.status).send({ error: error.code, message: error.message });
       }

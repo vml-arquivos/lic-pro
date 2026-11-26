@@ -559,3 +559,25 @@ p {
   cursor: pointer;
   font-weight: 600;
 }
+
+/* Só usar, não copiar: o texto da página não é selecionável. Campos de digitação continuam
+   normais. */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+input,
+textarea,
+select,
+[contenteditable=''],
+[contenteditable='true'],
+[data-copiavel],
+[data-copiavel] * {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+img {
+  -webkit-user-drag: none;
+}
