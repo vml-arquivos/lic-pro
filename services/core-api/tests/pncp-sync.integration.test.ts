@@ -283,38 +283,6 @@ suite('coleta do PNCP (PostgreSQL real, fonte simulada)', () => {
     expect(result.status).toBe('erro');
     expect(result.erros).toBeGreaterThan(0);
     expect(result.ultimo_erro).toContain('HTTP 500');
-    await setup.query('DELETE FROM coleta_pncp_pendencias WHERE tenant_id = $1', [platformTenant]);
-  });
-
-  it('retoma a página limitada pelo PNCP em outra rodada', async () => {
-    const estado = { calls: [] as string[] };
-    const fonte = fakeSource(estado);
-    const data = () => new Date('2026-02-10T15:00:00Z');
-    const restrita: typeof fetch = async (input, init) => {
-      const url = new URL(String(input));
-      if (url.pathname.endsWith('/publicacao') && url.searchParams.get('pagina') === '2') {
-        return new Response('limite', { status: 429, headers: { 'Retry-After': '60' } });
-      }
-      return fonte(input, init);
-    };
-    const opcoes = { origem: 'agendada', dias: 1 } as const;
-    const primeira = await runPncpSync({ ...deps(estado), now: data, fetchImpl: restrita }, opcoes);
-    expect(primeira.status).toBe('parcial');
-    const checkpoint = await setup.query(
-      `UPDATE coleta_pncp_pendencias SET tentar_em = now()
-        WHERE tenant_id = $1 AND inicio = '20260210' AND feed = 'publicacao'
-        RETURNING pagina`,
-      [platformTenant],
-    );
-    expect(checkpoint.rows[0]?.pagina).toBe(2);
-    estado.calls.length = 0;
-    const segunda = await runPncpSync({ ...deps(estado), now: data }, opcoes);
-    expect(segunda.erros).toBe(0);
-    const publicacao = estado.calls.filter(
-      (url) => url.includes('/publicacao') && url.includes('dataInicial=20260210'),
-    );
-    expect(publicacao).toHaveLength(1);
-    expect(new URL(publicacao[0]!, 'https://pncp.test').searchParams.get('pagina')).toBe('2');
   });
 
   it('sem conta da plataforma avisa em vez de gravar', async () => {

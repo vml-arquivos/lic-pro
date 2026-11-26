@@ -417,6 +417,13 @@ suite('cobrança, curso e assinatura (PostgreSQL real, Asaas simulado)', () => {
     expect(data.curso.vendidos).toBeGreaterThanOrEqual(2);
     expect(Array.isArray(data.receita_por_mes)).toBe(true);
     expect(data.recentes.length).toBeGreaterThan(0);
+    expect(Array.isArray(data.inativos)).toBe(true);
+    const semInativos = await app.inject({
+      method: 'GET',
+      url: '/admin/financeiro?modulo=curso',
+      headers: team(),
+    });
+    expect(semInativos.json().inativos).toEqual([]);
     expect(
       (await app.inject({ method: 'GET', url: '/admin/financeiro', headers: company() }))
         .statusCode,

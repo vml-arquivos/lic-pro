@@ -68,6 +68,23 @@ const analysis: MenuItem = {
 };
 const prices: MenuItem = { label: 'Preços pagos', href: '/precos', icon: 'chart' };
 const portals: MenuItem = { label: 'Portais de compras', href: '/portais', icon: 'building' };
+const competition: MenuItem = {
+  label: 'Consulta de concorrência',
+  href: '/concorrencia',
+  icon: 'scale',
+};
+const followedSuppliers: MenuItem = {
+  label: 'Fornecedores acompanhados',
+  href: '/concorrencia/acompanhar',
+  icon: 'users',
+};
+const bidRobot: MenuItem = { label: 'Robô de lances', href: '/robo-de-lances', icon: 'target' };
+const dataSources: MenuItem = { label: 'Fonte de dados', href: '/fontes-de-dados', icon: 'sync' };
+const activeQueries: MenuItem = {
+  label: 'Consultas ativas',
+  href: '/consultas-ativas',
+  icon: 'search',
+};
 
 const home: MenuItem = { label: 'Início', href: '/painel', icon: 'home' };
 const subscription: MenuItem = { label: 'Assinatura e uso', href: '/assinatura', icon: 'award' };
@@ -90,7 +107,12 @@ const biddingGroup: MenuGroup = {
 };
 const trackingGroup: MenuGroup = {
   label: 'Acompanhamento',
-  items: [savedSearches, alerts, pipeline, agenda],
+  items: [activeQueries, savedSearches, alerts, pipeline, agenda],
+};
+/** Concorrência e disputa: só para quem trabalha com licitações no dia a dia (empresa e equipe). */
+const competitionGroup: MenuGroup = {
+  label: 'Concorrência e disputa',
+  items: [competition, followedSuppliers, bidRobot],
 };
 const supportGroup: MenuGroup = { label: 'Aprender e apoio', items: [academy, ana] };
 
@@ -101,7 +123,7 @@ const supportGroup: MenuGroup = { label: 'Aprender e apoio', items: [academy, an
  */
 export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
   administracao: [
-    { label: '', items: [{ label: 'Painel de operações', href: '/admin', icon: 'home' }] },
+    { label: '', items: [{ label: 'Visão geral', href: '/admin', icon: 'home' }] },
     {
       label: 'Vendas e financeiro',
       items: [
@@ -132,7 +154,7 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
     { label: 'Conta', items: [account] },
   ],
   curso: [
-    { label: '', items: [{ label: 'Painel da mentoria', href: '/gestao', icon: 'home' }] },
+    { label: '', items: [{ label: 'Visão geral', href: '/gestao', icon: 'home' }] },
     {
       label: 'Vendas e financeiro',
       items: [
@@ -158,7 +180,8 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
     { label: '', items: [home] },
     biddingGroup,
     trackingGroup,
-    { label: 'Minha empresa', items: [companyData, documents] },
+    competitionGroup,
+    { label: 'Minha empresa', items: [companyData, documents, dataSources] },
     supportGroup,
     { label: 'Conta e financeiro', items: [subscription, account] },
   ],
@@ -205,7 +228,8 @@ export const AREA_MENUS: Record<Area, readonly MenuGroup[]> = {
     { label: '', items: [home] },
     biddingGroup,
     trackingGroup,
-    { label: 'Empresa', items: [companyData, documents] },
+    competitionGroup,
+    { label: 'Empresa', items: [companyData, documents, dataSources] },
     supportGroup,
     { label: 'Conta', items: [account] },
   ],
@@ -249,6 +273,10 @@ export const PAGE_RULES: readonly PageRule[] = [
   { prefix: '/agenda', areas: OPERATION },
   { prefix: '/documentos', areas: OPERATION },
   { prefix: '/buscas-salvas', areas: OPERATION },
+  { prefix: '/consultas-ativas', areas: OPERATION },
+  { prefix: '/concorrencia', areas: OPERATION },
+  { prefix: '/robo-de-lances', areas: OPERATION },
+  { prefix: '/fontes-de-dados', areas: OPERATION },
   { prefix: '/alertas', areas: OPERATION },
   { prefix: '/empresas', areas: OPERATION },
   { prefix: '/painel', areas: ALL },

@@ -14,7 +14,7 @@ const niche = NICHE_CATALOG[0]!;
 const term = niche.terms[0]!;
 const DAY = 24 * 60 * 60 * 1000;
 
-suite('Radar: busca, facetas, favoritos, histórico e exportação (PostgreSQL real)', () => {
+suite('Farol: busca, facetas, favoritos, histórico e exportação (PostgreSQL real)', () => {
   let pool!: Pool;
   let setup!: Pool;
   let app!: ReturnType<typeof buildApp>;
@@ -113,10 +113,10 @@ suite('Radar: busca, facetas, favoritos, histórico e exportação (PostgreSQL r
       ]);
     }
     await setup.query('INSERT INTO plataforma_tenants (id) VALUES ($1)', [platformTenant]);
-    await insertUser(adminA, tenantA, 'admin', 'Admin Radar A');
-    await insertUser(operadorA, tenantA, 'operador', 'Operador Radar A');
-    await insertUser(alunoA, tenantA, 'aluno', 'Aluno Radar A');
-    await insertUser(adminB, tenantB, 'admin', 'Admin Radar B');
+    await insertUser(adminA, tenantA, 'admin', 'Admin Farol A');
+    await insertUser(operadorA, tenantA, 'operador', 'Operador Farol A');
+    await insertUser(alunoA, tenantA, 'aluno', 'Aluno Farol A');
+    await insertUser(adminB, tenantB, 'admin', 'Admin Farol B');
 
     const now = Date.now();
     await setup.query(
@@ -314,7 +314,7 @@ suite('Radar: busca, facetas, favoritos, histórico e exportação (PostgreSQL r
     }
   });
 
-  it('perfil do Radar gera a nota de compatibilidade explicada', async () => {
+  it('perfil do Farol gera a nota de compatibilidade explicada', async () => {
     const put = await app.inject({
       method: 'PUT',
       url: '/radar/perfil',

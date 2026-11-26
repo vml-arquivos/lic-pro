@@ -1,7 +1,7 @@
 import { Icon } from './Icon';
 
 const POINTS = [
-  ['search', 'Editais do governo no Radar'],
+  ['search', 'Editais do governo no Farol'],
   ['bell', 'Alertas e prazos sob controle'],
   ['cap', 'Academia e mentoria'],
   ['spark', 'Ana, com fontes e limites claros'],
@@ -14,7 +14,7 @@ export function AuthAside() {
       <p className="hub-eyebrow" style={{ color: 'rgba(255,255,255,0.8)' }}>
         Rede de especialistas
       </p>
-      <h2>Radar, prazos, documentos e curso.</h2>
+      <h2>Farol, prazos, documentos e curso.</h2>
       <ul>
         {POINTS.map(([icon, text]) => (
           <li key={text}>

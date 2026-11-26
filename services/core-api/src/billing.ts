@@ -1002,8 +1002,35 @@ export function registerBillingRoutes(app: FastifyInstance, deps: Deps): void {
             [tipo],
           )
         ).rows;
+        // Inativos: empresas cuja assinatura acabou (cancelada, expirada ou teste vencido).
+        const inativos =
+          modulo === 'curso'
+            ? []
+            : (
+                await client.query(
+                  `SELECT * FROM (
+                     SELECT a.id, t.nome AS cliente,
+                            (SELECT e.razao_social FROM empresas e WHERE e.tenant_id = a.tenant_id
+                              ORDER BY e.created_at LIMIT 1) AS empresa,
+                            (SELECT u.email FROM usuarios u WHERE u.tenant_id = a.tenant_id
+                                AND u.papel::text = 'admin' ORDER BY u.created_at LIMIT 1) AS contato,
+                            p.nome AS plano, ${statusEfetivoSql('a')} AS status,
+                            COALESCE(a.fim_em, a.updated_at) AS desde,
+                            (SELECT max(cp.pago_em)
+                               FROM cobranca_pagamentos cp JOIN cobrancas c ON c.id = cp.cobranca_id
+                              WHERE c.empresa_tenant_id = a.tenant_id
+                                AND cp.status IN ('CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH', 'MANUAL')) AS ultimo_pagamento
+                       FROM assinaturas a
+                       JOIN tenants t ON t.id = a.tenant_id
+                       JOIN planos p ON p.id = a.plano_id
+                   ) x
+                   WHERE x.status IN ('cancelada', 'expirada')
+                   ORDER BY x.desde DESC NULLS LAST LIMIT 100`,
+                )
+              ).rows;
         const base = (config.apiUrl ?? '').replace(/\/+$/, '');
         return {
+          inativos,
           cobranca: {
             ligada: billingOn(),
             ambiente: config.asaasEnv,

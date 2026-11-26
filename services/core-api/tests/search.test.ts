@@ -176,3 +176,24 @@ describe('edital search query', () => {
     expect(() => editalSearchSchema.parse({ regiao: 'atlantida' })).toThrow();
   });
 });
+
+describe('filtros iguais aos do PNCP', () => {
+  it('Status e Ano entram parametrizados', () => {
+    const filters = editalSearchSchema.parse({ status: 'julgamento', ano: '2026,2025' });
+    const query = buildEditalSearchQuery(filters);
+    expect(query.text).toContain('valor_homologado IS NULL');
+    expect(query.text).toContain('= ANY(');
+    expect(query.values).toContainEqual(['2026', '2025']);
+  });
+
+  it('Status todos não restringe nada', () => {
+    const query = buildEditalSearchQuery(editalSearchSchema.parse({ status: 'todos' }));
+    expect(query.countText).not.toContain('valor_homologado');
+    expect(query.countText).not.toContain('data_encerramento_proposta >');
+  });
+
+  it('recusa status e ano fora do padrão', () => {
+    expect(() => editalSearchSchema.parse({ status: 'qualquer' })).toThrow();
+    expect(() => editalSearchSchema.parse({ ano: '1900' })).toThrow();
+  });
+});

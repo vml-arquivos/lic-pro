@@ -45,6 +45,8 @@ export const SITUACAO_PRAZO = [
   'vencendo_7',
   'encerradas',
 ] as const;
+/** Mesmas quatro opções do campo Status do PNCP. */
+export const STATUS_PNCP = ['recebendo', 'julgamento', 'encerradas', 'todos'] as const;
 export const SITUACAO_TIPO = ['suspensa', 'revogada', 'anulada', 'cancelada'] as const;
 export const PERIODO_TIPO = ['publicacao', 'abertura', 'encerramento', 'atualizacao'] as const;
 export const ESTADO_USUARIO = [
@@ -88,6 +90,15 @@ export const editalSearchSchema = z.object({
   amparo_legal: stringOrStrings.optional(),
   situacao: stringOrStrings.optional(),
   situacao_prazo: z.enum(SITUACAO_PRAZO).optional(),
+  /** Status como no PNCP: recebendo propostas, em julgamento, encerradas ou todos. */
+  status: z.enum(STATUS_PNCP).optional(),
+  /** Ano da contratação (o do número de controle do PNCP). */
+  ano: listish(
+    z.union([
+      z.coerce.number().int().min(2000).max(2100),
+      z.array(z.coerce.number().int().min(2000).max(2100)).min(1).max(10),
+    ]),
+  ).optional(),
   situacao_tipo: listish(
     z.union([z.enum(SITUACAO_TIPO), z.array(z.enum(SITUACAO_TIPO)).min(1)]),
   ).optional(),
@@ -443,6 +454,36 @@ export function buildEditalSearchQuery(
       break;
     default:
       break;
+  }
+  switch (filters.status) {
+    case 'recebendo':
+      add('data_encerramento_proposta IS NOT NULL AND data_encerramento_proposta > now()', []);
+      break;
+    case 'julgamento':
+      // Propostas encerradas e sem desfecho: não homologado nem cancelado.
+      add(
+        `data_encerramento_proposta IS NOT NULL AND data_encerramento_proposta <= now()
+         AND valor_homologado IS NULL
+         AND COALESCE(situacao, '') !~* '(revogad|anulad|cancelad|homologad|fracassad|deserta)'`,
+        [],
+      );
+      break;
+    case 'encerradas':
+      add(
+        `(valor_homologado IS NOT NULL
+          OR COALESCE(situacao, '') ~* '(revogad|anulad|cancelad|homologad|fracassad|deserta)')`,
+        [],
+      );
+      break;
+    default:
+      break;
+  }
+  const anos = [filters.ano ?? []].flat().map(String);
+  if (anos.length) {
+    add(
+      `COALESCE(substring(id_externo from '/(\\d{4})$'), to_char(data_publicacao, 'YYYY')) = ANY({0}::text[])`,
+      [anos],
+    );
   }
   if (filters.periodo_de || filters.periodo_ate) {
     const column = PERIODO_COLUNA[filters.periodo_tipo ?? 'publicacao'];

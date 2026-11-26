@@ -239,7 +239,7 @@ suite('detalhes do edital (PostgreSQL real, PNCP simulado)', () => {
     expect(docs.rows.map((row) => row.nome_arquivo)).toEqual(['Edital.pdf']);
     expect(docs.rows.every((row) => String(row.url).startsWith('https://'))).toBe(true);
 
-    // a empresa lê pelo detalhe do Radar
+    // a empresa lê pelo detalhe do Farol
     const detail = await app.inject({
       method: 'GET',
       url: `/editais/${editalPncp}`,

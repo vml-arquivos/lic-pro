@@ -62,7 +62,6 @@ export function RadarApp({
     if (!final.get('page_size')) final.set('page_size', '10');
     return final;
   }, [params, usandoPerfil, perfilDados]);
-  const ufsEfetivas = efetivos.getAll('uf').join(', ');
   const chave = useMemo(() => chaveDaLista(usuario, efetivos), [usuario, efetivos]);
   const chaveAtual = useRef(chave);
   chaveAtual.current = chave;
@@ -145,7 +144,7 @@ export function RadarApp({
     };
   }, [chave, efetivos, profileVersion, signedIn, perfilDados, versaoDados]);
 
-  // Lembra a busca (para o "Voltar ao Radar") e a posição da lista ao sair da tela.
+  // Lembra a busca (para o "Voltar ao Farol") e a posição da lista ao sair da tela.
   const buscaDaUrl = params.toString();
   useEffect(() => {
     if (signedIn) lembrarBusca(usuario, buscaDaUrl);
@@ -227,7 +226,7 @@ export function RadarApp({
 
   return (
     <div className="ui-page rd-page">
-      <PageHeader eyebrow="Radar" title="Radar de licitações" />
+      <PageHeader eyebrow="Farol" title="Farol de licitações" />
       <LicitacoesNav atual="/radar" area={area} />
       {signedIn ? <DadosAtualizados /> : null}
       {signedIn ? (
@@ -253,9 +252,6 @@ export function RadarApp({
           }}
         />
       ) : null}
-      {signedIn && ufsEfetivas ? (
-        <p className="rd-filtros-efetivos">Estados na busca: {ufsEfetivas}</p>
-      ) : null}
       <RadarFilters
         params={params}
         onApply={apply}
@@ -278,7 +274,7 @@ export function RadarApp({
                 aria-pressed={ativo}
                 disabled={bloqueado}
                 title={
-                  bloqueado ? 'Preencha o perfil do Radar para usar este atalho.' : atalho.dica
+                  bloqueado ? 'Preencha o perfil do Farol para usar este atalho.' : atalho.dica
                 }
                 onClick={() => {
                   if (ativo) {
@@ -297,7 +293,7 @@ export function RadarApp({
 
       {state === 'anonymous' ? (
         <section className="ui-panel">
-          <h2>Entre para usar o Radar</h2>
+          <h2>Entre para usar o Farol</h2>
           <Link className="ui-btn" href="/login">
             Entrar
           </Link>
@@ -312,7 +308,7 @@ export function RadarApp({
             </>
           ) : (
             <>
-              <h2>Escolha seus nichos para usar o Radar</h2>
+              <h2>Escolha seus nichos para usar o Farol</h2>
               <p>Escolha de um a três nichos no perfil acima.</p>
             </>
           )}
@@ -320,7 +316,7 @@ export function RadarApp({
       ) : null}
       {state === 'error' ? (
         <Alert kind="error">
-          Não foi possível carregar o Radar agora. Tente novamente em instantes.
+          Não foi possível carregar o Farol agora. Tente novamente em instantes.
         </Alert>
       ) : null}
       {state === 'loading' && !result ? <p className="ui-loading">Consultando editais…</p> : null}

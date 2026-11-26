@@ -73,7 +73,7 @@ export type DadosColaborador = { radar: unknown; me: unknown };
 
 type Base = Pick<AnaContexto, 'resumo' | 'destaques' | 'sugestoes' | 'fatos'>;
 
-/** Licitações em destaque do Radar (as melhores para o perfil), em até 3 linhas. */
+/** Licitações em destaque do Farol (as melhores para o perfil), em até 3 linhas. */
 function destaquesDoRadar(radar: unknown): AnaDestaque[] {
   return list(obj(radar).destaques)
     .slice(0, 3)

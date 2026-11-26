@@ -232,14 +232,14 @@ suite('Análise de oportunidades: ranking, comparação e simulador (PostgreSQL 
     expect(faceis[0]!.titulo).toContain(' c '); // dispensa pequena
   });
 
-  it('os filtros do Radar valem no ranking (estado e valor)', async () => {
+  it('os filtros do Farol valem no ranking (estado e valor)', async () => {
     const sp = (await ranking('limite=100&uf=SP')).meus;
     expect(sp.map((item) => item.titulo.includes(' b '))).toEqual([true]);
     const pequenos = (await ranking('limite=100&valor_max=30000')).meus;
     expect(pequenos.every((item) => item.titulo.includes(' c '))).toBe(true);
   });
 
-  it('o perfil do Radar vale sozinho no ranking e pode ser desligado', async () => {
+  it('o perfil do Farol vale sozinho no ranking e pode ser desligado', async () => {
     const outro = randomUUID();
     await insertUser(outro, tenantA, 'admin', 'Admin Perfil');
     const headers = as(outro, tenantA, 'admin');
@@ -325,7 +325,7 @@ suite('Análise de oportunidades: ranking, comparação e simulador (PostgreSQL 
     expect(five.statusCode).toBeGreaterThanOrEqual(400);
   });
 
-  it('analisa um edital só (card da licitação) e o Radar informa os itens já coletados', async () => {
+  it('analisa um edital só (card da licitação) e o Farol informa os itens já coletados', async () => {
     const one = await app.inject({
       method: 'GET',
       url: `/analise/edital/${ids.a}?margem_pct=10`,

@@ -1,4 +1,4 @@
-/** Tipos e funções puras do Radar (sem React), para testar e reaproveitar. */
+/** Tipos e funções puras do Farol (sem React), para testar e reaproveitar. */
 import { infoDoPortal, portalDaLicitacao } from '@licitecomigo/shared';
 
 export type Tender = {
@@ -51,6 +51,19 @@ export const PRAZOS: ReadonlyArray<readonly [string, string]> = [
   ['vencendo_7', 'Encerram em até 7 dias'],
   ['encerradas', 'Já encerradas'],
 ];
+
+/** Mesmas opções do campo Status do PNCP. */
+export const STATUS_PNCP: ReadonlyArray<readonly [string, string]> = [
+  ['recebendo', 'Recebendo propostas'],
+  ['julgamento', 'Em julgamento'],
+  ['encerradas', 'Encerradas'],
+  ['todos', 'Todos'],
+];
+
+/** Anos da contratação: do atual para trás. */
+export function anosDaContratacao(ate = new Date().getFullYear()): string[] {
+  return Array.from({ length: 6 }, (_, indice) => String(ate - indice));
+}
 
 export const ESTADOS: ReadonlyArray<readonly [string, string]> = [
   ['favoritas', 'Favoritas'],
@@ -121,7 +134,7 @@ export function atalhoAtivo(params: URLSearchParams): string | null {
 export function aplicarAtalho(params: URLSearchParams, atalho: Atalho): URLSearchParams {
   const next = new URLSearchParams(params);
   next.delete('page');
-  for (const chave of ['ordem', 'situacao_prazo', 'srp']) next.delete(chave);
+  for (const chave of ['ordem', 'situacao_prazo', 'srp', 'status']) next.delete(chave);
   for (const [chave, valor] of Object.entries(atalho.params)) next.set(chave, valor);
   return next;
 }
@@ -198,6 +211,7 @@ export function paramsFromForm(form: FormData): URLSearchParams {
     const value = typeof raw === 'string' ? raw.trim() : '';
     if (!value) return;
     if (key === 'perto') return;
+    if (key === 'status' && value === 'todos') return;
     if (csv.has(key)) (csvValues[key] ??= []).push(value);
     else if (multi.has(key)) params.append(key, value);
     else params.set(key, value);
@@ -296,13 +310,13 @@ export function gravarEscolhidos(lista: EscolhidoParaComparar[]): void {
   }
 }
 
-/** Parâmetros da busca atual do Radar, prontos para o Ranking da Análise (mesmos filtros). */
+/** Parâmetros da busca atual do Farol, prontos para o Ranking da Análise (mesmos filtros). */
 export function paramsParaRanking(efetivos: URLSearchParams, semPerfil: boolean): URLSearchParams {
   const next = new URLSearchParams(efetivos);
   for (const chave of ['page', 'page_size', 'ordem', 'facetas', 'foco', 'limite']) {
     next.delete(chave);
   }
-  if (!next.get('situacao_prazo')) next.set('situacao_prazo', 'abertas');
+  if (!next.get('situacao_prazo') && !next.get('status')) next.set('situacao_prazo', 'abertas');
   if (semPerfil) next.set('usar_perfil', 'false');
   next.set('limite', '100');
   next.set('foco', 'interessantes');

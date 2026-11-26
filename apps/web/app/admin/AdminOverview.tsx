@@ -13,18 +13,7 @@ import {
 } from '../components/ui';
 import { MigrationNotice } from './_components/MigrationNotice';
 
-type Rodada = {
-  id: string;
-  iniciado_em: string;
-  finalizado_em: string;
-  status: 'ok' | 'parcial' | 'erro';
-  inseridos: number;
-  atualizados: number;
-  erros: number;
-};
-
 type Overview = {
-  rodadas_pncp?: Rodada[];
   contas_por_papel: { papel: string; total: number; ativos: number }[];
   empresas_clientes: { total: number; novos_30d: number };
   curso: {
@@ -44,68 +33,6 @@ type Overview = {
   };
   ana: { conversas_7d: number };
 };
-
-const ESTADOS_PNCP = { ok: 'Concluída', parcial: 'Parcial', erro: 'Falhou' };
-
-function ColetaPainel({ data }: Readonly<{ data: Overview }>) {
-  const rodadas = data.rodadas_pncp ?? [];
-  const ultima = rodadas[0];
-  const maior = Math.max(1, ...rodadas.map((r) => r.inseridos + r.atualizados));
-  return (
-    <Panel title="Sincronização PNCP" actions={<Link href="/admin/fontes">Fontes de dados</Link>}>
-      <ul className="ui-list">
-        <li>
-          <span>Última rodada PNCP</span>
-          <strong>
-            {ultima
-              ? `${formatDate(ultima.finalizado_em, true)} · ${ESTADOS_PNCP[ultima.status]}`
-              : '—'}
-          </strong>
-        </li>
-        <li>
-          <span>Última alteração no catálogo</span>
-          <strong>{formatDate(data.editais.ultima_captura, true)}</strong>
-        </li>
-        <li>
-          <span>Última execução do coletor externo</span>
-          <strong>{formatDate(data.ingestao.ultima_execucao, true)}</strong>
-        </li>
-        <li>
-          <span>Falhas pendentes do coletor externo</span>
-          <strong>{formatNumber(data.ingestao.dead_letters_pendentes)}</strong>
-        </li>
-      </ul>
-      {ultima && ultima.status !== 'ok' ? (
-        <Alert kind="info">
-          A última rodada registrou {formatNumber(ultima.erros)} erro(s). Veja o histórico em Fontes
-          de dados.
-        </Alert>
-      ) : null}
-      {data.ingestao.dead_letters_pendentes > 0 ? (
-        <Alert kind="info">Há falhas do coletor externo aguardando análise.</Alert>
-      ) : null}
-      {rodadas.length ? (
-        <figure className="coleta-chart">
-          <figcaption>Editais novos e atualizados por rodada</figcaption>
-          <ol>
-            {[...rodadas].reverse().map((r) => (
-              <li key={r.id}>
-                <span>{formatDate(r.iniciado_em, true)}</span>
-                <span className="coleta-chart-track" aria-hidden="true">
-                  <span style={{ width: `${(100 * r.inseridos) / maior}%` }} />
-                  <span style={{ width: `${(100 * r.atualizados) / maior}%` }} />
-                </span>
-                <small>
-                  {r.inseridos} novos · {r.atualizados} atualizados · {ESTADOS_PNCP[r.status]}
-                </small>
-              </li>
-            ))}
-          </ol>
-        </figure>
-      ) : null}
-    </Panel>
-  );
-}
 
 const PAPEIS: Record<string, string> = {
   plataforma: 'Equipe (Painel admin)',
@@ -168,8 +95,6 @@ export function AdminOverview({ modulo = 'profissional' }: Readonly<{ modulo?: M
               )}
             </div>
 
-            {doCurso ? null : <ColetaPainel data={data} />}
-
             <div className="ui-grid">
               <Panel title="Uso da plataforma">
                 <ul className="ui-list">
@@ -203,6 +128,32 @@ export function AdminOverview({ modulo = 'profissional' }: Readonly<{ modulo?: M
                   ))}
                 </ul>
               </Panel>
+              {doCurso ? null : (
+                <Panel
+                  title="Coleta de editais"
+                  actions={<Link href="/admin/fontes">Ver detalhes</Link>}
+                >
+                  <ul className="ui-list">
+                    <li>
+                      <span>Última captura de edital</span>
+                      <strong>{formatDate(data.editais.ultima_captura, true)}</strong>
+                    </li>
+                    <li>
+                      <span>Última execução da coleta</span>
+                      <strong>{formatDate(data.ingestao.ultima_execucao, true)}</strong>
+                    </li>
+                    <li>
+                      <span>Falhas aguardando análise</span>
+                      <strong>{formatNumber(data.ingestao.dead_letters_pendentes)}</strong>
+                    </li>
+                  </ul>
+                  {data.ingestao.dead_letters_pendentes > 0 ? (
+                    <Alert kind="info">
+                      Há falhas de coleta sem resolução. Veja em Fontes de dados.
+                    </Alert>
+                  ) : null}
+                </Panel>
+              )}
             </div>
 
             <Panel title="Atalhos">

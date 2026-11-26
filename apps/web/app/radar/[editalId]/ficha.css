@@ -1,4 +1,4 @@
-/* Ficha e blocos da página do edital: carregado junto com a página, sem depender do Radar */
+/* Ficha e blocos da página do edital: carregado junto com a página, sem depender do Farol */
 .rd-page .rd-facts {
   display: grid;
   gap: 0.55rem 1.2rem;

@@ -14,7 +14,7 @@ const questions = [
     'Não. Não há promessa de vitória, lucro, contrato ou resultado.',
   ],
   [
-    'Quais fontes o Radar usa?',
+    'Quais fontes o Farol usa?',
     'O projeto documenta conectores oficiais, incluindo PNCP e Compras.gov.br. Confira sempre a fonte de origem.',
   ],
   [
@@ -25,7 +25,7 @@ const questions = [
 
 export const metadata = {
   title: 'Perguntas frequentes',
-  description: 'Respostas diretas sobre o Radar, a Ana, fontes e os limites do Licite Comigo.',
+  description: 'Respostas diretas sobre o Farol, a Ana, fontes e os limites do Licite Comigo.',
 };
 export default function FaqPage() {
   return (

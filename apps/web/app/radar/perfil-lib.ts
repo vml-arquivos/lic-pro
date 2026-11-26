@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { NICHE_CATALOG, SEGMENT_CATALOG } from '@licitecomigo/shared';
 import { api } from '../../lib/api';
 
-/** Perfil do Radar: guardado uma vez e aplicado sozinho nas buscas. */
+/** Perfil do Farol: guardado uma vez e aplicado sozinho nas buscas. */
 export type Perfil = {
   ufs: string[];
   palavras_interesse: string[];

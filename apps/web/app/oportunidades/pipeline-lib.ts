@@ -29,7 +29,7 @@ export const COLUMNS: readonly Column[] = [
   {
     key: 'salvas',
     title: 'Salvas',
-    hint: 'Achados no Radar para olhar depois.',
+    hint: 'Achados no Farol para olhar depois.',
     statuses: ['salva', 'triagem'],
   },
   {

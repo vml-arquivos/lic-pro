@@ -4,7 +4,7 @@ import { RadarApp } from './RadarApp';
 import './radar.css';
 
 export const metadata = {
-  title: 'Radar | Licite Comigo',
+  title: 'Farol | Licite Comigo',
   description: 'Busque oportunidades públicas com filtros de apoio à decisão.',
 };
 
@@ -13,7 +13,7 @@ export default async function RadarPage() {
   const area = session?.area;
   const canWork = area === 'empresa' || area === 'administracao' || area === 'colaborador';
   return (
-    <Suspense fallback={<p className="ui-loading">Carregando o Radar…</p>}>
+    <Suspense fallback={<p className="ui-loading">Carregando o Farol…</p>}>
       <RadarApp
         signedIn={Boolean(session)}
         canExport={canWork}

@@ -3,7 +3,7 @@ import { ContentPage } from '../../components/ContentPage';
 export const metadata = {
   title: 'Recursos',
   description:
-    'Radar, fontes, empresas, Academia e Ana para apoiar decisões em licitações públicas.',
+    'Farol, fontes, empresas, Academia e Ana para apoiar decisões em licitações públicas.',
 };
 export default function ResourcesPage() {
   return (
@@ -14,7 +14,7 @@ export default function ResourcesPage() {
     >
       <div className="feature-list">
         <section>
-          <h2>Radar de licitações</h2>
+          <h2>Farol de licitações</h2>
           <p>Busca por oportunidades ingeridas de fontes oficiais, com link de origem e filtros.</p>
         </section>
         <section>

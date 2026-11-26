@@ -247,21 +247,10 @@ export function DocumentosDoEdital({
   editalId,
   estado,
   publicados,
-  buscando = false,
-}: Readonly<{
-  editalId: string;
-  estado: EstadoDaLeitura;
-  publicados: DocumentoPublicado[];
-  buscando?: boolean;
-}>) {
+}: Readonly<{ editalId: string; estado: EstadoDaLeitura; publicados: DocumentoPublicado[] }>) {
   const [aberto, setAberto] = useState<string | null>(null);
 
-  if (!publicados.length)
-    return (
-      <p className="lt-vazio">
-        {buscando ? 'Buscando anexos na fonte…' : 'Nenhum anexo disponível no catálogo.'}
-      </p>
-    );
+  if (!publicados.length) return <p className="lt-vazio">Nenhum documento publicado.</p>;
   const lidos = estado.s === 'pronta' ? estado.dados.documentos : [];
 
   return (

@@ -4,7 +4,7 @@ import { PageHeader } from '../components/ui';
 import { AdminOverview } from './AdminOverview';
 
 export const metadata = {
-  title: 'Painel de operações | Licite Comigo',
+  title: 'Painel admin | Licite Comigo',
   description: 'Visão geral da operação: empresas, assinaturas e coleta de editais.',
 };
 
@@ -12,9 +12,9 @@ export default async function AdminPage() {
   await requireArea('administracao');
   return (
     <main className="ui-page">
-      <PageHeader eyebrow="Administração" title="Painel de operações" />
-      <AdminOverview modulo="profissional" />
+      <PageHeader eyebrow="Painel admin" title="Visão geral" />
       <AreaHub area="administracao" />
+      <AdminOverview modulo="profissional" />
     </main>
   );
 }

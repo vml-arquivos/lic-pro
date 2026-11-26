@@ -23,7 +23,7 @@ type ApprovalState = 'Pendente' | 'Aprovado' | 'Rejeitado';
 
 const automations = [
   [
-    'Radar diário de oportunidades',
+    'Farol diário de oportunidades',
     'Busca editais conforme CNAE, segmentos, locais, palavras-chave e valores.',
     'Diariamente · 08:00',
   ],

@@ -1,4 +1,4 @@
-/* Radar de editais */
+/* Farol de editais */
 .rd-page .ui-header {
   margin-bottom: 1.2rem;
 }
@@ -619,4 +619,50 @@
 .rd-descricao {
   border-top: 1px solid var(--workspace-line);
   padding-top: 0.6rem;
+}
+
+/* Status como no PNCP */
+.rd-status {
+  align-items: center;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  margin: 0 0 0.9rem;
+  padding: 0;
+}
+.rd-status legend {
+  float: left;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin-right: 0.8rem;
+  padding: 0;
+  text-transform: uppercase;
+}
+.rd-status-opcao {
+  align-items: center;
+  cursor: pointer;
+  display: inline-flex;
+  flex-direction: row;
+  font-size: 0.92rem;
+  font-weight: 600;
+  gap: 0.4rem;
+}
+.rd-status-opcao input {
+  accent-color: var(--lc-primary, #4f46e5);
+  margin: 0;
+  width: auto;
+}
+
+:root .rd-status .rd-status-opcao {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+}
+:root .rd-status .rd-status-opcao input {
+  width: auto;
+  min-height: 0;
+  padding: 0;
 }

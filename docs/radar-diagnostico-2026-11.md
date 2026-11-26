@@ -2,13 +2,13 @@
 
 ## 1. Como foi medido (e o que NÃO foi)
 
-| Item | Como |
-|---|---|
-| Reabertura do Radar, número de chamadas | Lido no código antigo (out32). O build antigo não foi rodado para contar requisições. |
-| Tempo de consulta do Radar | **Simulado**: banco local com 60 mil editais sintéticos (55 mil abertos), Postgres 16. Não é o banco de produção. |
-| PNCP / Compras.gov.br | **Não houve chamada real** (o ambiente de teste não alcança as fontes). Testado com respostas simuladas. |
-| Redis entre instâncias | Testado com um cliente Redis falso compartilhado. **Não testado com Redis real.** |
-| Coolify / homologação | Sem acesso. Nada foi verificado lá. |
+| Item                                    | Como                                                                                                              |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Reabertura do Radar, número de chamadas | Lido no código antigo (out32). O build antigo não foi rodado para contar requisições.                             |
+| Tempo de consulta do Radar              | **Simulado**: banco local com 60 mil editais sintéticos (55 mil abertos), Postgres 16. Não é o banco de produção. |
+| PNCP / Compras.gov.br                   | **Não houve chamada real** (o ambiente de teste não alcança as fontes). Testado com respostas simuladas.          |
+| Redis entre instâncias                  | Testado com um cliente Redis falso compartilhado. **Não testado com Redis real.**                                 |
+| Coolify / homologação                   | Sem acesso. Nada foi verificado lá.                                                                               |
 
 ## 2. Diagnóstico
 
@@ -31,25 +31,25 @@
 
 ## 4. Validade por tipo de dado
 
-| Dado | Validade | Guardado por | Observação |
-|---|---|---|---|
-| Resultados do edital (PNCP) | 10 min aberto; 30 min fechado sem resultado completo; 24 h fechado com resultado publicado | 14 dias | Parcial vale 2 min; serve o antigo e atualiza ao fundo |
-| Preços pagos por CATMAT | 6 h | 7 dias | Compras.gov.br |
-| Contratos/fornecedores do órgão | 6 h | 7 dias | |
-| Leitura dos PDFs | 6 h completa; 3 min incompleta; espera de 2 min após erro | 24 h | |
-| Detalhes do edital (banco) | 3 h aberto; 24 h fechado; imediato se o PNCP mudou | — | |
-| Lista do Radar (navegador) | atualiza ao abrir e a cada rodada agendada | sessão | |
+| Dado                            | Validade                                                                                   | Guardado por | Observação                                             |
+| ------------------------------- | ------------------------------------------------------------------------------------------ | ------------ | ------------------------------------------------------ |
+| Resultados do edital (PNCP)     | 10 min aberto; 30 min fechado sem resultado completo; 24 h fechado com resultado publicado | 14 dias      | Parcial vale 2 min; serve o antigo e atualiza ao fundo |
+| Preços pagos por CATMAT         | 6 h                                                                                        | 7 dias       | Compras.gov.br                                         |
+| Contratos/fornecedores do órgão | 6 h                                                                                        | 7 dias       |                                                        |
+| Leitura dos PDFs                | 6 h completa; 3 min incompleta; espera de 2 min após erro                                  | 24 h         |                                                        |
+| Detalhes do edital (banco)      | 3 h aberto; 24 h fechado; imediato se o PNCP mudou                                         | —            |                                                        |
+| Lista do Radar (navegador)      | atualiza ao abrir e a cada rodada agendada                                                 | sessão       |                                                        |
 
 ## 5. Portais — o que existe hoje
 
 Todas as licitações entram **pelo PNCP**. O portal de origem é identificado pelo nome que o PNCP informa (e pelo link de origem) e serve para filtro e link direto. Não há integração direta com nenhum portal.
 
-| Portal | Origem identificada | Editais | Itens | Anexos | Resultados | Participantes |
-|---|---|---|---|---|---|---|
-| Compras.gov.br | sim | via PNCP | via PNCP | via PNCP | via PNCP | não confirmado |
-| Portal de Compras Públicas | sim | via PNCP | via PNCP | via PNCP | via PNCP | não confirmado |
-| BLL, BNC, Licitanet, Licitações-e, ComprasBR, BBMNET, M2A, Licitar Digital | sim | via PNCP | via PNCP | via PNCP | via PNCP | não confirmado |
-| Outros | pelo nome/host informado | via PNCP | via PNCP | via PNCP | via PNCP | não confirmado |
+| Portal                                                                     | Origem identificada      | Editais  | Itens    | Anexos   | Resultados | Participantes  |
+| -------------------------------------------------------------------------- | ------------------------ | -------- | -------- | -------- | ---------- | -------------- |
+| Compras.gov.br                                                             | sim                      | via PNCP | via PNCP | via PNCP | via PNCP   | não confirmado |
+| Portal de Compras Públicas                                                 | sim                      | via PNCP | via PNCP | via PNCP | via PNCP   | não confirmado |
+| BLL, BNC, Licitanet, Licitações-e, ComprasBR, BBMNET, M2A, Licitar Digital | sim                      | via PNCP | via PNCP | via PNCP | via PNCP   | não confirmado |
+| Outros                                                                     | pelo nome/host informado | via PNCP | via PNCP | via PNCP | via PNCP   | não confirmado |
 
 "Via PNCP" = o que o PNCP publicar para aquele edital; o que o portal mostra e o PNCP não, não é coletado. Lista de participantes não foi confirmada como disponível em nenhuma fonte usada — não é mostrada como dado.
 

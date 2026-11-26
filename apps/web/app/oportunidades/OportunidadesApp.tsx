@@ -84,7 +84,7 @@ export function OportunidadesApp() {
         title="Pipeline"
         actions={
           <Link className="ui-btn" href="/radar">
-            Buscar no Radar
+            Buscar no Farol
           </Link>
         }
       />
@@ -92,7 +92,7 @@ export function OportunidadesApp() {
         <section className="ui-panel op-help" aria-label="Como funciona">
           <h2>Como funciona</h2>
           <ol>
-            <li>No Radar, salve o edital no pipeline.</li>
+            <li>No Farol, salve o edital no pipeline.</li>
             <li>Leia o edital e mova para “Analisando”.</li>
             <li>Se for seguir, monte o checklist de habilitação em “Preparando documentos”.</li>
             <li>Decida participar ou não e escreva o motivo. Fica guardado no histórico.</li>
@@ -147,11 +147,11 @@ function Board({
     return (
       <Panel title="Nenhuma oportunidade ainda">
         <Empty>
-          Quando você salvar um edital no Radar, ele aparece aqui. Comece por uma busca e use
+          Quando você salvar um edital no Farol, ele aparece aqui. Comece por uma busca e use
           “Salvar no pipeline”.
         </Empty>
         <Link className="ui-btn" href="/radar">
-          Ir para o Radar
+          Ir para o Farol
         </Link>
       </Panel>
     );

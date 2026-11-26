@@ -142,8 +142,6 @@ h3 {
 h1 {
   font-size: clamp(2.6rem, 6vw, 5.5rem);
   max-width: 760px;
-  text-wrap: balance;
-  overflow-wrap: anywhere;
 }
 h2 {
   font-size: clamp(1.8rem, 3.8vw, 3.3rem);

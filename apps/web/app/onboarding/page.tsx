@@ -10,7 +10,7 @@ export const metadata = {
 
 export default async function OnboardingPage() {
   const session = await requireArea('administracao', 'empresa', 'aluno', 'mentor');
-  // Empresa monta o perfil (nichos, estados e valores) direto no Radar, de uma vez só.
+  // Empresa monta o perfil (nichos, estados e valores) direto no Farol, de uma vez só.
   if (session.area === 'empresa') redirect('/radar');
   return (
     <main className="academy-page">

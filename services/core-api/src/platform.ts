@@ -183,18 +183,6 @@ export function registerPlatformRoutes(app: FastifyInstance, { pool, config }: D
                     (SELECT count(*) FROM ingest_dead_letters WHERE tenant_id = $1 AND resolvida_em IS NULL)::int AS dead_letters_pendentes`,
             [tenantId],
           ),
-          ...(modulo === 'curso'
-            ? {}
-            : {
-                rodadas_pncp: (
-                  await client.query(
-                    `SELECT id, iniciado_em, finalizado_em, status, inseridos, atualizados, erros
-                 FROM coleta_pncp_execucoes
-                WHERE finalizado_em IS NOT NULL
-                ORDER BY iniciado_em DESC LIMIT 6`,
-                  )
-                ).rows,
-              }),
           ana: await row(
             `SELECT count(*)::int AS conversas_7d FROM ana_conversas
               WHERE created_at > now() - interval '7 days'`,

@@ -17,7 +17,19 @@ import {
   useResource,
 } from '../../components/ui';
 
+type Inativo = {
+  id: string;
+  cliente: string;
+  empresa: string | null;
+  contato: string | null;
+  plano: string;
+  status: string;
+  desde: string | null;
+  ultimo_pagamento: string | null;
+};
+
 type Finance = {
+  inativos?: Inativo[];
   cobranca: { ligada: boolean; ambiente: string; webhook_url: string | null };
   receita: {
     mes_centavos: string;
@@ -126,6 +138,7 @@ export function FinanceAdmin({ modulo = 'profissional' }: Readonly<{ modulo?: Mo
                     value={brl(info.assinaturas.mrr_centavos)}
                   />
                   <Kpi label="Assinantes ativos" value={formatNumber(info.assinaturas.ativas)} />
+                  <Kpi label="Inativos" value={formatNumber(info.inativos?.length ?? 0)} />
                   <Kpi
                     label="Em atraso"
                     value={formatNumber(info.assinaturas.em_atraso)}
@@ -206,6 +219,36 @@ export function FinanceAdmin({ modulo = 'profissional' }: Readonly<{ modulo?: Mo
                 <Empty>Nenhuma cobrança criada ainda.</Empty>
               )}
             </Panel>
+
+            {doCurso ? null : (
+              <Panel title="Inativos">
+                {info.inativos?.length ? (
+                  <Table
+                    label="Assinantes inativos"
+                    head={['Empresa', 'Contato', 'Plano', 'Situação', 'Desde', 'Último pagamento']}
+                  >
+                    {info.inativos.map((row) => (
+                      <tr key={row.id}>
+                        <td>
+                          <strong>{row.empresa ?? row.cliente}</strong>
+                        </td>
+                        <td>{row.contato ?? '—'}</td>
+                        <td>{row.plano}</td>
+                        <td>
+                          <Badge tone="muted">
+                            {row.status === 'cancelada' ? 'Cancelada' : 'Expirada'}
+                          </Badge>
+                        </td>
+                        <td>{row.desde ? formatDate(row.desde) : '—'}</td>
+                        <td>{row.ultimo_pagamento ? formatDate(row.ultimo_pagamento) : '—'}</td>
+                      </tr>
+                    ))}
+                  </Table>
+                ) : (
+                  <Empty>Nenhum inativo.</Empty>
+                )}
+              </Panel>
+            )}
 
             <Panel title="Ligação com o Asaas">
               <p>

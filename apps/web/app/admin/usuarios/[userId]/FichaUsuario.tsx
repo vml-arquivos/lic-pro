@@ -419,7 +419,7 @@ export function FichaUsuario({
                   {data.buscas.recentes.map((item, index) => (
                     <tr key={`${item.created_at}-${index}`}>
                       <td>{formatDate(item.created_at, true)}</td>
-                      <td>{item.origem === 'precos' ? 'Preços pagos' : 'Radar de editais'}</td>
+                      <td>{item.origem === 'precos' ? 'Preços pagos' : 'Farol de editais'}</td>
                       <td>
                         {item.termo ? <strong>“{item.termo}”</strong> : null}
                         <small>{filtrosTexto(item.filtros)}</small>

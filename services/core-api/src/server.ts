@@ -46,6 +46,7 @@ import { registerDiagnosticoRoutes } from './diagnostico.js';
 import { AsaasError, type AsaasClient } from './asaas.js';
 import { registerPriceRoutes } from './precos.js';
 import { registerDetalhesRoutes } from './pncp-detalhes.js';
+import { registerConcorrenciaRoutes } from './concorrencia.js';
 import { registerHistoricoRoutes } from './historico-mercado.js';
 import { leituras, registerLeituraRoutes } from './leitura-edital.js';
 import { CacheCompartilhado } from './cache-compartilhado.js';
@@ -75,7 +76,14 @@ import { registerAnaContextoRoutes } from './ana-contexto.js';
 import { registerSegmentosRoutes } from './segmentos.js';
 import { registerLookupRoutes, type LookupOptions } from './lookup.js';
 import { registerActivityTracking } from './atividade.js';
-import { ESTADO_USUARIO, ORDEM, PERIODO_TIPO, SITUACAO_PRAZO, SITUACAO_TIPO } from './search.js';
+import {
+  ESTADO_USUARIO,
+  ORDEM,
+  PERIODO_TIPO,
+  SITUACAO_PRAZO,
+  SITUACAO_TIPO,
+  STATUS_PNCP,
+} from './search.js';
 import { alertReadSchema, savedSearchPatchSchema, savedSearchSchema } from './alerts.js';
 
 export type BuildAppOptions = {
@@ -391,7 +399,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (error instanceof Error && error.message === 'niche_preferences_required') {
       reply.code(409).send({
         error: 'niche_preferences_required',
-        message: 'Selecione de um a três nichos no onboarding antes de usar o Radar e os alertas.',
+        message: 'Selecione de um a três nichos no onboarding antes de usar o Farol e os alertas.',
       });
       return;
     }
@@ -1519,6 +1527,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       })),
       grande_vulto_min: GRANDE_VULTO_PADRAO,
       situacao_prazo: SITUACAO_PRAZO,
+      status: STATUS_PNCP,
       situacao_tipo: SITUACAO_TIPO,
       periodo_tipo: PERIODO_TIPO,
       estados: ESTADO_USUARIO,
@@ -2207,6 +2216,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   leituras.usarCompartilhado(cacheDasFontes);
   registerDetalhesRoutes(app, { pool, config, cache: cacheDasFontes });
   registerHistoricoRoutes(app, { pool, config, cache: cacheDasFontes });
+  registerConcorrenciaRoutes(app, { pool, config, cache: cacheDasFontes });
   registerLeituraRoutes(app, { pool });
   registerBillingRoutes(app, { pool, config, ...(options.asaas ? { asaas: options.asaas } : {}) });
   registerBillingExtras(app, { pool, config, ...(options.asaas ? { asaas: options.asaas } : {}) });

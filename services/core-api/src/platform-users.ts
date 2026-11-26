@@ -72,7 +72,7 @@ const ACAO_LABEL: Record<string, string> = {
   'oportunidade.saved': 'Salvou uma oportunidade',
   'oportunidade.updated': 'Atualizou uma oportunidade',
   'oportunidade.removed': 'Removeu uma oportunidade',
-  'radar.exported': 'Exportou resultados do Radar',
+  'radar.exported': 'Exportou resultados do Farol',
   'empresa.created': 'Cadastrou a empresa',
   'empresa.updated': 'Atualizou os dados da empresa',
   'empresa_documento.updated': 'Atualizou um documento da empresa',

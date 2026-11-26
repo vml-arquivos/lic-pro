@@ -67,7 +67,7 @@ export function DashboardCards() {
           <p className="eyebrow">Minha empresa</p>
           <h2>{me?.nome ?? 'Carregando…'}</h2>
           <p>
-            {companies[0]?.razao_social ?? 'Complete os dados da empresa para melhorar o Radar.'}
+            {companies[0]?.razao_social ?? 'Complete os dados da empresa para melhorar o Farol.'}
           </p>
         </div>
         <Link className="button-secondary" href="/onboarding">
@@ -75,7 +75,7 @@ export function DashboardCards() {
         </Link>
       </section>
       <section className="dashboard-card dashboard-scope-card">
-        <p className="eyebrow">Escopo do Radar</p>
+        <p className="eyebrow">Escopo do Farol</p>
         <h2>Seus nichos de atuação</h2>
         {me?.nicho_preferencias?.length ? (
           <div className="tag-row">
@@ -87,7 +87,7 @@ export function DashboardCards() {
           </div>
         ) : (
           <p>
-            Defina de um a três nichos. Eles definem o que o Radar, as buscas salvas e os alertas
+            Defina de um a três nichos. Eles definem o que o Farol, as buscas salvas e os alertas
             mostram.
           </p>
         )}
@@ -135,9 +135,9 @@ export function DashboardCards() {
         </div>
         <div className="dashboard-card">
           <p className="eyebrow">Próximos passos</p>
-          <h2>Radar de licitações</h2>
+          <h2>Farol de licitações</h2>
           <div className="dashboard-links">
-            <Link href="/radar">Abrir Radar</Link>
+            <Link href="/radar">Abrir Farol</Link>
             <Link href="/academia">Ir para Academia</Link>
             <Link href="/ana">Falar com a Ana</Link>
           </div>

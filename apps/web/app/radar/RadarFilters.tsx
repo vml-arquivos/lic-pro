@@ -11,7 +11,9 @@ import {
   PERIODOS,
   PRAZOS,
   REGIOES,
+  STATUS_PNCP,
   activeFilterCount,
+  anosDaContratacao,
   paramsFromForm,
 } from './radar-lib';
 
@@ -20,6 +22,9 @@ type Catalog = {
   modalidade?: string[];
   esfera?: string[];
   poder?: string[];
+  instrumento?: string[];
+  modo_disputa?: string[];
+  amparo_legal?: string[];
 };
 type PortalOpcao = { slug: string; nome: string; total: number };
 type CityHit = { codigo_ibge: string; municipio: string; sigla_uf: string };
@@ -119,6 +124,20 @@ export function RadarFilters({
         onApply(paramsFromForm(new FormData(event.currentTarget)));
       }}
     >
+      <fieldset className="rd-status">
+        <legend>Status</legend>
+        {STATUS_PNCP.map(([codigo, texto]) => (
+          <label key={codigo} className="rd-status-opcao">
+            <input
+              type="radio"
+              name="status"
+              value={codigo}
+              defaultChecked={(params.get('status') ?? 'todos') === codigo}
+            />
+            {texto}
+          </label>
+        ))}
+      </fieldset>
       <div className="rd-filters-main">
         <label className="rd-wide">
           Palavras-chave
@@ -167,10 +186,8 @@ export function RadarFilters({
         <Select
           label="Ordenar por"
           name="ordem"
-          value={params.get('ordem') === 'recentes' ? '' : (params.get('ordem') ?? '')}
-          options={ORDENS.filter(
-            ([code]) => code !== 'recentes' && (code !== 'compat' || hasProfile),
-          )}
+          value={params.get('ordem') ?? ''}
+          options={ORDENS.filter(([code]) => code !== 'compat' || hasProfile)}
           empty="Mais recentes"
         />
       </div>
@@ -211,6 +228,38 @@ export function RadarFilters({
             value={params.get('modalidade') ?? ''}
             options={asOptions(catalog.modalidade)}
           />
+          <Select
+            label="Instrumento convocatório"
+            name="instrumento"
+            value={params.get('instrumento') ?? ''}
+            options={asOptions(catalog.instrumento)}
+          />
+          <Select
+            label="Ano da contratação"
+            name="ano"
+            value={params.get('ano') ?? ''}
+            options={anosDaContratacao().map((ano) => [ano, ano] as const)}
+          />
+          <Select
+            label="Modo de disputa"
+            name="modo_disputa"
+            value={params.get('modo_disputa') ?? ''}
+            options={asOptions(catalog.modo_disputa)}
+          />
+          <Select
+            label="Amparo legal"
+            name="amparo_legal"
+            value={params.get('amparo_legal') ?? ''}
+            options={asOptions(catalog.amparo_legal)}
+          />
+          <label>
+            Órgão (nome ou CNPJ)
+            <input name="orgao" defaultValue={params.get('orgao') ?? ''} maxLength={160} />
+          </label>
+          <label>
+            Unidade (código)
+            <input name="uasg" defaultValue={params.get('uasg') ?? ''} maxLength={30} />
+          </label>
           <Select
             label="Esfera"
             name="esfera"

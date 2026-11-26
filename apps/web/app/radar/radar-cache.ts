@@ -1,5 +1,5 @@
 /**
- * Guarda a última resposta de cada busca do Radar neste navegador, para reabrir a lista na hora
+ * Guarda a última resposta de cada busca do Farol neste navegador, para reabrir a lista na hora
  * e atualizar em segundo plano. A chave inclui a conta e a busca já normalizada (com o perfil
  * aplicado): trocar de conta, de perfil ou de filtro nunca reaproveita outra lista.
  */
@@ -110,7 +110,7 @@ export function esquecerListas(): void {
   }
 }
 
-/** Lembra a busca em que a pessoa estava, para o "Voltar ao Radar" do edital. */
+/** Lembra a busca em que a pessoa estava, para o "Voltar ao Farol" do edital. */
 export function lembrarBusca(usuario: string, query: string): void {
   try {
     armazenamento()?.setItem(CHAVE_ULTIMA, JSON.stringify({ usuario, query }));

@@ -370,7 +370,7 @@ export function EditalWorkspace({
     return (
       <section className="detail-card">
         <h2>Edital não encontrado</h2>
-        <Link href="/radar">Voltar ao Radar</Link>
+        <Link href="/radar">Voltar ao Farol</Link>
       </section>
     );
   const edital = detail.edital;
@@ -540,9 +540,7 @@ export function EditalWorkspace({
             <button type="submit">Salvar anotação</button>
           </form>
         ) : null}
-        <h3>
-          {fetchingDetails && !detail.itens.length ? 'Itens' : `Itens (${detail.itens.length})`}
-        </h3>
+        <h3>Itens ({detail.itens.length})</h3>
         {signedIn && detail.edital.fonte === 'pncp' ? (
           <p>
             <button
@@ -582,9 +580,7 @@ export function EditalWorkspace({
             ))}
           </ul>
         ) : (
-          <p>
-            {fetchingDetails ? 'Buscando itens do edital…' : 'Nenhum item disponível no catálogo.'}
-          </p>
+          <p>Nenhum item normalizado ainda.</p>
         )}
         {signedIn && detail.edital.fonte === 'pncp' && detail.itens.length ? (
           <ValoresFechados editalId={editalId} />
@@ -614,7 +610,6 @@ export function EditalWorkspace({
             editalId={editalId}
             estado={leitura.estado}
             publicados={detail.documentos ?? []}
-            buscando={fetchingDetails}
           />
         </section>
       ) : null}
@@ -659,7 +654,7 @@ export function EditalWorkspace({
             ))}
           </ul>
         ) : (
-          <p>Nenhuma alteração registrada desde que o edital entrou no Radar.</p>
+          <p>Nenhuma alteração registrada desde que o edital entrou no Farol.</p>
         )}
         {!signedIn && (detail.documentos ?? []).length ? (
           <>

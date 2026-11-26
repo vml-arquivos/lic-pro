@@ -64,8 +64,8 @@ class SearchEditaisTool:
     def run(self, tenant_id: str, argument: str) -> tuple[str, list[Evidence]]:
         del tenant_id
         return (
-            f"O Radar pode consultar oportunidades oficiais para o tema “{argument}”. "
-            "Use os filtros do Radar para executar a busca e abra o edital na fonte original.",
+            f"O Farol pode consultar oportunidades oficiais para o tema “{argument}”. "
+            "Use os filtros do Farol para executar a busca e abra o edital na fonte original.",
             [],
         )
 

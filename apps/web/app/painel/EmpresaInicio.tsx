@@ -51,7 +51,7 @@ export function EmpresaInicio({
         title={`Olá, ${nome.split(' ')[0] ?? nome}`}
         actions={
           <Link className="ui-btn" href="/radar">
-            Buscar no Radar
+            Buscar no Farol
           </Link>
         }
       />
@@ -172,7 +172,7 @@ export function EmpresaInicio({
                 </Panel>
 
                 <Panel
-                  title="Seu escopo no Radar"
+                  title="Seu escopo no Farol"
                   actions={<Link href="/onboarding">Mudar nichos</Link>}
                 >
                   {nichos.length ? (
@@ -184,7 +184,7 @@ export function EmpresaInicio({
                       ))}
                     </div>
                   ) : (
-                    <Empty>Escolha de um a três nichos para o Radar mostrar o que interessa.</Empty>
+                    <Empty>Escolha de um a três nichos para o Farol mostrar o que interessa.</Empty>
                   )}
                   <p className="op-company">
                     {data.empresa

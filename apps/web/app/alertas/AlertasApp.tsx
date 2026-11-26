@@ -125,7 +125,7 @@ export function AlertasApp() {
           {({ data }) =>
             data.length === 0 ? (
               <Empty>
-                Nenhum aviso ainda. Salve uma busca no <Link href="/radar">Radar</Link>: quando
+                Nenhum aviso ainda. Salve uma busca no <Link href="/radar">Farol</Link>: quando
                 surgir algo novo, ele aparece aqui.
               </Empty>
             ) : (

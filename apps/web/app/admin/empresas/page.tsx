@@ -4,7 +4,7 @@ import { CompaniesAdmin } from './CompaniesAdmin';
 
 export const metadata = {
   title: 'Empresas clientes | Licite Comigo',
-  description: 'Contas de empresas que usam o Radar, com convite e situação de cada uma.',
+  description: 'Contas de empresas que usam o Farol, com convite e situação de cada uma.',
 };
 
 export default async function CompaniesPage() {

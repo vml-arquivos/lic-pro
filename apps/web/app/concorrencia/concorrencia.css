@@ -1,0 +1,42 @@
+.conc-form {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  align-items: end;
+}
+.conc-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.conc-split {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+.conc-nome {
+  display: block;
+  font-weight: 600;
+}
+.conc-sub {
+  display: block;
+  color: var(--muted, #6b7280);
+  font-size: 0.85rem;
+}
+.conc-linha-acoes {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.conc-objeto {
+  max-width: 340px;
+}
+
+.conc-split .ui-table th,
+.conc-split .ui-table td {
+  padding-inline: 8px;
+}
+:root .conc-split .ui-table {
+  min-width: 0;
+}

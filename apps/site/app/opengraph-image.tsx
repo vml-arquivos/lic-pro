@@ -47,7 +47,7 @@ export default function OpenGraphImage() {
         </span>
       </div>
       <div style={{ color: '#0f937f', fontSize: '24px', fontWeight: 600 }}>
-        Radar · Empresas · Academia · Ana
+        Farol · Empresas · Academia · Ana
       </div>
     </div>,
     { ...size },

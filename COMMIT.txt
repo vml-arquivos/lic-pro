@@ -1,7 +1,18 @@
 Resumo:
-Acesso master, leitura automática do edital, Quadro de decisão, Radar que mantém a busca, página do edital em colunas e painéis sem textos de ajuda
+Concorrência e fornecedores, Consultas ativas, Robô de lances, Fonte de dados, filtros iguais aos do PNCP, Farol (novo nome do Radar) e inativos no financeiro
 
 Descrição:
+- Filtros do Farol iguais aos do PNCP: Status (recebendo propostas, em julgamento, encerradas, todos), Instrumento convocatório, Ano da contratação, Modo de disputa, Amparo legal, Órgão (nome ou CNPJ) e Unidade (código).
+- Radar de licitações passa a se chamar Farol (só o nome na tela; endereços e links continuam os mesmos).
+- Depois do cadastro ou do pagamento, a empresa cai direto na criação do perfil do Farol; a página Assinatura avisa quando o perfil falta.
+- Financeiro (Painel admin): lista de Inativos (assinaturas canceladas ou vencidas) com contato, plano, desde quando e último pagamento.
+- Nova Consulta de concorrência: por assunto (quem mais fecha contratos) e por CNPJ (contratos, valor, órgãos e estados), lida do PNCP, com link de cada contrato.
+- Novos Fornecedores acompanhados: a empresa guarda CNPJs de concorrentes e vê os contratos novos desde a última visita (migration 0038).
+- Nova página Consultas ativas: as buscas salvas ligadas, com quantas licitações abertas e novas em 24 h cada uma tem.
+- Novo Robô de lances: calcula o piso (custo + lucro mínimo), a sequência de lances e o próximo lance. Não envia lance a portal.
+- Nova página Fonte de dados: de onde vem cada dado, última coleta e editais por portal.
+- Menu e bloqueio por acesso dos itens novos (empresa e colaborador). Painéis de alunos e de empresas continuam separados.
+- Migration 0038 (tabela fornecedores_acompanhados). Sem variável nova.
 - Acesso master (superadmin) pelo e-mail em SUPERADMIN_EMAILS: vê tudo, cria acessos de equipe e marca o que cada um não pode abrir (menu, páginas e API). Nova tela em Equipe administrativa e também no convite.
 - Login único entre os painéis para a equipe (COOKIE_DOMAIN) e atalhos para trocar de painel.
 - Migration 0037 (colunas acessos_bloqueados).

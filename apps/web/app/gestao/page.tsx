@@ -12,7 +12,7 @@ export default async function GestaoPage() {
   await requireArea('curso');
   return (
     <main className="ui-page">
-      <PageHeader eyebrow="Gestão acadêmica" title="Painel da mentoria" />
+      <PageHeader eyebrow="Painel da mentoria" title="Visão geral" />
       <AreaHub area="curso" />
       <AdminOverview modulo="curso" />
     </main>

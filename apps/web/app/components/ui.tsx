@@ -35,7 +35,7 @@ export function Kpi({
 }: Readonly<{
   label: string;
   value: React.ReactNode;
-  hint?: string;
+  hint?: string | undefined;
   tone?: 'warn' | 'ok' | undefined;
 }>) {
   return (

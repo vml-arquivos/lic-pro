@@ -34,7 +34,7 @@ export type EntradaAnalise = {
   modalidade: string | null;
   srp: boolean | null;
   itens: number | null;
-  /** Compatibilidade (0–100) com o perfil do Radar, quando a pessoa tem perfil. */
+  /** Compatibilidade (0–100) com o perfil do Farol, quando a pessoa tem perfil. */
   compat: number | null;
   perfil_valor_min: number | null;
   perfil_valor_max: number | null;
@@ -216,11 +216,11 @@ export function analisarOportunidade(entrada: EntradaAnalise): ResultadoAnalise 
     entrada.compat === null
       ? {
           pontos: 50,
-          detalhe: 'Sem perfil no Radar: defina UFs e palavras para medir a aderência.',
+          detalhe: 'Sem perfil no Farol: defina UFs e palavras para medir a aderência.',
         }
       : {
           pontos: Math.round(clamp(entrada.compat)),
-          detalhe: `Compatibilidade de ${Math.round(entrada.compat)}% com os seus nichos e o perfil do Radar.`,
+          detalhe: `Compatibilidade de ${Math.round(entrada.compat)}% com os seus nichos e o perfil do Farol.`,
         };
   const prazo = pontosPrazo(entrada.encerra_em, entrada.agora);
   const valor = pontosValor(entrada);

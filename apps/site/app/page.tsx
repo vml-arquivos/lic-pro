@@ -60,9 +60,9 @@ export default function HomePage() {
       <section className="hero section-wrap">
         <div className="hero-copy">
           <p className="eyebrow">Licitações públicas</p>
-          <h1>Encontre licitações e decida quais disputar.</h1>
+          <h1>Encontre oportunidades. Leia o edital. Organize o próximo passo.</h1>
           <p className="hero-lead">
-            Radar de oportunidades, leitura assistida com fontes e organização de prazos para
+            Farol de oportunidades, leitura assistida com fontes e organização de prazos para
             empresas e profissionais que participam de compras públicas.
           </p>
           <div className="cta-row">
