@@ -666,3 +666,47 @@
   min-height: 0;
   padding: 0;
 }
+
+:root .rd-portais {
+  border: 1px solid var(--workspace-line, #e4e7ec);
+  border-radius: 0.6rem;
+  grid-column: 1 / -1;
+  margin: 0;
+  min-width: 0;
+  padding: 0.5rem 0.8rem 0.7rem;
+}
+:root .rd-portais legend {
+  color: var(--workspace-muted, #667085);
+  font-size: 0.8rem;
+  padding: 0 0.3rem;
+}
+:root .rd-portais ul {
+  display: grid;
+  gap: 0.15rem 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  list-style: none;
+  margin: 0;
+  max-height: 11rem;
+  overflow-y: auto;
+  padding: 0;
+}
+:root .rd-portais label {
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  font-size: 0.86rem;
+  gap: 0.4rem;
+}
+:root .rd-portais label span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:root .rd-portais small {
+  color: var(--workspace-muted, #667085);
+}
+:root .rd-portal-vazio {
+  opacity: 0.6;
+}

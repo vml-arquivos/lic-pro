@@ -64,7 +64,19 @@ describe('core-api configuration', () => {
       pncpSyncModalidades: [6, 8, 4, 5, 7, 9],
       pncpSyncMaxPages: 40,
       pncpBaseUrl: 'https://pncp.gov.br/api/consulta',
+      pncpEnrichEnabled: true,
+      pncpEnrichMinutes: 30,
+      pncpEnrichPages: 6,
     });
+    expect(
+      loadConfig({
+        ...productionEnv,
+        EMAIL_PROVIDER: 'disabled',
+        PNCP_ENRICH_ENABLED: 'false',
+        PNCP_ENRICH_MINUTES: '1',
+        PNCP_ENRICH_PAGES: '999',
+      }),
+    ).toMatchObject({ pncpEnrichEnabled: false, pncpEnrichMinutes: 5, pncpEnrichPages: 40 });
     const custom = loadConfig({
       ...productionEnv,
       EMAIL_PROVIDER: 'disabled',

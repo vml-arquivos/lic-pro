@@ -25,8 +25,15 @@ type Catalog = {
   instrumento?: string[];
   modo_disputa?: string[];
   amparo_legal?: string[];
+  fonte_orcamentaria?: string[];
+  normativo_base?: string[];
+  criterio_julgamento?: string[];
 };
-type PortalOpcao = { slug: string; nome: string; total: number };
+const SIM_NAO: ReadonlyArray<readonly [string, string]> = [
+  ['true', 'Sim'],
+  ['false', 'Não'],
+];
+type PortalOpcao = { slug: string; nome: string; total: number; conhecido?: boolean };
 type CityHit = { codigo_ibge: string; municipio: string; sigla_uf: string };
 
 function Select({
@@ -106,10 +113,12 @@ export function RadarFilters({
   const nichosDaLista = selectedNiches.length ? selectedNiches : meusNichos;
   const asOptions = (list: string[] | undefined) =>
     (list ?? []).map((item) => [item, item] as const);
-  const portalAtual = params.get('portal') ?? '';
-  const portalOpcoes = portais
-    .filter((portal) => portal.total > 0 || portal.slug === portalAtual)
-    .map((portal) => [portal.slug, portal.nome] as const);
+  const portaisEscolhidos = params.getAll('portal');
+  // Todos os portais conhecidos (mesmo sem edital agora) e os que apareceram na coleta.
+  const portalOpcoes = portais.filter(
+    (portal) =>
+      portal.conhecido !== false || portal.total > 0 || portaisEscolhidos.includes(portal.slug),
+  );
   const nearDefault = params.get('perto_municipio')
     ? `Município escolhido (${params.get('perto_municipio')})`
     : (params.get('municipio') ?? '');
@@ -252,6 +261,42 @@ export function RadarFilters({
             value={params.get('amparo_legal') ?? ''}
             options={asOptions(catalog.amparo_legal)}
           />
+          <Select
+            label="Fonte orçamentária"
+            name="fonte_orcamentaria"
+            value={params.get('fonte_orcamentaria') ?? ''}
+            options={asOptions(catalog.fonte_orcamentaria)}
+          />
+          <Select
+            label="Normativo base"
+            name="normativo_base"
+            value={params.get('normativo_base') ?? ''}
+            options={asOptions(catalog.normativo_base)}
+          />
+          <Select
+            label="Critério de julgamento"
+            name="criterio_julgamento"
+            value={params.get('criterio_julgamento') ?? ''}
+            options={asOptions(catalog.criterio_julgamento)}
+          />
+          <Select
+            label="Emenda parlamentar"
+            name="emenda"
+            value={params.get('emenda') ?? ''}
+            options={SIM_NAO}
+          />
+          <Select
+            label="Item sigiloso"
+            name="sigiloso"
+            value={params.get('sigiloso') ?? ''}
+            options={SIM_NAO}
+          />
+          <Select
+            label="Exige nota fiscal eletrônica"
+            name="nfe"
+            value={params.get('nfe') ?? ''}
+            options={SIM_NAO}
+          />
           <label>
             Órgão (nome ou CNPJ)
             <input name="orgao" defaultValue={params.get('orgao') ?? ''} maxLength={160} />
@@ -272,13 +317,28 @@ export function RadarFilters({
             value={params.get('poder') ?? ''}
             options={asOptions(catalog.poder)}
           />
-          <Select
-            label="Portal de compras"
-            name="portal"
-            value={portalAtual}
-            options={portalOpcoes}
-            empty="Todos os portais"
-          />
+          <fieldset className="rd-portais">
+            <legend>Portais de compras</legend>
+            <ul>
+              {portalOpcoes.map((portal) => (
+                <li
+                  key={portal.slug}
+                  className={portal.total === 0 ? 'rd-portal-vazio' : undefined}
+                >
+                  <label>
+                    <input
+                      type="checkbox"
+                      name="portal"
+                      value={portal.slug}
+                      defaultChecked={portaisEscolhidos.includes(portal.slug)}
+                    />
+                    <span>{portal.nome}</span>
+                    <small>{portal.total.toLocaleString('pt-BR')}</small>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </fieldset>
           <Select
             label="Período por"
             name="periodo_tipo"

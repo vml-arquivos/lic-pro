@@ -41,6 +41,10 @@ export type RuntimeConfig = {
   pncpSyncModalidades: number[];
   /** Teto de páginas por modalidade e por rodada (cada página traz até 50 editais). */
   pncpSyncMaxPages: number;
+  /** Enriquecimento dos editais com campos extras do PNCP (fonte orçamentária, emenda…). */
+  pncpEnrichEnabled: boolean;
+  pncpEnrichMinutes: number;
+  pncpEnrichPages: number;
   pncpBaseUrl: string;
   /** API de detalhes do PNCP (itens e documentos de uma contratação). */
   pncpApiBaseUrl: string;
@@ -146,6 +150,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
     pncpSyncDays: boundedInt(env.PNCP_SYNC_DAYS, 2, 1, 30),
     pncpSyncModalidades: modalidades(env.PNCP_SYNC_MODALIDADES),
     pncpSyncMaxPages: boundedInt(env.PNCP_SYNC_MAX_PAGES, 40, 1, 200),
+    pncpEnrichEnabled: clean(env.PNCP_ENRICH_ENABLED) !== 'false',
+    pncpEnrichMinutes: boundedInt(env.PNCP_ENRICH_MINUTES, 30, 5, 1440),
+    pncpEnrichPages: boundedInt(env.PNCP_ENRICH_PAGES, 6, 1, 40),
     pncpBaseUrl: (env.PNCP_BASE_URL?.trim() || 'https://pncp.gov.br/api/consulta').replace(
       /\/$/,
       '',

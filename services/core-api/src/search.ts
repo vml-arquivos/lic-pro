@@ -105,6 +105,12 @@ export const editalSearchSchema = z.object({
   instrumento: stringOrStrings.optional(),
   codigo_instrumento: stringOrStrings.optional(),
   srp: booleanish.optional(),
+  fonte_orcamentaria: stringOrStrings.optional(),
+  normativo_base: stringOrStrings.optional(),
+  criterio_julgamento: stringOrStrings.optional(),
+  emenda: booleanish.optional(),
+  sigiloso: booleanish.optional(),
+  nfe: booleanish.optional(),
   prazo_proposta_aberto: booleanish.optional(),
   periodo_tipo: z.enum(PERIODO_TIPO).optional(),
   periodo_de: dateText.optional(),
@@ -179,6 +185,8 @@ export type SearchQuery = {
   countText: string;
   countValues: SearchValue[];
   facets: { campo: FacetKey; text: string; values: SearchValue[] }[];
+  /** Uma linha por portal (portal_slug): total, abertos, que encerram em 3 dias e valor dos abertos. */
+  portais: { text: string; values: SearchValue[] };
 };
 
 /** Fragmento SQL com parâmetros locais `{0}`, `{1}`… numerados na montagem final. */
@@ -422,6 +430,12 @@ export function buildEditalSearchQuery(
   if (filters.instrumento) addText('instrumento', filters.instrumento);
   if (filters.codigo_instrumento) addText('codigo_instrumento', filters.codigo_instrumento);
   if (filters.srp !== undefined) add('srp = {0}', [filters.srp]);
+  if (filters.fonte_orcamentaria) addText('fonte_orcamentaria', filters.fonte_orcamentaria);
+  if (filters.normativo_base) addText('normativo_base', filters.normativo_base);
+  if (filters.criterio_julgamento) addText('criterio_julgamento', filters.criterio_julgamento);
+  if (filters.emenda !== undefined) add('emenda_parlamentar = {0}', [filters.emenda]);
+  if (filters.sigiloso !== undefined) add('orcamento_sigiloso = {0}', [filters.sigiloso]);
+  if (filters.nfe !== undefined) add('possui_nfe = {0}', [filters.nfe]);
   if (filters.prazo_proposta_aberto === true) {
     add('data_encerramento_proposta IS NOT NULL AND data_encerramento_proposta > now()', []);
   } else if (filters.prazo_proposta_aberto === false) {
@@ -735,6 +749,26 @@ export function buildEditalSearchQuery(
     };
   });
 
+  const portaisValues: SearchValue[] = [];
+  const portaisWhere = sqlWhere(frags, portaisValues);
+  const portais = {
+    text: `SELECT portal_slug AS slug,
+                  mode() WITHIN GROUP (ORDER BY sistema_origem) AS nome,
+                  count(*)::int AS total,
+                  (count(*) FILTER (WHERE data_encerramento_proposta > now()))::int AS abertas,
+                  (count(*) FILTER (
+                     WHERE data_encerramento_proposta > now()
+                       AND data_encerramento_proposta <= now() + interval '3 days'))::int AS encerram_3_dias,
+                  COALESCE(sum(valor_estimado) FILTER (WHERE data_encerramento_proposta > now()), 0)::float8
+                    AS valor_abertas
+             FROM editais${joins}
+            WHERE ${portaisWhere} AND portal_slug IS NOT NULL
+            GROUP BY portal_slug
+            ORDER BY total DESC, slug
+            LIMIT 300`,
+    values: portaisValues,
+  };
+
   const hasExtras = values.length > whereValues.length;
   return {
     text: `${projection}${pagination}`,
@@ -742,6 +776,7 @@ export function buildEditalSearchQuery(
     countText: `SELECT count(*)::integer AS total FROM editais${joins} WHERE ${where}`,
     countValues: hasExtras ? whereValues : values,
     facets,
+    portais,
   };
 }
 

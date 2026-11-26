@@ -1,7 +1,16 @@
 Resumo:
-Concorrência e fornecedores, Consultas ativas, Robô de lances, Fonte de dados, filtros iguais aos do PNCP, Farol (novo nome do Radar) e inativos no financeiro
+Portais por filtro, página de Portais com números e alerta, seis filtros do PNCP e proteção contra migration atrasada
 
 Descrição:
+- Portais: o filtro do Farol agora lista todos os portais (os conhecidos e os que aparecem na coleta, com a quantidade de cada um) e deixa escolher vários de uma vez.
+- Página Portais refeita: editais, abertos, que encerram em 3 dias e valor dos abertos por portal; filtros por estado, modalidade e palavra-chave; ordenação; busca pelo nome do portal; botão "Avisar de novos" (cria a busca e o alerta do portal) e "Ver editais" já com os filtros.
+- A contagem por portal passa a ser direta pelo identificador do portal; antes usava só os 40 maiores e um portal pequeno podia aparecer com zero.
+- Se o servidor subir antes da migration 0039, a lista de filtros e a ficha do edital continuam funcionando (só ficam sem os seis campos novos), e a rotina de campos do PNCP espera a migration.
+- Farol: novos filtros Fonte orçamentária, Normativo base, Critério de julgamento, Emenda parlamentar, Item sigiloso e Exige nota fiscal eletrônica, com as opções reais da base. Os mesmos filtros valem para buscas salvas e alertas.
+- Ficha do edital mostra os seis campos novos quando o PNCP informa.
+- Nova rotina leve no core-api (a cada 30 min) completa esses campos nos editais já coletados, lendo a busca pública do PNCP (recebendo propostas e em julgamento) e, para os mais novos que faltarem, buscando pelo número do edital. Se o PNCP falhar, a rodada é pulada e nada é apagado.
+- Migration 0039 (colunas novas em editais e função de gravação da rotina).
+- Variáveis opcionais PNCP_ENRICH_ENABLED, PNCP_ENRICH_MINUTES e PNCP_ENRICH_PAGES (padrões já valem). Lista de modalidades ampliável em PNCP_SYNC_MODALIDADES (exemplo no .env.example).
 - Filtros do Farol iguais aos do PNCP: Status (recebendo propostas, em julgamento, encerradas, todos), Instrumento convocatório, Ano da contratação, Modo de disputa, Amparo legal, Órgão (nome ou CNPJ) e Unidade (código).
 - Radar de licitações passa a se chamar Farol (só o nome na tela; endereços e links continuam os mesmos).
 - Depois do cadastro ou do pagamento, a empresa cai direto na criação do perfil do Farol; a página Assinatura avisa quando o perfil falta.

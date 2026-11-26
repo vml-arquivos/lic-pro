@@ -17,7 +17,7 @@ export default async function PortaisPage() {
     <div className="ui-page">
       <LicitacoesNav atual="/portais" area={session.area} />
       <PageHeader eyebrow="Licitações" title="Portais de compras" />
-      <PortaisApp />
+      <PortaisApp podeAvisar={session.area !== 'aluno'} />
     </div>
   );
 }

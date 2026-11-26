@@ -204,7 +204,7 @@ export function isFacetActive(params: URLSearchParams, campo: string, valor: str
 /** Transforma o formulário em parâmetros de URL, descartando campos vazios. */
 export function paramsFromForm(form: FormData): URLSearchParams {
   const params = new URLSearchParams();
-  const multi = new Set(['nicho', 'situacao_tipo', 'segmento', 'item']);
+  const multi = new Set(['nicho', 'situacao_tipo', 'segmento', 'item', 'portal']);
   const csv = new Set(['uf']);
   const csvValues: Record<string, string[]> = {};
   form.forEach((raw, key) => {

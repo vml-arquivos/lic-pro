@@ -3,6 +3,7 @@ import { createPool } from './db.js';
 import { loadConfig } from './config.js';
 import { startAlertEngine } from './alert-engine.js';
 import { startPncpSync } from './pncp-sync.js';
+import { startEnriquecimento } from './pncp-enriquecimento.js';
 import { sendEmail } from './email.js';
 import { startCleanup } from './limpeza.js';
 
@@ -30,6 +31,9 @@ if (config.nodeEnv !== 'test') {
     startPncpSync({ pool, config, onRound: () => alertas?.runNow() }, (message) =>
       app.log.info(message),
     );
+  }
+  if (pool && config.pncpSyncEnabled && config.pncpEnrichEnabled) {
+    startEnriquecimento({ pool, config }, (message) => app.log.info(message));
   }
 }
 

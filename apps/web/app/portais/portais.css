@@ -64,3 +64,38 @@
   margin: 0;
   padding: 0;
 }
+.pt-filtros {
+  align-items: end;
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+}
+.pt-filtros label {
+  color: var(--workspace-muted);
+  display: grid;
+  font-size: 0.8rem;
+  gap: 0.2rem;
+}
+.pt-filtros-acoes {
+  display: flex;
+  gap: 0.4rem;
+}
+.pt-numeros {
+  display: grid;
+  gap: 0.4rem 0.8rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+.pt-numeros dt {
+  color: var(--workspace-muted);
+  font-size: 0.74rem;
+}
+.pt-numeros dd {
+  color: var(--workspace-navy);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0;
+}
+.pt-erro {
+  color: #b42318;
+}

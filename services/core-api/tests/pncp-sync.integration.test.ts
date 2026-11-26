@@ -473,9 +473,20 @@ suite('coleta do PNCP (PostgreSQL real, fonte simulada)', () => {
     const lista = await app.inject({ method: 'GET', url: '/portais', headers });
     expect(lista.statusCode).toBe(200);
     const portais = lista.json() as {
-      portais: Array<{ slug: string; total: number; site: string | null }>;
+      portais: Array<{
+        slug: string;
+        total: number;
+        site: string | null;
+        abertas: number;
+        encerram_3_dias: number;
+        valor_abertas: number;
+      }>;
       total: number;
     };
+    const licitanet = portais.portais.find((item) => item.slug === 'licitanet')!;
+    expect(licitanet.abertas).toBeLessThanOrEqual(licitanet.total);
+    expect(licitanet.encerram_3_dias).toBeLessThanOrEqual(licitanet.abertas);
+    expect(licitanet.valor_abertas).toBeGreaterThanOrEqual(0);
     expect(portais.portais.find((item) => item.slug === 'licitanet')!.total).toBeGreaterThanOrEqual(
       1,
     );

@@ -29,6 +29,12 @@ type Edital = {
   numero_compra?: string | null;
   processo?: string | null;
   amparo_legal?: string | null;
+  fonte_orcamentaria?: string | null;
+  emenda_parlamentar?: boolean | null;
+  normativo_base?: string | null;
+  criterio_julgamento?: string | null;
+  orcamento_sigiloso?: boolean | null;
+  possui_nfe?: boolean | null;
   informacao_complementar?: string | null;
   municipio_nome?: string | null;
   esfera?: string | null;
@@ -123,6 +129,10 @@ const FIELD_LABELS: Record<string, string> = {
   modalidade: 'Modalidade',
   titulo: 'Objeto',
 };
+
+function simNao(valor: boolean | null | undefined): string | null {
+  return valor === null || valor === undefined ? null : valor ? 'Sim' : 'Não';
+}
 
 function showValue(campo: string, value: unknown): string {
   if (value === null || value === undefined || value === '') return 'vazio';
@@ -419,6 +429,12 @@ export function EditalWorkspace({
               ['Modo de disputa', edital.modo_disputa],
               ['Instrumento', edital.instrumento],
               ['Amparo legal', edital.amparo_legal],
+              ['Normativo base', edital.normativo_base],
+              ['Critério de julgamento', edital.criterio_julgamento],
+              ['Fonte orçamentária', edital.fonte_orcamentaria],
+              ['Emenda parlamentar', simNao(edital.emenda_parlamentar)],
+              ['Orçamento sigiloso', simNao(edital.orcamento_sigiloso)],
+              ['Exige nota fiscal eletrônica', simNao(edital.possui_nfe)],
               [
                 'Registro de preços',
                 edital.srp === null || edital.srp === undefined ? null : edital.srp ? 'Sim' : 'Não',

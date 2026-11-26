@@ -22,32 +22,48 @@ export type PortalListado = {
   descricao: string | null;
   total: number;
   conhecido: boolean;
+  abertas: number;
+  encerram_3_dias: number;
+  valor_abertas: number;
+};
+
+export type LinhaDePortal = {
+  slug: string;
+  nome: string | null;
+  total: number;
+  abertas?: number;
+  encerram_3_dias?: number;
+  valor_abertas?: number;
 };
 
 /**
- * Junta os nomes de portal que o PNCP informou (cada edital traz o seu) em um item por portal
- * e acrescenta os portais conhecidos que ainda não apareceram, com total zero.
+ * Uma linha por portal, vinda da contagem por `portal_slug`, mais os portais conhecidos que
+ * ainda não apareceram (total zero), para a lista estar sempre completa.
  */
-export function montarListaDePortais(
-  linhas: readonly { valor: string; total: number }[],
-): PortalListado[] {
+export function montarListaDePortais(linhas: readonly LinhaDePortal[]): PortalListado[] {
   const porSlug = new Map<string, PortalListado>();
   for (const linha of linhas) {
-    const portal = portalDaLicitacao({ usuario: linha.valor });
-    if (!portal) continue;
-    const info = infoDoPortal(portal.slug);
-    const atual = porSlug.get(portal.slug);
+    const info = infoDoPortal(linha.slug);
+    const portal = portalDaLicitacao({ usuario: linha.nome ?? linha.slug });
+    const nome = info?.nome ?? portal?.nome ?? linha.nome ?? linha.slug;
+    const atual = porSlug.get(linha.slug);
     if (atual) {
       atual.total += linha.total;
+      atual.abertas += linha.abertas ?? 0;
+      atual.encerram_3_dias += linha.encerram_3_dias ?? 0;
+      atual.valor_abertas += linha.valor_abertas ?? 0;
       continue;
     }
-    porSlug.set(portal.slug, {
-      slug: portal.slug,
-      nome: portal.nome,
+    porSlug.set(linha.slug, {
+      slug: linha.slug,
+      nome,
       site: info?.site ?? null,
       descricao: info?.descricao ?? null,
       total: linha.total,
-      conhecido: portal.conhecido,
+      conhecido: Boolean(info),
+      abertas: linha.abertas ?? 0,
+      encerram_3_dias: linha.encerram_3_dias ?? 0,
+      valor_abertas: linha.valor_abertas ?? 0,
     });
   }
   for (const info of PORTAIS_CONHECIDOS) {
@@ -59,6 +75,9 @@ export function montarListaDePortais(
       descricao: info.descricao,
       total: 0,
       conhecido: true,
+      abertas: 0,
+      encerram_3_dias: 0,
+      valor_abertas: 0,
     });
   }
   return [...porSlug.values()].sort(
@@ -84,11 +103,7 @@ export function registerPortaisRoutes(app: FastifyInstance, { pool }: Deps): voi
         page_size: 1,
       });
       const busca = buildEditalSearchQuery(filters, await searchContext(client, request));
-      const faceta = busca.facets.find((item) => item.campo === 'sistema_origem')!;
-      const linhas = await client.query<{ valor: string; total: number }>(
-        faceta.text,
-        faceta.values,
-      );
+      const linhas = await client.query<LinhaDePortal>(busca.portais.text, busca.portais.values);
       const contagem = await client.query<{ total: number }>(busca.countText, busca.countValues);
       const portais = montarListaDePortais(linhas.rows);
       const comPortal = portais.reduce((soma, portal) => soma + portal.total, 0);

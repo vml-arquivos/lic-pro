@@ -1,3 +1,4 @@
+import { temCamposPncp } from './colunas-opcionais.js';
 import { randomUUID } from 'node:crypto';
 import fastifyCors from '@fastify/cors';
 import fastifyJwt from '@fastify/jwt';
@@ -1484,6 +1485,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       'TO',
     ];
     const result = await withTenant(pool, authContext(request), async (client) => {
+      const comCamposPncp = await temCamposPncp(client);
       const fields = [
         'fonte',
         'sistema_origem',
@@ -1494,8 +1496,15 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         'situacao',
         'instrumento',
         'amparo_legal',
+        'fonte_orcamentaria',
+        'normativo_base',
+        'criterio_julgamento',
         'catmat_catser',
-      ];
+      ].filter(
+        (campo) =>
+          !['fonte_orcamentaria', 'normativo_base', 'criterio_julgamento'].includes(campo) ||
+          comCamposPncp,
+      );
       const values = await Promise.all(
         fields.map(async (field) => {
           const result = await client.query<{ value: string }>(
@@ -1778,6 +1787,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (!pool) return sendDatabaseUnavailable(reply);
     const { editalId } = editalPathSchema.parse(request.params);
     const result = await withTenant(pool, authContext(request), async (client) => {
+      const camposPncp = (await temCamposPncp(client))
+        ? `fonte_orcamentaria, emenda_parlamentar, normativo_base, criterio_julgamento,
+                  orcamento_sigiloso, possui_nfe,`
+        : '';
       const [edital, itens, versoes, chunks, analise, documentos, eventos] = await Promise.all([
         client.query(
           `SELECT id, fonte, sistema_origem, id_externo, titulo, orgao, uf, uasg,
@@ -1787,6 +1800,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
                   data_atualizacao, data_abertura_proposta, data_encerramento_proposta,
                   url_origem, conteudo_texto, hash_conteudo, estado_completude,
                   orgao_cnpj, numero_compra, processo, amparo_legal, informacao_complementar,
+                  ${camposPncp}
                   created_at, updated_at, detalhes_coletados_em
              FROM editais
             WHERE id = $1`,
