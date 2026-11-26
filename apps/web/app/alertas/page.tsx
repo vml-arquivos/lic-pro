@@ -14,7 +14,7 @@ export default async function AlertasPage() {
   return (
     <div className="ui-page">
       <PageHeader
-        eyebrow="Farol"
+        eyebrow="Alerta de Licitações"
         title="Alertas"
         actions={
           <Link className="ui-btn ui-btn-ghost" href="/buscas-salvas">

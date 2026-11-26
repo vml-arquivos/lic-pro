@@ -17,7 +17,7 @@ export default async function EditalDetailPage({ params }: DetailPageProps) {
       <VoltarAoRadar usuario={session?.id ?? 'anonimo'} />
       <header className="ui-header">
         <div>
-          <p className="eyebrow">Farol</p>
+          <p className="eyebrow">Alerta de Licitações</p>
           <h1>Edital</h1>
         </div>
       </header>

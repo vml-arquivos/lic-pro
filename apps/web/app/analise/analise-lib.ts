@@ -108,7 +108,8 @@ export const GUIA_DE_VALORES: ReadonlyArray<readonly [string, string]> = [
 ];
 
 export const CRITERIOS_AJUDA: Record<string, string> = {
-  aderencia: 'Quanto o edital combina com o seu perfil do Farol (UFs, palavras, faixa de valor).',
+  aderencia:
+    'Quanto o edital combina com o seu perfil do Alerta de Licitações (UFs, palavras, faixa de valor).',
   prazo: 'Tempo que sobra para preparar a proposta. O ideal é entre 3 e 14 dias.',
   valor: 'Se o valor estimado está na faixa que a sua empresa costuma atender.',
   facilidade:

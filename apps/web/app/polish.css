@@ -751,7 +751,7 @@ body {
   gap: var(--sp-4) var(--sp-4);
 }
 
-/* Indicadores do Farol: no máximo 4 por linha, linhas completas e alinhadas à esquerda. */
+/* Indicadores do Alerta de Licitações: no máximo 4 por linha, linhas completas e alinhadas à esquerda. */
 :root .rd-painel .ui-kpis {
   grid-template-columns: repeat(
     auto-fill,
@@ -798,7 +798,7 @@ body {
   }
 }
 
-/* Filtros do Farol: grade de 12 colunas (3 + 4 por linha) no computador; 2 por linha no celular. */
+/* Filtros do Alerta de Licitações: grade de 12 colunas (3 + 4 por linha) no computador; 2 por linha no celular. */
 @media (min-width: 62rem) {
   :root .rd-filters-main {
     grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -861,7 +861,7 @@ body {
   font-weight: 600;
 }
 
-/* Resumo do Farol: os indicadores ficam soltos, sem caixa extra por fora. */
+/* Resumo do Alerta de Licitações: os indicadores ficam soltos, sem caixa extra por fora. */
 :root .rd-painel {
   background: none;
   border: 0;

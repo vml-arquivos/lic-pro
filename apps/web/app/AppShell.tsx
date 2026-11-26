@@ -30,7 +30,7 @@ const ANONYMOUS_MENU: readonly MenuGroup[] = [
   {
     label: 'Visitante',
     items: [
-      { label: 'Explorar licitações', href: '/radar', icon: 'search' },
+      { label: 'Alerta de Licitações', href: '/radar', icon: 'search' },
       { label: 'Academia', href: '/academia', icon: 'cap' },
       { label: 'Entrar', href: '/login', icon: 'lock' },
     ],

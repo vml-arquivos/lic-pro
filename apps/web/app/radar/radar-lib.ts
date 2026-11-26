@@ -1,4 +1,4 @@
-/** Tipos e funções puras do Farol (sem React), para testar e reaproveitar. */
+/** Tipos e funções puras do Alerta de Licitações (sem React), para testar e reaproveitar. */
 import { infoDoPortal, portalDaLicitacao } from '@licitecomigo/shared';
 
 export type Tender = {
@@ -310,7 +310,7 @@ export function gravarEscolhidos(lista: EscolhidoParaComparar[]): void {
   }
 }
 
-/** Parâmetros da busca atual do Farol, prontos para o Ranking da Análise (mesmos filtros). */
+/** Parâmetros da busca atual do Alerta de Licitações, prontos para o Ranking da Análise (mesmos filtros). */
 export function paramsParaRanking(efetivos: URLSearchParams, semPerfil: boolean): URLSearchParams {
   const next = new URLSearchParams(efetivos);
   for (const chave of ['page', 'page_size', 'ordem', 'facetas', 'foco', 'limite']) {

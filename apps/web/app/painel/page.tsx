@@ -43,7 +43,7 @@ export default async function PainelPage() {
         />
       );
     default:
-      // Primeiro acesso da empresa: abre direto a criação do perfil do Farol.
+      // Primeiro acesso da empresa: abre direto a criação do perfil do Alerta de Licitações.
       if (!session.nicho_preferencias?.length) redirect('/radar');
       return (
         <EmpresaInicio

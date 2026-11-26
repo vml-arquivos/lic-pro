@@ -14,7 +14,7 @@ export default function HowPage() {
     >
       <ol className="numbered-list">
         <li>
-          <h2>Encontre no Farol</h2>
+          <h2>Encontre no Alerta de Licitações</h2>
           <p>Filtre oportunidades e confira a fonte oficial antes de salvar.</p>
         </li>
         <li>

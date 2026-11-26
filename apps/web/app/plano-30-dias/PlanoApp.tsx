@@ -131,7 +131,7 @@ export function PlanoApp({ canEdit }: Readonly<{ canEdit: boolean }>) {
                           </Link>
                         ) : null}
                         {day.tipo === 'pratica' ? (
-                          <Link href="/radar">Escolher edital no Farol</Link>
+                          <Link href="/radar">Escolher edital na busca</Link>
                         ) : null}
                       </div>
                       {day.comentario_mentor ? (

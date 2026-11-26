@@ -11,7 +11,7 @@ export default function BuscasSalvasPage() {
   return (
     <div className="ui-page">
       <PageHeader
-        eyebrow="Farol"
+        eyebrow="Alerta de Licitações"
         title="Buscas salvas"
         actions={
           <Link className="ui-btn ui-btn-ghost" href="/alertas">

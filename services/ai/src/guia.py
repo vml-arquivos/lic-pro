@@ -154,7 +154,7 @@ GUIDE: tuple[GuideEntry, ...] = (
         "Operação e fontes de dados",
         ("fonte", "coleta", "captura", "pncp", "atualizacao", "sincronizacao", "dados"),
         "Em Fontes de dados você vê a última coleta do PNCP, o intervalo, as falhas e pode iniciar uma "
-        "coleta manual. O Farol mostra “dados atualizados há X min”.",
+        "coleta manual. O Alerta de Licitações mostra “dados atualizados há X min”.",
         "/admin/fontes",
         ("administracao",),
     ),

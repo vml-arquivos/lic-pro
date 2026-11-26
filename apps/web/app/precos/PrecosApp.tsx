@@ -256,8 +256,8 @@ export function PrecosApp({ nichos }: Readonly<{ nichos: readonly NichoOption[] 
         {lista.state === 'error' ? <Alert kind="error">{lista.message}</Alert> : null}
         {lista.state === 'ready' && !lista.itens.length ? (
           <Alert kind="info">
-            Ainda não há itens deste nicho nos editais coletados. Abra um edital no Farol e use
-            “Buscar itens e documentos no PNCP”, ou consulte pelo código abaixo.
+            Ainda não há itens deste nicho nos editais coletados. Abra um edital no Alerta de
+            Licitações e use “Buscar itens e documentos no PNCP”, ou consulte pelo código abaixo.
           </Alert>
         ) : null}
         <details className="ui-details">

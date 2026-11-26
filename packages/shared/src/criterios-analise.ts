@@ -1,7 +1,7 @@
 /**
  * Critérios das análises, em texto, para a tela mostrar exatamente o que entra em cada resultado
  * ("mais fáceis", "mais lucrativas", "mais interessantes", "melhor preço") e na compatibilidade
- * do Farol. Os pesos e os limites vêm das mesmas constantes que o cálculo usa
+ * do Alerta de Licitações. Os pesos e os limites vêm das mesmas constantes que o cálculo usa
  * (`analise.ts`), e os testes conferem que o texto continua batendo com o cálculo.
  */
 import {
@@ -34,7 +34,7 @@ export const CRITERIOS_ANALISE: readonly CriterioAnalise[] = [
     peso_pct: Math.round(PESOS.aderencia * 100),
     pergunta: 'O edital combina com o que a sua empresa vende e onde atua?',
     como_pontua: [
-      'Usa a compatibilidade com o perfil do Farol (0 a 100).',
+      'Usa a compatibilidade com o perfil do Alerta de Licitações (0 a 100).',
       'Sem perfil cadastrado, a aderência fica neutra (50) e a confiança da análise cai.',
     ],
     dados: 'Segmentos, itens, palavras, UFs, faixa de valor e modalidades do seu perfil.',
@@ -145,7 +145,7 @@ export type CriterioCompatibilidade = {
   regra: string;
 };
 
-/** Compatibilidade do Farol: só entram os critérios que a pessoa preencheu no perfil. */
+/** Compatibilidade do Alerta de Licitações: só entram os critérios que a pessoa preencheu no perfil. */
 export const CRITERIOS_COMPATIBILIDADE: readonly CriterioCompatibilidade[] = [
   {
     chave: 'segmento',

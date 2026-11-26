@@ -14,7 +14,7 @@ const questions = [
     'Não. Não há promessa de vitória, lucro, contrato ou resultado.',
   ],
   [
-    'Quais fontes o Farol usa?',
+    'Quais fontes o Alerta de Licitações usa?',
     'O projeto documenta conectores oficiais, incluindo PNCP e Compras.gov.br. Confira sempre a fonte de origem.',
   ],
   [
@@ -25,7 +25,8 @@ const questions = [
 
 export const metadata = {
   title: 'Perguntas frequentes',
-  description: 'Respostas diretas sobre o Farol, a Ana, fontes e os limites do Licite Comigo.',
+  description:
+    'Respostas diretas sobre o Alerta de Licitações, a Ana, fontes e os limites do Licite Comigo.',
 };
 export default function FaqPage() {
   return (

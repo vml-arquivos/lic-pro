@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { buscaLembrada } from './radar-cache';
 
-/** "Voltar ao Farol" que devolve a pessoa à mesma busca, filtros e página. */
+/** "Voltar à busca" que devolve a pessoa à mesma busca, filtros e página. */
 export function VoltarAoRadar({ usuario }: Readonly<{ usuario: string }>) {
   const [destino, setDestino] = useState('/radar');
   useEffect(() => {
@@ -13,7 +13,7 @@ export function VoltarAoRadar({ usuario }: Readonly<{ usuario: string }>) {
   }, [usuario]);
   return (
     <Link className="back-link" href={destino}>
-      ← Voltar ao Farol
+      ← Voltar à busca
     </Link>
   );
 }

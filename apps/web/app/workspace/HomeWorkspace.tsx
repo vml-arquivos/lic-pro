@@ -14,7 +14,12 @@ const realAreas = [
     'Busque oportunidades em fontes públicas e abra o edital original.',
     '/radar',
   ],
-  ['▥', 'Empresas', 'Cadastre os CNPJs e mantenha os dados usados no Farol.', '/empresas'],
+  [
+    '▥',
+    'Empresas',
+    'Cadastre os CNPJs e mantenha os dados usados no Alerta de Licitações.',
+    '/empresas',
+  ],
   ['◎', 'Academia', 'Consulte trilhas e aulas publicadas para aprender o processo.', '/academia'],
   ['✦', 'Ana', 'Faça uma pergunta e receba apoio com fontes e limites claros.', '/ana'],
 ] as const;
@@ -47,7 +52,7 @@ export function HomeWorkspace({ demoMode }: HomeWorkspaceProps) {
       <section className="workspace-hero" aria-labelledby="hero-title">
         <div>
           <p className="hero-kicker">✦ PRÓXIMO PASSO</p>
-          <h2 id="hero-title">Comece pelo Farol de licitações.</h2>
+          <h2 id="hero-title">Comece pelo Alerta de Licitações.</h2>
           <p>
             Pesquise oportunidades compatíveis e abra a fonte oficial antes de tomar uma decisão.
           </p>
@@ -75,7 +80,7 @@ export function HomeWorkspace({ demoMode }: HomeWorkspaceProps) {
           <div className="workspace-step">
             <span className="step-number">1</span>
             <div>
-              <strong>Pesquise no Farol</strong>
+              <strong>Pesquise licitações</strong>
               <small>Use palavras-chave e filtros.</small>
             </div>
           </div>

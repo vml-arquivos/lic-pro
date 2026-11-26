@@ -20,7 +20,7 @@ const lista = (total: number) =>
     facetas: {},
   }) as unknown as ListResponse;
 
-describe('cache da lista do Farol', () => {
+describe('cache da lista do Alerta de Licitações', () => {
   it('gera a mesma chave para a mesma busca, em qualquer ordem', () => {
     const a = chaveDaLista('u1', new URLSearchParams('uf=SP&q=notebook&page=2'));
     const b = chaveDaLista('u1', new URLSearchParams('page=2&q=notebook&uf=SP'));

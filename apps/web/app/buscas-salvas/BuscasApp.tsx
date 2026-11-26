@@ -82,8 +82,8 @@ export function BuscasApp() {
           data.length === 0 ? (
             <Panel title="Nenhuma busca salva">
               <Empty>
-                No <Link href="/radar">Farol</Link>, escolha seus filtros e use “Salvar esta busca”.
-                Os avisos são criados junto.
+                No <Link href="/radar">Alerta de Licitações</Link>, escolha seus filtros e use
+                “Salvar esta busca”. Os avisos são criados junto.
               </Empty>
             </Panel>
           ) : (
@@ -107,7 +107,7 @@ export function BuscasApp() {
                                       className="ui-btn ui-btn-small"
                                       href={radarHref(busca.filtros)}
                                     >
-                                      Abrir no Farol
+                                      Abrir na busca
                                     </Link>
                                     <button
                                       type="button"

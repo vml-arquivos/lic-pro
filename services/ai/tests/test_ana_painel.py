@@ -134,7 +134,7 @@ def test_busca_real_lista_editais_com_links() -> None:
 def test_busca_sem_core_mantem_o_comportamento_antigo() -> None:
     response = ana().chat("t", "u", None, "Quais editais de TI existem?", AnaSession(role="admin", token=""))
     assert response.ferramentas == ["buscar_editais"]
-    assert "Farol" in response.texto
+    assert "Alerta de Licitações" in response.texto
 
 
 def test_busca_com_core_fora_do_ar_avisa_sem_inventar() -> None:

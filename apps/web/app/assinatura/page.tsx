@@ -17,7 +17,7 @@ export default async function AssinaturaPage() {
       <PageHeader eyebrow="Conta" title="Assinatura" />
       {session.nicho_preferencias?.length ? null : (
         <p className="notice">
-          Falta criar seu perfil. <Link href="/radar">Criar perfil no Farol</Link>
+          Falta criar seu perfil. <Link href="/radar">Criar perfil no Alerta de Licitações</Link>
         </p>
       )}
       <AssinaturaPanel />

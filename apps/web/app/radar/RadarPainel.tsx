@@ -103,9 +103,9 @@ export function RadarPainel({
   }, [refreshKey]);
 
   if (failed) return null;
-  if (!data) return <p className="ui-loading">Carregando o resumo do Farol…</p>;
+  if (!data) return <p className="ui-loading">Carregando o resumo do Alerta de Licitações…</p>;
   return (
-    <section aria-label="Resumo do Farol" className="rd-painel">
+    <section aria-label="Resumo do Alerta de Licitações" className="rd-painel">
       <div className="ui-kpis">
         {CARDS.filter((card) => data.cards[card.key] !== null).map((card) => (
           <button

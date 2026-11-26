@@ -380,7 +380,7 @@ export function EditalWorkspace({
     return (
       <section className="detail-card">
         <h2>Edital não encontrado</h2>
-        <Link href="/radar">Voltar ao Farol</Link>
+        <Link href="/radar">Voltar à busca</Link>
       </section>
     );
   const edital = detail.edital;
@@ -670,7 +670,7 @@ export function EditalWorkspace({
             ))}
           </ul>
         ) : (
-          <p>Nenhuma alteração registrada desde que o edital entrou no Farol.</p>
+          <p>Nenhuma alteração registrada desde que o edital entrou no Alerta de Licitações.</p>
         )}
         {!signedIn && (detail.documentos ?? []).length ? (
           <>

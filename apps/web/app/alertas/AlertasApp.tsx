@@ -125,8 +125,9 @@ export function AlertasApp() {
           {({ data }) =>
             data.length === 0 ? (
               <Empty>
-                Nenhum aviso ainda. Salve uma busca no <Link href="/radar">Farol</Link>: quando
-                surgir algo novo, ele aparece aqui.
+                Nenhum aviso ainda. Salve uma busca no{' '}
+                <Link href="/radar">Alerta de Licitações</Link>: quando surgir algo novo, ele
+                aparece aqui.
               </Empty>
             ) : (
               <Paginado itens={data}>

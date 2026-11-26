@@ -19,7 +19,7 @@ export type HubNodeData = {
 export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
   empresa: [
     {
-      label: 'Farol',
+      label: 'Alerta de Licitações',
       caption: 'Editais do governo',
       href: '/radar',
       icon: 'search',
@@ -129,7 +129,7 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
       tone: 'green',
     },
     {
-      label: 'Farol',
+      label: 'Alerta de Licitações',
       caption: 'Editais do governo',
       href: '/radar',
       icon: 'search',
@@ -198,7 +198,7 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
   ],
   colaborador: [
     {
-      label: 'Farol',
+      label: 'Alerta de Licitações',
       caption: 'Editais dos seus nichos',
       href: '/radar',
       icon: 'search',
@@ -377,7 +377,7 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
       tone: 'slate',
     },
     {
-      label: 'Farol',
+      label: 'Alerta de Licitações',
       caption: 'Editais do governo',
       href: '/radar',
       icon: 'search',
@@ -401,12 +401,18 @@ export const HUB_NODES: Record<Area, readonly HubNodeData[]> = {
 };
 
 /**
- * Visitante (página inicial pública): vitrine do que o sistema oferece. Farol e Academia abrem
+ * Visitante (página inicial pública): vitrine do que o sistema oferece. Alerta de Licitações e Academia abrem
  * sem conta; os demais levam ao login e voltam para a página escolhida.
  */
 const toLogin = (path: string) => `/login?next=${encodeURIComponent(path)}`;
 export const HUB_VISITOR: readonly HubNodeData[] = [
-  { label: 'Farol', caption: 'Editais do governo', href: '/radar', icon: 'search', tone: 'violet' },
+  {
+    label: 'Alerta de Licitações',
+    caption: 'Editais do governo',
+    href: '/radar',
+    icon: 'search',
+    tone: 'violet',
+  },
   {
     label: 'Buscas salvas',
     caption: 'Seu funil de busca',

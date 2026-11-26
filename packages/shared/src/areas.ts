@@ -59,7 +59,7 @@ const account: MenuItem = { label: 'Minha conta', href: '/conta', icon: 'user' }
 const ana: MenuItem = { label: 'Ana', href: '/ana', icon: 'spark' };
 const academy: MenuItem = { label: 'Academia', href: '/academia', icon: 'cap' };
 const materials: MenuItem = { label: 'Materiais', href: '/materiais', icon: 'file' };
-const radar: MenuItem = { label: 'Explorar licitações', href: '/radar', icon: 'search' };
+const radar: MenuItem = { label: 'Alerta de Licitações', href: '/radar', icon: 'search' };
 const published: MenuItem = { label: 'Pregões publicados', href: '/pregoes', icon: 'globe' };
 const analysis: MenuItem = {
   label: 'Análise',

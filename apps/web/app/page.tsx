@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = {
   title: 'Licite Comigo | Licitações com mentoria e inteligência conectada',
   description:
-    'Farol de licitações com dados do governo, prazos, documentos, curso e mentoria em um só lugar.',
+    'Alerta de Licitações com dados do governo, prazos, documentos, curso e mentoria em um só lugar.',
 };
 
 const PILLARS = [

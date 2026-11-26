@@ -56,7 +56,7 @@ export function AssinaturaPanel() {
       await send('POST', '/billing/teste-gratis', { plano: slug });
       setMessage({
         kind: 'success',
-        text: 'Teste grátis liberado. Aproveite o Farol, as buscas salvas e a agenda.',
+        text: 'Teste grátis liberado. Aproveite o Alerta de Licitações, as buscas salvas e a agenda.',
       });
       reload();
     } catch (cause) {

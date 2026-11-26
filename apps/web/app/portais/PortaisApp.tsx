@@ -62,7 +62,7 @@ export function PortaisApp({ podeAvisar = true }: Readonly<{ podeAvisar?: boolea
   const texto = parametros.toString();
   const [valor] = useResource<Resposta>(`/portais${texto ? `?${texto}` : ''}`);
 
-  const noFarol = (slug: string) => {
+  const naBusca = (slug: string) => {
     const p = new URLSearchParams(parametros);
     p.set('portal', slug);
     return `/radar?${p.toString()}`;
@@ -240,7 +240,7 @@ export function PortaisApp({ podeAvisar = true }: Readonly<{ podeAvisar?: boolea
                           </div>
                         </dl>
                         <div className="pt-acoes">
-                          <Link className="ui-btn ui-btn-small" href={noFarol(portal.slug)}>
+                          <Link className="ui-btn ui-btn-small" href={naBusca(portal.slug)}>
                             Ver editais
                           </Link>
                           {podeAvisar ? (

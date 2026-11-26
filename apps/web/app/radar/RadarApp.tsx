@@ -144,7 +144,7 @@ export function RadarApp({
     };
   }, [chave, efetivos, profileVersion, signedIn, perfilDados, versaoDados]);
 
-  // Lembra a busca (para o "Voltar ao Farol") e a posição da lista ao sair da tela.
+  // Lembra a busca (para o "Voltar à busca") e a posição da lista ao sair da tela.
   const buscaDaUrl = params.toString();
   useEffect(() => {
     if (signedIn) lembrarBusca(usuario, buscaDaUrl);
@@ -226,7 +226,7 @@ export function RadarApp({
 
   return (
     <div className="ui-page rd-page">
-      <PageHeader eyebrow="Farol" title="Farol de licitações" />
+      <PageHeader eyebrow="Alerta de Licitações" title="Alerta de Licitações" />
       <LicitacoesNav atual="/radar" area={area} />
       {signedIn ? <DadosAtualizados /> : null}
       {signedIn ? (
@@ -274,7 +274,9 @@ export function RadarApp({
                 aria-pressed={ativo}
                 disabled={bloqueado}
                 title={
-                  bloqueado ? 'Preencha o perfil do Farol para usar este atalho.' : atalho.dica
+                  bloqueado
+                    ? 'Preencha o perfil do Alerta de Licitações para usar este atalho.'
+                    : atalho.dica
                 }
                 onClick={() => {
                   if (ativo) {
@@ -293,7 +295,7 @@ export function RadarApp({
 
       {state === 'anonymous' ? (
         <section className="ui-panel">
-          <h2>Entre para usar o Farol</h2>
+          <h2>Entre para usar o Alerta de Licitações</h2>
           <Link className="ui-btn" href="/login">
             Entrar
           </Link>
@@ -308,7 +310,7 @@ export function RadarApp({
             </>
           ) : (
             <>
-              <h2>Escolha seus nichos para usar o Farol</h2>
+              <h2>Escolha seus nichos para usar o Alerta de Licitações</h2>
               <p>Escolha de um a três nichos no perfil acima.</p>
             </>
           )}
@@ -316,7 +318,7 @@ export function RadarApp({
       ) : null}
       {state === 'error' ? (
         <Alert kind="error">
-          Não foi possível carregar o Farol agora. Tente novamente em instantes.
+          Não foi possível carregar o Alerta de Licitações agora. Tente novamente em instantes.
         </Alert>
       ) : null}
       {state === 'loading' && !result ? <p className="ui-loading">Consultando editais…</p> : null}

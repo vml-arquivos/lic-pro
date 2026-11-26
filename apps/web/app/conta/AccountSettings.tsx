@@ -188,7 +188,9 @@ export function AccountSettings() {
       !nichosTravados &&
       (selected.length < 1 || selected.length > 3 || new Set(selected).size !== selected.length)
     ) {
-      setProfileError('Escolha de um a três nichos diferentes para o escopo do Farol.');
+      setProfileError(
+        'Escolha de um a três nichos diferentes para o escopo do Alerta de Licitações.',
+      );
       return;
     }
     setSavingProfile(true);
@@ -384,7 +386,7 @@ export function AccountSettings() {
             </div>
             {account?.papel === 'colaborador' ? (
               <fieldset className="account-fieldset">
-                <legend>Nichos do Farol</legend>
+                <legend>Nichos do Alerta de Licitações</legend>
                 <p className="form-hint">Os nichos da sua conta são definidos pelo Painel admin.</p>
                 <p>
                   {(account.nicho_preferencias ?? []).length
@@ -396,7 +398,7 @@ export function AccountSettings() {
               </fieldset>
             ) : (
               <fieldset className="account-fieldset">
-                <legend>Nichos do Farol</legend>
+                <legend>Nichos do Alerta de Licitações</legend>
                 <div className="account-form-grid account-niche-grid">
                   {niches.map((value, index) => (
                     <label key={index}>

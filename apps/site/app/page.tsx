@@ -62,8 +62,8 @@ export default function HomePage() {
           <p className="eyebrow">Licitações públicas</p>
           <h1>Encontre oportunidades. Leia o edital. Organize o próximo passo.</h1>
           <p className="hero-lead">
-            Farol de oportunidades, leitura assistida com fontes e organização de prazos para
-            empresas e profissionais que participam de compras públicas.
+            Alerta de Licitações, leitura assistida com fontes e organização de prazos para empresas
+            e profissionais que participam de compras públicas.
           </p>
           <div className="cta-row">
             <a className="button button-primary" href={appUrl}>

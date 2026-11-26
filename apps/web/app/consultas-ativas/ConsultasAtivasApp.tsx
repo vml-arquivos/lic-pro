@@ -21,7 +21,7 @@ type Consulta = {
   atualizada_em: string;
 };
 
-function hrefDoFarol(filtros: Record<string, unknown>): string {
+function hrefDaBusca(filtros: Record<string, unknown>): string {
   const params = new URLSearchParams();
   for (const [chave, valor] of Object.entries(filtros)) {
     if (Array.isArray(valor)) valor.forEach((item) => params.append(chave, String(item)));
@@ -58,8 +58,8 @@ export function ConsultasAtivasApp() {
                   </td>
                   <td>{formatDate(consulta.atualizada_em)}</td>
                   <td>
-                    <Link className="ui-btn ui-btn-ghost" href={hrefDoFarol(consulta.filtros)}>
-                      Abrir no Farol
+                    <Link className="ui-btn ui-btn-ghost" href={hrefDaBusca(consulta.filtros)}>
+                      Abrir na busca
                     </Link>
                   </td>
                 </tr>
@@ -67,7 +67,8 @@ export function ConsultasAtivasApp() {
             </Table>
           ) : (
             <Empty>
-              Nenhuma busca ligada. <Link href="/radar">Faça uma busca no Farol e salve.</Link>
+              Nenhuma busca ligada.{' '}
+              <Link href="/radar">Faça uma busca no Alerta de Licitações e salve.</Link>
             </Empty>
           )}
         </Panel>

@@ -19,7 +19,7 @@ export default async function QuadroPage() {
       <div className="qd-no-print">
         <LicitacoesNav atual="/radar/quadro" area={session.area} />
       </div>
-      <PageHeader eyebrow="Farol" title="Quadro de decisão" />
+      <PageHeader eyebrow="Alerta de Licitações" title="Quadro de decisão" />
       <Suspense fallback={<p className="ui-loading">Carregando…</p>}>
         <Quadro />
       </Suspense>

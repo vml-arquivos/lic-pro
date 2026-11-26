@@ -10,7 +10,7 @@ export default function AboutPage() {
     <ContentPage
       eyebrow="Sobre"
       title="Tecnologia para tornar o próximo passo verificável."
-      intro="O Licite Comigo combina Farol, formação e organização de operação para apoiar pessoas e empresas que participam de compras públicas brasileiras."
+      intro="O Licite Comigo combina Alerta de Licitações, formação e organização de operação para apoiar pessoas e empresas que participam de compras públicas brasileiras."
     >
       <p>
         O produto está sendo construído com isolamento multi-tenant, fontes oficiais, evidências e

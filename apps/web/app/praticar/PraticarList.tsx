@@ -30,12 +30,12 @@ export function PraticarList() {
     <>
       <Panel title="Como funciona">
         <ol className="ui-list">
-          <li>1. No Farol, escolha um edital e abra a ficha dele.</li>
+          <li>1. No Alerta de Licitações, escolha um edital e abra a ficha dele.</li>
           <li>2. Clique em “Praticar este edital” e responda as perguntas com suas palavras.</li>
           <li>3. Envie ao mentor. Ele devolve com comentários e uma nota de 1 a 5.</li>
         </ol>
         <Link className="ui-btn" href="/radar">
-          Escolher um edital no Farol
+          Escolher um edital na busca
         </Link>
       </Panel>
       <Panel title="Minhas práticas">

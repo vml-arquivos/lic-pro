@@ -67,7 +67,8 @@ export function DashboardCards() {
           <p className="eyebrow">Minha empresa</p>
           <h2>{me?.nome ?? 'Carregando…'}</h2>
           <p>
-            {companies[0]?.razao_social ?? 'Complete os dados da empresa para melhorar o Farol.'}
+            {companies[0]?.razao_social ??
+              'Complete os dados da empresa para melhorar o Alerta de Licitações.'}
           </p>
         </div>
         <Link className="button-secondary" href="/onboarding">
@@ -75,7 +76,7 @@ export function DashboardCards() {
         </Link>
       </section>
       <section className="dashboard-card dashboard-scope-card">
-        <p className="eyebrow">Escopo do Farol</p>
+        <p className="eyebrow">Escopo do Alerta de Licitações</p>
         <h2>Seus nichos de atuação</h2>
         {me?.nicho_preferencias?.length ? (
           <div className="tag-row">
@@ -87,8 +88,8 @@ export function DashboardCards() {
           </div>
         ) : (
           <p>
-            Defina de um a três nichos. Eles definem o que o Farol, as buscas salvas e os alertas
-            mostram.
+            Defina de um a três nichos. Eles definem o que o Alerta de Licitações, as buscas salvas
+            e os alertas mostram.
           </p>
         )}
         <Link href="/onboarding">Atualizar nichos</Link>
@@ -135,9 +136,9 @@ export function DashboardCards() {
         </div>
         <div className="dashboard-card">
           <p className="eyebrow">Próximos passos</p>
-          <h2>Farol de licitações</h2>
+          <h2>Alerta de Licitações</h2>
           <div className="dashboard-links">
-            <Link href="/radar">Abrir Farol</Link>
+            <Link href="/radar">Abrir Alerta de Licitações</Link>
             <Link href="/academia">Ir para Academia</Link>
             <Link href="/ana">Falar com a Ana</Link>
           </div>

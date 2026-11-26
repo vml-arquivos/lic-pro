@@ -28,7 +28,7 @@ export function AnaliseApp() {
   const [selecionados, setSelecionados] = useState<Selecionado[]>([]);
   const [carregouEscolhas, setCarregouEscolhas] = useState(false);
 
-  // A escolha feita nos cards do Farol ("Comparar com outras") chega por aqui, e volta para lá.
+  // A escolha feita nos cards do Alerta de Licitações ("Comparar com outras") chega por aqui, e volta para lá.
   useEffect(() => {
     setSelecionados(lerEscolhidos());
     setCarregouEscolhas(true);
