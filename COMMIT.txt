@@ -1,7 +1,8 @@
 Resumo:
-Carregamento de concorrentes, preços pagos e editais mais rápido e sem erro, e bloqueio de visualização de código
+Documentos do edital sem texto ilegível, carregamento mais rápido e bloqueio de visualização de código
 
 Descrição:
+- Documentos do edital: trechos e páginas que o PDF guarda sem texto legível (como páginas de jornal) deixam de aparecer como símbolos; ficam como "Trecho não legível." ou "Página sem texto legível." e saem da busca e da leitura automática de prazos. As leituras guardadas antes são refeitas.
 - Concorrentes, Preços pagos e Valores fechados: as páginas do PNCP e do Compras.gov.br são lidas ao mesmo tempo e com tempo de espera menor. Se a fonte demorar, a tela mostra "buscando" e atualiza sozinha, em vez de dar erro.
 - O que foi lido das fontes passa a ficar guardado no banco e continua valendo depois de deploy ou reinício (migration 0040, tabela cache_fontes). Sem a migration, o sistema segue funcionando e guarda só na memória.
 - Ao listar os editais, os primeiros já têm contratos do órgão e preços pagos preparados em segundo plano; ao abrir o edital, o dado está pronto.

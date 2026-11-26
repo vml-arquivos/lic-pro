@@ -55,6 +55,33 @@ describe('leitura dos documentos do edital', () => {
     expect(leitura.textos.get(chaveDoDocumento(URL_EDITAL))).toHaveLength(2);
   });
 
+  it('página de jornal mal decodificada não vira texto: some da tela, da busca e dos prazos', async () => {
+    const lixo =
+      '\ufffd\ufffd!#"\ufffd $\ufffd!\ufffd\n&5& (21(255*5 ?6 2325781.)&)*6\n%\ufffd\ufffd "\ufffd\ufffd';
+    const leitura = await lerDocumentos([{ tipo: 'Edital', nome: 'EDITAL', url: URL_EDITAL }], {
+      fetchImpl: async () => resposta(pdf()),
+      lerPdf: async () => [
+        'O prazo de validade da proposta é de 60 dias.\nOs pagamentos serão feitos em até 30 dias.',
+        `PUBLICIDADE LEGAL\n${lixo}`,
+      ],
+    });
+    expect(leitura.documentos).toMatchObject([{ estado: 'lido', paginas: 2 }]);
+    const paginas = leitura.textos.get(chaveDoDocumento(URL_EDITAL))!;
+    expect(paginas[1]).toBe('Página sem texto legível.');
+    expect(paginas.join('\n')).not.toContain('\ufffd');
+    expect(leitura.fatos.find((fato) => fato.id === 'validade-proposta')?.valor).toBe('60 dias');
+  });
+
+  it('documento só com texto ilegível conta como PDF sem texto', async () => {
+    const leitura = await lerDocumentos([{ tipo: 'Edital', nome: 'EDITAL', url: URL_EDITAL }], {
+      fetchImpl: async () => resposta(pdf()),
+      lerPdf: async () => [
+        '\ufffd\ufffd\ufffd!#"\ufffd \ufffd\ufffd\ufffd\ufffd $\ufffd!\ufffd\n%\ufffd\ufffd "\ufffd\ufffd\ufffd',
+      ],
+    });
+    expect(leitura.documentos).toMatchObject([{ estado: 'sem_texto', paginas: 0 }]);
+  });
+
   it('o que não é PDF, falha ou não tem texto vira documento não lido', async () => {
     const leitura = await lerDocumentos(
       [

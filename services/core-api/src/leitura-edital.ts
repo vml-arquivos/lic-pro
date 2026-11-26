@@ -13,6 +13,7 @@ import { PublicRateLimiter } from './auth-public.js';
 import type { CacheCompartilhado } from './cache-compartilhado.js';
 import { withTenant } from './db.js';
 import { authContext, sendDatabaseUnavailable } from './request-context.js';
+import { limparPagina, semMarcas } from './texto-legivel.js';
 
 /**
  * Leitura dos documentos do edital (PDF publicado no PNCP).
@@ -72,9 +73,16 @@ const MAX_NA_MEMORIA = 30;
 export const chaveDoDocumento = (url: string): string =>
   createHash('sha256').update(url).digest('hex').slice(0, 12);
 
+/** Sobe quando a forma de ler muda, para as leituras guardadas antes serem refeitas. */
+const VERSAO_DA_LEITURA = 'v2-texto-legivel';
+
 const assinaturaDe = (documentos: readonly DocumentoParaLer[]): string =>
   createHash('sha256')
-    .update(documentos.map((doc) => `${doc.url}#${doc.versao ?? ''}#${doc.nome ?? ''}`).join('|'))
+    .update(
+      VERSAO_DA_LEITURA +
+        '|' +
+        documentos.map((doc) => `${doc.url}#${doc.versao ?? ''}#${doc.nome ?? ''}`).join('|'),
+    )
     .digest('hex')
     .slice(0, 16);
 
@@ -213,15 +221,21 @@ export async function lerDocumentos(
       continue;
     }
     try {
-      const paginas = limitar(await lerPdf(baixado.bytes));
-      if (!paginas.some((pagina) => pagina.trim().length > 20)) {
+      const limpas = limitar(await lerPdf(baixado.bytes)).map(limparPagina);
+      const paginas = limpas.map((pagina) => pagina.texto);
+      if (!limpas.some((pagina) => semMarcas(pagina.texto).trim().length > 20)) {
         lidos.push({ ...base, estado: 'sem_texto', paginas: 0, motivo: 'PDF sem texto (imagem).' });
         continue;
       }
       textos.set(chave, paginas);
-      paginas.forEach((texto, indice) =>
-        paginasParaFatos.push({ documento: base.nome, pagina: indice + 1, texto }),
-      );
+      limpas.forEach((pagina, indice) => {
+        if (pagina.ilegivel) return;
+        paginasParaFatos.push({
+          documento: base.nome,
+          pagina: indice + 1,
+          texto: semMarcas(pagina.texto),
+        });
+      });
       lidos.push({ ...base, estado: 'lido', paginas: paginas.length, motivo: null });
     } catch (error) {
       lidos.push({
